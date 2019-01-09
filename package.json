@@ -1,0 +1,29 @@
+{
+  "name": "beamcoder",
+  "version": "0.0.1",
+  "description": "Node.JS native bindings to FFmpeg with support for streams and promises.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Streampunk/beamcoder.git"
+  },
+  "keywords": [
+    "FFmpeg",
+    "libav",
+    "video",
+    "audio",
+    "sound",
+    "encode",
+    "decode",
+    "transcode"
+  ],
+  "author": "Streampunk Media Ltd",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/Streampunk/beamcoder/issues"
+  },
+  "homepage": "https://github.com/Streampunk/beamcoder#readme"
+}
