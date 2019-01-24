@@ -44,11 +44,11 @@ async function run() {
     if (packet.stream_index === 0) { // Check demuxer to find index of video stream
       let frames = await decoder.decode(packet);
       // Do something with the frame data
-      console.log(x, frames.totalTime); // Optional log of time taken to decode each frame
+      console.log(x, frames.total_time); // Optional log of time taken to decode each frame
     }
   }
   let frames = await decoder.flush(); // Must tell the decoder when we are done
-  console.log('flush', frames.totalTime, frames.length);
+  console.log('flush', frames.total_time, frames.length);
 }
 
 run();
@@ -150,7 +150,7 @@ The easiest way to create a demuxer is with a filename or URL, for example to op
 
     let tsDemuxer = await beamcoder.demuxer('media/bbb_1080p_c.ts');
 
-The `demuxer` operation performs file system and/or network access and so is asynchronous. On successful resolution, the value is a Javascript object describing the contents of the media input after the contents of the file or stream has been probed. Here is a _reduced_ output:
+The `demuxer` operation performs file system and/or network access and so is asynchronous. On successful resolution, the value is a Javascript object describing the contents of the media input after the contents of the file or stream has been probed. Here is a summary of the created demuxer:
 
 ```Javascript
 { type: 'demuxer',
@@ -253,15 +253,118 @@ The final form of seeking supported is by number of frames into a given stream:
 
 All seek call resolve to a `null` value or rejects if there is an error. You have to call `read` to get the next frame. Note that if you seek beyond the end of the file or stream, the call resolves OK and the next read operation resolves to `null`.
 
-The seek operation has two additional flags that can be specified. The `backward` Boolean-valued property can be used to enable seeking backwards where supported. The `any` Boolean-valued property enables seeking to both 
+The seek operation has two additional flags that can be specified. The `backward` Boolean-valued property can be used to enable seeking backwards where supported. The `any` Boolean-valued property enables seeking to both
 
 #### Using Node.JS streams
 
-*Simon*
+___Simon___
 
 ### Decoding
 
+Decoding is the process of taking a stream of compressed data in the form of _packets_ and converting it into _frames_. In general, to decode an interleaved (multiplexed) media file, you need a decoder for each of the video and the audio streams. For the purpose of keeping the examples simple in this section, a single stream is decoded but it is possible to set up more than one decoder - say for a video and audio stream - and run them asynchronously, i.e. to decode the video and audio for a frame in parallel.
+
+To see a list of available decoders, use:
+
+    let decs = beamcoder.decoders();
+
+As with the demuxers, the result is an object where the keys are the names of the decoders and the values are objects describing the codec. This includes the codec type (`video`, `audio`, `subtitle`), a _descriptor_ for the family of codecs, some capability flags, supported profiles and more. Here are some examples of querying the available decoders:
+
+```Javascript
+// Find a decoder that deals with H.264 / AVC
+decs['h264'];
+{ type: 'Codec',
+  name: 'h264',
+  long_name: 'H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10',
+  codec_type: 'video',
+  id: 27, /* ... */ }
+
+// Find all other decoders that can decode H.264
+Object.values(decs).filter(x => x.id === 27).map(x => x.name);
+[ 'h264', 'h264_qsv', 'h264_cuvid' ]
+// Note: h264_qsv and h264_cuvid are wrappers to hardware-accelerated decoders
+//       Appearance in the list does not imply that the codec is supported by current hardware.
+
+// Find all decoders claiming support for the MP3 format
+Object.values(decs)
+  .filter(x => x.long_name.indexOf('MP3') >= 0)
+  .map(x => ({ name: x.name, long_name: x.long_name }));
+[ { name: 'mp3float', long_name: 'MP3 (MPEG audio layer 3)' },
+  { name: 'mp3', long_name: 'MP3 (MPEG audio layer 3)' },
+  { name: 'mp3adufloat',
+    long_name: 'ADU (Application Data Unit) MP3 (MPEG audio layer 3)' },
+  { name: 'mp3adu',
+    long_name: 'ADU (Application Data Unit) MP3 (MPEG audio layer 3)' },
+  { name: 'mp3on4float', long_name: 'MP3onMP4' },
+  { name: 'mp3on4', long_name: 'MP3onMP4' } ]
+
+// List all audio decoders
+Object.values(decs).filter(x => x.codec_type === 'audio').map(x => x.name);
+[ 'comfortnoise', 'dvaudio', '8svx_exp', '8svx_fib', 's302m', 'sdx2_dpcm',
+  'aac', 'aac_fixed', 'aac_latm' /* ... */ ]
+```
+
+#### Decoder
+
+To get an instance of a decoder, request a `decoder` from beam coder, specifying either the decoder's `name`, a `codec_id`, or by providing a `demuxer` and a `stream_id`. For example:
+
+```Javascript
+// Create a decoder by name - note this is synchronous
+let decoder = beamcoder.decoder({ name: 'h264' });
+// or for the first choice codec in the H.264 family
+let decoder = beamcoder.decoder({ codec_id: 27 });
+// Alternatively, use a demuxer and a stream_index
+//   The codec parameters of the streams will be used to set the decoding parameters
+let tsDemux = await beamcoder.demuxer('media/bbb_1080p_c.ts');
+let decoder = beamcoder.decoder({ demuxer: tsDemux, stream_index: 0 });
+```
+
+Other properties of the decoder can be provided on initialisation and may be required in certain cases. For example, the width and height of the video. These will override the default values.  Note that certain values for the decoder may not be available until a the first few packets have been decoded.
+
+```Javascript
+let decoder = beamcoder.decoder({ name: 'h264', width: 1920, height: 1080 });
+```
+
+A decoder has many properties. These can be set before decoding in the usual way for a Javascript object. Some of the properties are more appropriate for encoding but are listed for information. Some properties can only be set by _libav*_ and others can only be set by the user. Follow the [FFmpeg documentation]() for details.
+
+#### Decode
+
+To decode an encoded data _packet_ and create an uncompressed _frame_ (may be a frames-worth of audio), user the asynchronous _decode_ method of a decoder. Decoders may need more than one packet to produce a frame and may subsequently produce more than one frame per packet. This is particularly the case for _long-GOP_ formats.
+
+```Javascript
+while (packet != null) {
+  let dec_result = await decoder.decode(packet);
+  // dec_result.frames - possibly empty array of frames for further processing
+  // dec_result.total_time - log the microseconds that the operation took to complete
+  // Get the data for the packet
+}
+```
+
+As long as decoding was successful, the decode operation resolves to an object containing the `total_time` (measured in microseconds) that the operation took to execute, and an array of decoded frames that are now available. If the array is empty, the decoder has buffered the packet as part of the process of producing future frames. Frames are delivered in presentation order.
+
+It is possible to pass more than one packet at a time to the decoder, either as an array of packets or a list of arguments:
+
+```Javascript
+// Array of packets
+let dec_result = await decoder.decode([packet1, packet2, packet3 /* ... */ ]);
+// List of packets as arguments
+let dec_result = await decoder.decode(packet1, packet2, packet3 /* ... */ );
+```
+
+#### Flush
+
+Once all packets have been passed to the decoder, it is necessary to call the asynchronous `flush` operation. If any frames are yet to be delivered by the decoder, they will be provided in the resolved value.
+
+```Javascript
+let flush_result = await decoder.flush();
+// flush_result.frames - array of any remaining frames to be decoded
+// flush_result.total_time - microseconds taken to execute the flush operation
+```
+
+The decoder will be cleaned up as part of the Javascript garbage collection process, so make sure that the reference to the decoder goes out of scope.
+
 ### Filtering
+
+___Simon___
 
 ### Encoding
 
