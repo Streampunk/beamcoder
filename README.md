@@ -2,13 +2,17 @@
 
 [Node.JS](https://nodejs.org/) native bindings to [FFmpeg](https://www.ffmpeg.org/) with support for asynchronous processing via streams and promises.
 
-The aim of this module is to facilitate relatively easy access to the capabilities of FFmpeg - including media muxing, demuxing, encoding, decoding and filtering - from Node.JS applications. Rather than using the filesystem and controlling the FFmpeg as an external command line process, the beam coder executes functions of the FFmpeg _libav*_ libraries directly. Work is configured by Javascript objects and executes over data buffers that are shared between Javascript and C. Long running media processing operations are asynchronous, running as promises that execute native code separately from the main event loop. The developers created beam coder to enable development of highly-scalable frame-by-frame, packet-by-packet media nanoservices built out the web-platform, combining media IO functions with the comprehensive library of other scalable IO modules for Node, such as [express](https://expressjs.com/), [koa](https://koajs.com/), [ioredis](https://www.npmjs.com/package/ioredis) etc..
+The aim of this module is to facilitate access to the capabilities of FFmpeg - including media muxing, demuxing, encoding, decoding and filtering - from Node.JS applications. Rather than using the filesystem and controlling the FFmpeg as an external command line process, the beam coder executes functions of the FFmpeg _libav*_ libraries directly. Work is configured by Javascript objects and jobs execute over data buffers that are shared between Javascript and C. Long running media processing operations are asynchronous, running as promises that execute native code separately from the main event loop.
+
+The developers created beam coder to enable development of highly-scalable frame-by-frame, packet-by-packet web-fit nanoservices built out the web-platform, combining media IO functions with the comprehensive library of other scalable IO modules for Node, such as [express](https://expressjs.com/), [koa](https://koajs.com/), [ioredis](https://www.npmjs.com/package/ioredis) etc..
 
 If you are looking to write your own frame-by-frame transcoder, media mangler or muxer, you are in the right place. However, if you want to control FFmpeg as a command line application over complete files or piped streams from a Node.JS application, many other projects are available, such as [fluent-ffmpeg](https://www.npmjs.com/package/fluent-ffmpeg).
 
+Does beam coder support X, Y or Z protocol / format / codec / file type / stream type / hardware etc.? If FFmpeg supports it, its possible, indeed likely. You have to start somewhere, and the developers have been testing with the codecs and formats they are familiar with. Please raise any problems or requests for additional features as issues or raise a pull request to add in missing features. Automated testing per dimension will be added in due course.
+
 Beam coder will be a cross-platform module for Windows, Mac and Linux. In this early release, only Windows is supported. Other platforms will follow shortly.
 
-Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wikipedia.org/wiki/Aerostat) product set, whereby a fleet of media-oriented _aerostats_ (_blimps_, _air ships_, _zeppelins_ etc.) are launched into the clouds. Media content is beamed between the fleet as if beams of light and beamed to and from locations on the planet surface as required. See also the [_Aerostat Beam Engine_](https://www.npmjs.com/package/beamengine).
+Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wikipedia.org/wiki/Aerostat) open-source product set, whereby a fleet of media-oriented _aerostats_ (_blimps_, _air ships_, _zeppelins_ etc.) are launched into the clouds. Media content is beamed between the fleet as if beams of light and beamed to and from locations on the planet surface as required. See also the [_Aerostat Beam Engine_](https://www.npmjs.com/package/beamengine).
 
 ## Installation
 
@@ -22,9 +26,9 @@ Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wi
 
 The basic usage pattern is as follows:
 
-1. Use promises to create processing stages for some media, for example a demuxer and a decoder.
-2. In a loop, use a promise to get data from one processing stage and feed it into the next, using the data as required. For example, read some frames from a file and send them to a decoder, receiving uncompressed representations of each frame.
-3. Flush the buffers of each processing stage and collect any outstanding frames.
+1. Use promises to create processing stages for an item of media, for example a demuxer and a decoder. One can be used to configure the other.
+2. In a loop, use a promise to move data through a sequence of processing stages, working with the data as required. For example, read some frames from a file and send them to a decoder, receiving uncompressed data for each frame. This data may be suitable for display or analysis.
+3. Flush the buffers of each processing stage, close resources and collect any outstanding frames.
 
 Here is a simple example as code:
 
@@ -32,11 +36,12 @@ Here is a simple example as code:
 const beamcoder = require('beamcoder');
 
 async function run() {
-  let demuxer = await beamcoder.format('/path/to/file.mp4'); // Create a demuxer for a file
-  let decoder = await beamcoder.decoder({ name: 'h264' }); // Codec assumed, can pass in demuxer
-  for ( let x = 0 ; x < 1000 ; x++ ) {
-    let packet = await format.readFrame(); // Read next frame
-    if (packet.stream_index === 0) { // Check format to find index of video stream
+  let demuxer = await beamcoder.demuxer('/path/to/file.mp4'); // Create a demuxer for a file
+  let decoder = await beamcoder.decoder({ name: 'h264' }); // Codec asserted. Can pass in demuxer.
+  let packet = {};
+  for ( let x = 0 ; x < 1000 && packet != null ; x++ ) {
+    packet = await format.read(); // Read next frame. Note: returns null for EOF
+    if (packet.stream_index === 0) { // Check demuxer to find index of video stream
       let frames = await decoder.decode(packet);
       // Do something with the frame data
       console.log(x, frames.totalTime); // Optional log of time taken to decode each frame
@@ -49,60 +54,235 @@ async function run() {
 run();
 ```
 
-For mode examples, see the `examples` folder.
+For mode examples, see the `examples` folder. Note that the eventual aim is that every example in the FFmpeg source tree will have a corresponding example for Node.JS.
 
-### Marshalling
+### Values
 
-In design, each of the main structures of FFmpeg have mappings to Javascript objects and values are automatically marshalled and unmarshalled between native and Javascript representations. With the exception of codec contexts (encoders and decoders), these objects contain an internal instance of the native C structure, have a `type` property for the type name, and use getters and setters to expose the properties. Wherever possible, the names of the properties are the same as those in the C library, meaning that [FFmpeg's doxygen documentation](https://www.ffmpeg.org/doxygen/4.1/index.html) can be used find out the details of each property.
+In design, each of the main structures of FFmpeg have mappings to Javascript objects and values are automatically marshalled and unmarshalled between native and Javascript representations. With the exception of encoders and decoders, these objects contain an internal instance of the native C structure, have a `type` property for the type name, and use getters and setters to expose the underlying native properties. Wherever possible, the names of the properties are the same as those in the C library, meaning that [FFmpeg's doxygen documentation](https://www.ffmpeg.org/doxygen/4.1/index.html) should be used as a reference.
 
-To create one of the main data types, use the `make...` methods of `beamcoder`. With no arguments, the value has default values.
+#### Construction
 
-    let pkt = beamcoder.makePacket();
+To create one of the main data types _packet_, _frame_, _demuxer_, _muxer_, _decoder_, _filterer_, or _encoder_, use the  methods of `beamcoder` with the same name e.g. `packet`, `frame`, etc. With no arguments, the value constructed has FFmpeg's default values. To contruct a packet:
 
-To configure the object an initialisation, pass is an options object:
+    let pkt = beamcoder.packet();
+
+To configure the object on initialisation, pass is an options object:
 
 ```Javascript
-let q = beamcoder.makePacket({ pts: 10, dts: 10, stream_index: 3 });
-/* q is now ...
+let q = beamcoder.packet({ pts: 10, dts: 10, stream_index: 3 });
+console.log(q);
 { type: 'Packet',
   pts: 10,
   dts: 10,
   data: null,
   size: 0,
   stream_index: 3,
-... } */
+  /* ... */ }
 ```
 
-Property value mappings are as follows:
+Note that some special cases exist to this rule, such as creating a _demuxer_ from a URL or filename. As this is a common use case, a single string can be passed in rather than an options object. As the URL or file must be accessed before the demuxer is constructed, a promise to create the demuxer is returned rather than a demuxer directly. This allows the file or streams operation to be asynchronous. See the description of each processing stage for details.
 
-* C `int`, `int64_t` and other integer types map to Javascript's `number` type. Try to use integer representations in Javascript wherever possible, e.g. `|0` when dividing. Note that the full range of a C `int64_t` is not yet supported by Beam Coder, waiting on Javascript `BigInt` to move from experimental implementation in Node.
-* C `float` and `double` types map the Javascript's `number` type. Note that as the underlying representation of floating point values is double length in Javascript, conversion to and from C `float` can cause a lose of precision. Make sure to test for value ranges, not exact values.
-* `AVRational` maps to a Javascript array containing two integer `number`s. For example, `(AVRational){1,25}` maps to Javascript `[1,25]`.
-* C `char *` and `const char *` map to Javascript's `string` type.
-* AV enumerations are converted to Javascript strings representing their name. FFmpeg provides its own utility functions for converting most of its enumerations to and from strings, for example [`av_color_space_name`](https://www.ffmpeg.org/doxygen/4.1/pixdesc_8c.html#a7a5b3f4d128f0a0112b4a91f75055339) and [`av_color_space_from_name`](https://www.ffmpeg.org/doxygen/4.1/pixdesc_8c.html#a0c7d0a9d7470c49397a72e1169d2a8e3).
-* AV flags are converted to a Javascript object of Boolean-valued properties, where each property is named to match variable part of the `#define` in the C-library header files and documentation. For example, the _corrupt_ and _discard_ flags of an `AVFrame` `flags` property become `{ CORRUPT: false, DISCARD: false }` in Javascript.
-* AVBufferRef and other blobs of binary data are represented by [Node.JS Buffers](https://nodejs.org/docs/latest-v10.x/api/buffer.html). Wherever possible, the data is not copied. For example, on reading a new counted reference to the underlying AVBuffer is created and held onto until the Javascript buffer is garbage collected. When a Javascript buffer is written to an AV structure, the structure holds a reference and the underlying data is kept alive until both of any AV processing functions and Javascript have finished with it.
+#### Reading and modifying
 
-Private data used for configuring codecs is supported in some cases. See the encoding section for details.
+After construction, Javascript properties of an object can be used in a natural way, with dot notation and array-style access:
 
+```Javascript
+let q_pts = q.pts; // Current value of pts for q, q_pts= 10
+let same = q['pts'] === q.pts; // true ... the current value of pts for q = 10
+q.pts = 12; // Set the value pts for q to 12
+q.data = Buffer.from('Text data for this packet.'); // Set packet data
+```
+
+This is achieved with [setters and getters](). Note that not every readable property is writeable. This may depend on context. For example some properties are set only by _libav*_ or can only be updated by the user when encoding. The work to convert a value from C to Javascript is only done when each separate property is requested, which is worth bearing in mind before being too liberal with, say, `console.log()` that enumerate every property of an object.
+
+#### Freeing and deleting
+
+Care has been taken to ensure that the reference-counted then garbage collected data structures of Javascript work in tandem with the allocation and free mechanisms of _libav*_. As such, there is no explicit requirement to free or delete objects. As with any Javascript application, if you hold onto references to objects when they are no longer required, garbage collection is prevented and this may have a detrimental or even catastrophic impact on performance.
+
+#### Type mappings
+
+Property value mappings from C to Javascript and vice versa are as follows:
+
+* C `int`, `int64_t` and other integer types map to and from Javascript's `number` type. Try to use integer representations in Javascript wherever possible, e.g. `|0` when dividing. (Note that the full ranges of C `int64_t` and `uint64_t` are not yet supported by Beam Coder. This feature is waiting on Javascript `BigInt` to move from experimental support to full support in Node.)
+* C `float` and `double` types map to and from Javascript's `number` type. Note that as the underlying representation of floating point values is double length in Javascript, causing conversion to and from C `float` to lose precision. It is best practice to test for small value ranges around a value rather than exact values.
+* `AVRational` values map to and from a Javascript array containing two integer `number`s. For example, `(AVRational){1,25}` maps to Javascript `[1,25]`.
+* C `char *` and `const char *` map to and from Javascript's `string` type.
+* FFmpeg enumerations are converted to Javascript strings representing their name. FFmpeg provides its own utility functions for converting most of its enumerations to and from strings, for example [`av_color_space_name`](https://www.ffmpeg.org/doxygen/4.1/pixdesc_8c.html#a7a5b3f4d128f0a0112b4a91f75055339) and [`av_color_space_from_name`](https://www.ffmpeg.org/doxygen/4.1/pixdesc_8c.html#a0c7d0a9d7470c49397a72e1169d2a8e3).
+* FFmpeg flags are converted to and from a Javascript object of Boolean-valued properties, where each property is named to match the distinguishing part of the `#define` macro name. For example, the _corrupt_ and _discard_ flags of an `AVFrame` `flags` property become `{ CORRUPT: false, DISCARD: false }` in Javascript.
+* `AVBufferRef` and other blobs of binary data are represented by [Node.JS Buffers](https://nodejs.org/docs/latest-v10.x/api/buffer.html). Wherever possible, the data is not copied. For example, on reading an `AVBuffer` from Javascript, a new reference to the underlying `AVBuffer` is created and a view of the data made available via an external buffer. The reference is held until the Javascript buffer is garbage collected. Coversely, when a Javascript buffer is to be read from an FFmpeg structure, the `AVBufferRef` structure holds a V8 reference to the underlying data of the Javascript buffer. The Javascript buffer is kept alive until both of any AV processing functions and Javascript have finished with it.
+* `AVDictionary` metadata values have a natural mapping to Javascript objects as keys as property names and values as string values.
+
+Private data used for configuring encoders, filters and other objects is supported where required. See the encoding section for details.
 
 ### Demuxing
 
+The process of demuxing (de-multiplexing) extracts time-labelled packets of data from streams contained in a media stream or file. FFmpeg provides a diverse range of demuxing capability with support for a wide range of input formats.
+
+To see a list and details of all the available demuxer input formats:
+
+    let dms = beamcoder.demuxers();
+
+The output is an object where each property key is the name of a demuxer and each value is an object describing the input format. For example, to find the demuxer for '.mp4' files:
+
+```Javascript
+Object.values(dms).filter(x => x.extensions.indexOf('mp4') >= 0);
+[ { type: 'InputFormat',
+    name: 'mov,mp4,m4a,3gp,3g2,mj2',
+    long_name: 'QuickTime / MOV',
+    mime_type: '', // Generally not available for demuxers
+    extensions: 'mov,mp4,m4a,3gp,3g2,mj2',
+    flags:
+     { NOFILE: true, // Demuxer will manage IO operations
+       NEEDNUMBER: false, // Needs '%d' in filename
+       SHOW_IDS: true, // Show format stream IDs numbers.
+       GENERIC_INDEX: true, // Use generic index building code
+       TS_DISCONT: true, // Format allows timestamp discontinuities.
+       NOBINSEARCH: true, // Format does not allow to fall back on binary search via read_timestamp
+       NOGENSEARCH: true, // Format does not allow to fall back on generic search
+       NO_BYTE_SEEK: false, // Format does not allow seeking by byte
+       SEEK_TO_PTS: false }, // Seeking is based on PTS
+    raw_codec_id: 0,
+    priv_data_size: 400,
+    priv_class: null } ]
+```
+
+The easiest way to create a demuxer is with a filename or URL, for example to open a transport stream containing the [Big Buck Bunny]() short movie in file `bbb_1080p_c.ts` in the `movie` sub-directory:
+
+    let tsDemuxer = await beamcoder.demuxer('media/bbb_1080p_c.ts');
+
+The `demuxer` operation performs file system and/or network access and so is asynchronous. On successful resolution, the value is a Javascript object describing the contents of the media input after the contents of the file or stream has been probed. Here is a _reduced_ output:
+
+```Javascript
+{ type: 'demuxer',
+  iformat:
+   { type: 'InputFormat',
+     name: 'mpegts',
+     \* ... *\ },
+  ctx_flags: { NOHEADER: false, UNSEEKABLE: false },
+  streams:
+  [ { type: 'Stream',
+      index: 0,
+      id: 301,
+      time_base: [ 1, 90000 ], /* ... */
+      codecpar:
+       { type: 'CodecParameters',
+         codec_type: 'video',
+         codec_id: 173,
+         name: 'hevc',
+         codec_tag: 'HEVC',
+         format: 'yuv420p', /* ... */
+         width: 1920,
+         height: 1080,
+        /* ... */ } },
+    { type: 'Stream',
+      index: 1,
+      id: 302,
+      time_base: [ 1, 90000 ], /* ... */
+      codecpar:
+       { type: 'CodecParameters',
+         codec_type: 'audio',
+         codec_id: 86018,
+         name: 'aac', /* ... */
+         format: 'fltp', /* ... */
+         channel_layout: 'stereo',
+         channels: 2,
+         /* ... */ } } ],
+  url: '../media/bbb_1080p_c.ts',
+  start_time: 80000,
+  duration: 596291667,
+  bit_rate: 2176799, /* ... */
+  stream: [Function],
+  read: [Function: readFrame],
+  seek: [Function: seekFrame] }
+```
+
+From this it is possible to determine that the file contains two streams, a HD video stream encoded with H.265/HEVC and a stereo audio stream encoded with AAC. The duration of the media is measure in microseconds (`AV_TIME_BASE`), so is approximately 596 seconds or 9m56s.
+
+#### Reading frames
+
+To read data from the demuxer, use the `read` method of a demuxer-type object, a method that takes no arguments. This reads the next data packet from the file or stream at the current position, where a frame could be from any of the streams. Typically, a packet is one frame of video data or a blob representing a codec-dependent number of audio samples. Use the `stream_index` property of returned packet to find out which stream it is associated with and dimensions including height, width or audio sample rate. For example:
+
+```Javascript
+let wavDemuxer = await beamcoder.demuxer('my_audio.wav');
+let packet = {};
+while (packet != null) {
+  packet = await wavDemuxer.read();
+  // Do something with the packet
+}
+```
+
+The read method is asynchronous and returns a promise. The promise resolves to an object of type `Packet` if it succeeds or a `null` value at the end of the file. If an error occurs, the promise rejects with an error message. An example of a successful read from a WAVE file is shown below:
+
+```Javascript
+{ type: 'Packet',
+  pts: 2792448,
+  dts: 2792448,
+  data:
+   <Buffer fd ff fe ff 02 00 01 00 ff ff 00 00 00 00 ff ff 00 00 02 00 02 00 fe ff fd ff 01 00 04 00 00 00 fb ff ff ff 04 00 01 00 fe ff ff ff 01 00 01 00 00 00 ... >,
+  size: 4160,
+  stream_index: 0,
+  flags:
+   { KEY: true, // Packet represents a key frame
+     CORRUPT: false, // Corruption detected
+     DISCARD: false, // Can be dropped after decoding
+     TRUSTED: false, // Packet from a trusted source
+     DISPOSABLE: false }, // Frames that can be discarded by the decoder
+  duration: 1024,
+  pos: 11169836 }
+```
+
+#### Seeking
+
+Beam coder offers FFmpeg's many options for seeking a particular frame in a file, either by time reference, frame count or file position. To do this, use the `seek` method of a demuxer-type object with an options object to configure the operation.
+
+To seek forward to a keyframe in a given stream or file at a given timestamp:
+
+    await demuxer.seek({ stream_index: 0, timestamp: 2792448 });
+
+The timestamp is the presentation timestamp of the packet measured in the timebase of the stream, which is `[1, 48000]` in the example. To seek based on elapsed time from the beginning of the primary stream (as determined by FFmpeg, normally the first video stream where available), use the `time` property:
+
+    await demuxer.seek({ time: 58.176 });
+
+Another form of seek is to use a byte offset position into the file:
+
+    await demuxer.seek({ pos: 11169836 });
+
+The final form of seeking supported is by number of frames into a given stream:
+
+    await demuxer.seek({ frame: 42, stream_index: 0});
+
+All seek call resolve to a `null` value or rejects if there is an error. You have to call `read` to get the next frame. Note that if you seek beyond the end of the file or stream, the call resolves OK and the next read operation resolves to `null`.
+
+The seek operation has two additional flags that can be specified. The `backward` Boolean-valued property can be used to enable seeking backwards where supported. The `any` Boolean-valued property enables seeking to both 
+
+#### Using Node.JS streams
+
+*Simon*
+
 ### Decoding
+
+### Filtering
 
 ### Encoding
 
 ### Muxing
 
-### Filtering
+#### Opening output
+
+#### Writing header
+
+#### Writing packets and frames
+
+#### Writing trailer
+
 
 ## Status, support and further development
 
-Although the architecture of the aerostat beam engine is such that it could be used at scale in production environments, development is not yet complete. In its current state, it is recommended that this software is used in development environments and for building prototypes. Future development will make this more appropriate for production use.
+Although the architecture of the aerostat beam coder is such that it could be used at scale in production environments, development is not yet complete. In its current state, it is recommended that this software is used in development environments, primarily for building prototypes. Future development will make this more appropriate for production use.
 
 The developers of beam coder aimed to find a balance between being a faithful mapping of FFmpeg to Javascript while creating a Javascript API that is useful and easy to use. This may mean that certain features of FFmpeg are not yet exposed or choices have been made that lead to sub-optimal performance. Areas that are known to need further development and optimisation include:
 
-* shared memory management between Javascript and C;
+* shared memory management between Javascript and C, specifically adding support for pools;
 * hardware acceleration;
 * side data and extended data.
 
@@ -112,4 +292,8 @@ Contributions can be made via pull requests and will be considered by the author
 
 This project is licensed under the GNU General Public License, version 3 or later. Copyright (C) 2019, Streampunk Media Ltd.
 
-This software links to libraries from the FFmpeg project, including optional parts and optimizations covered by the GPL v2.0 or later. Your attention is drawn to the FFmpeg project's page [FFmpeg License and Legal Considerations](https://www.ffmpeg.org/legal.html).
+This software links to libraries from the FFmpeg project, including optional parts and optimizations covered by the GPL v2.0 or later. Your attention is drawn to the FFmpeg project's page [FFmpeg License and Legal Considerations](https://www.ffmpeg.org/legal.html) and the Copyright notices of the FFmpeg developers.
+
+### Acknowledgements
+
+A massive thank you to the FFmpeg development team who's tireless and ongoing work make this and so many other software media projects possible.
