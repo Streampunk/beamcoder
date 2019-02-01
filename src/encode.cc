@@ -121,6 +121,7 @@ create:
     printf("Params to context result: %i\n", ret);
   }
 
+  const napi_value fargs[] = { result, args[0] };
   status = fromAVCodecContext(env, encoder, &result, true);
   CHECK_BAIL;
 
@@ -130,7 +131,6 @@ create:
   CHECK_BAIL;
   status = napi_get_named_property(env, jsObject, "assign", &assign);
   CHECK_BAIL;
-  const napi_value fargs[] = { result, args[0] };
   status = napi_call_function(env, result, assign, 2, fargs, &result);
   CHECK_BAIL;
 

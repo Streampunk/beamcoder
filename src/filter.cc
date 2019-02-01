@@ -71,7 +71,7 @@ napi_status fromAVFilterPad(napi_env env, const AVFilterPad* filterPads, uint32_
   status = napi_create_string_utf8(env, avfilter_pad_get_name(filterPads, padsIndex), NAPI_AUTO_LENGTH, &nameVal);
   PASS_STATUS;
 
-  status = napi_create_string_utf8(env, av_get_media_type_string(avfilter_pad_get_type(filterPads, padsIndex)), 
+  status = napi_create_string_utf8(env, av_get_media_type_string(avfilter_pad_get_type(filterPads, padsIndex)),
                                    NAPI_AUTO_LENGTH, &typeVal);
   PASS_STATUS;
 
@@ -631,7 +631,7 @@ napi_status fromAVFilterLink(napi_env env, const AVFilterLink* link, napi_value*
     { "dst", nullptr, nullptr, getLinkDst, nullptr, nullptr, napi_enumerable, (void*)link },
     { "dstpad", nullptr, nullptr, getLinkDstPad, nullptr, nullptr, napi_enumerable, (void*)link },
     { "type", nullptr, nullptr, getLinkMediaType, nullptr, nullptr, napi_enumerable, (void*)link },
-    { "w", nullptr, nullptr, getLinkVidWidth, nullptr, nullptr, 
+    { "w", nullptr, nullptr, getLinkVidWidth, nullptr, nullptr,
       (AVMEDIA_TYPE_VIDEO == link->type) ? napi_enumerable : napi_default, (void*)link },
     { "h", nullptr, nullptr, getLinkVidHeight, nullptr, nullptr,
       (AVMEDIA_TYPE_VIDEO == link->type) ? napi_enumerable : napi_default, (void*)link },
@@ -908,7 +908,7 @@ public:
 
   AVFilterContext *getContext(const std::string &name) const {
     AVFilterContext *result = nullptr;
-    auto &c = mFiltContexts.find(name);
+    auto c = mFiltContexts.find(name);
     if (c != mFiltContexts.end())
       result = c->second;
     return result;
@@ -1066,7 +1066,7 @@ void filtererComplete(napi_env env, napi_status asyncStatus, void* data) {
   REJECT_STATUS;
   c->status = napi_create_string_utf8(env, "filterer", NAPI_AUTO_LENGTH, &typeName);
   REJECT_STATUS;
-  
+
   c->status = napi_create_external(env, c->filterGraph, graphFinalizer, nullptr, &filterGraphValue);
   REJECT_STATUS;
   c->status = napi_create_external(env, c->srcCtxs, ctxsFinalizer, nullptr, &srcContextsValue);

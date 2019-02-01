@@ -649,7 +649,7 @@ napi_value pix_fmts(napi_env env, napi_callback_info info) {
     status = napi_set_named_property(env, pixfmt, "comp", comps);
     CHECK_STATUS;
     status = beam_set_string_utf8(env, pixfmt, "alias",
-      (desc->alias != nullptr) ? (char*) desc->alias : "");
+      const_cast<char*>((desc->alias != nullptr) ? desc->alias : ""));
     CHECK_STATUS;
     status = napi_set_named_property(env, result, desc->name, pixfmt);
     CHECK_STATUS;
