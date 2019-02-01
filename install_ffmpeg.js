@@ -87,7 +87,7 @@ async function win32() {
 }
 
 async function linux() {
-  console.log("Installing FFmpeg dependencies for Beam Coder on Linux.");
+  console.log("Checking FFmpeg dependencies for Beam Coder on Linux.");
 
 }
 
