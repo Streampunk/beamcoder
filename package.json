@@ -4,6 +4,8 @@
   "description": "Node.JS native bindings to FFmpeg with support for streams and promises.",
   "main": "index.js",
   "scripts": {
+    "install": "node install_ffmpeg.js",
+    "postinstall" : "node-gyp rebuild",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -25,5 +27,12 @@
   "bugs": {
     "url": "https://github.com/Streampunk/beamcoder/issues"
   },
-  "homepage": "https://github.com/Streampunk/beamcoder#readme"
+  "homepage": "https://github.com/Streampunk/beamcoder#readme",
+  "dependencies": {
+    "unzip": "^0.1.11",
+    "bindings": "^1.3.1",
+    "segfault-handler": "^1.0.1",
+    "tape": "^4.9.2"
+  },
+  "gypfile": true
 }

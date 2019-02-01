@@ -59,3 +59,9 @@ typings/
 
 # next.js build output
 .next
+
+# Native module build dir
+build/
+
+# FFmpeg install folder
+ffmpeg/

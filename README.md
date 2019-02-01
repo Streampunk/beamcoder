@@ -8,17 +8,63 @@ The developers created beam coder to enable development of highly-scalable frame
 
 If you are looking to write your own frame-by-frame transcoder, media mangler or muxer, you are in the right place. However, if you want to control FFmpeg as a command line application over complete files or piped streams from a Node.JS application, many other projects are available, such as [fluent-ffmpeg](https://www.npmjs.com/package/fluent-ffmpeg).
 
-Does beam coder support X, Y or Z protocol / format / codec / file type / stream type / hardware etc.? If FFmpeg supports it, its possible, indeed likely. You have to start somewhere, and the developers have been testing with the codecs and formats they are familiar with. Please raise any problems or requests for additional features as issues or raise a pull request to add in missing features. Automated testing per dimension will be added in due course.
+Does beam coder support X, Y or Z protocol / format / codec / file type / stream type / hardware etc.? If FFmpeg supports it, its possible and likely. You have to start somewhere, and the developers have been testing with the codecs and formats they are familiar with. Please raise any problems or requests for additional features as issues or raise a pull request to add in missing features. Automated testing per dimension will be extended in due course.
 
 Beam coder will be a cross-platform module for Windows, Mac and Linux. In this early release, only Windows is supported. Other platforms will follow shortly.
 
-Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wikipedia.org/wiki/Aerostat) open-source product set, whereby a fleet of media-oriented _aerostats_ (_blimps_, _air ships_, _zeppelins_ etc.) are launched into the clouds. Media content is beamed between the fleet as if beams of light and beamed to and from locations on the planet surface as required. See also the [_Aerostat Beam Engine_](https://www.npmjs.com/package/beamengine).
+Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wikipedia.org/wiki/Aerostat) open-source product set, whereby a fleet of media-oriented _aerostats_ (_blimps_, _air ships_, _zeppelins_ etc.) are launched into the clouds. Media content is beamed between the fleet as if light beams, and beamed to and from locations on the planet surface as required. See also the [_Aerostat Beam Engine_](https://www.npmjs.com/package/beamengine).
+
+### Motivating example
+
+The following code snippet is an app that allows a user to access key frames of video from a folder of media files, e.g. `.MP4` media files on a camera memory card, as JPEG images in a browser.
+
+```Javascript
+const beamcoder = require('beamcoder');
+const Koa = require('koa');
+const app = module.exports = new Koa();
+
+app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
+  let parts = ctx.path.split('/'); // Split the path into filename and time
+  if ((parts.length < 3) || (isNaN(+parts[2]))) return; // Ignore favicon etc..
+  let dm = await beamcoder.demuxer('file:' + parts[1]); // Probe the file
+  await dm.seek({ time: +parts[2] }); // Seek to the closest keyframe to time
+  let packet = await dm.read(); // Find the next video packet (assumes strm. 0)
+  for ( ; packet.stream_index !== 0 ; packet = await dm.read() );
+  let dec = beamcoder.decoder({ format: dm, stream: 0 }); // Create a decoder
+  let decResult = await dec.decode(packet); // Decode the frame
+  if (decResult.frames.length === 0) // Frame may be buffered, so flush it out
+    decResult = await dec.flush();
+  // Filtering could be used to transform the picture here, e.g. scaling
+  let params = dec.extractParams(); // Extract decoder details
+  let enc = beamcoder.encoder({ // Create an encoder for JPEG data
+    name : 'mjpeg',
+    width : params.width,
+    height: params.height,
+    pix_fmt: params.format.indexOf('422') >= 0 ? 'yuvj422p' : 'yuvj420p',
+    time_base: [1, 1] });
+  let jpegResult = await enc.encode(decResult.frames[0]); // Encode the frame
+  await enc.flush(); // Tidy the encoder
+  ctx.type = 'image/jpeg'; // Set the Content-Type of the data
+  ctx.body = jpegResult.packets[0].data; // Return the JPEG image data
+});
+
+if (!module.parent) app.listen(3000); // Start the server
+```
 
 ## Installation
 
 ### Pre-requisites
 
+1. Install the LTS version of [Node.JS](https://nodejs.org/en/) for your platform.
+2. Enable [node-gyp - the Node.js native addon build tool](https://github.com/nodejs/node-gyp) for your platform by following the [installation instructions](https://github.com/nodejs/node-gyp#installation).
+
+Note: For MacOSX _Mojave_, install the following package after `xcode-select --install`:
+
+    /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
+
 ### Installing
+
+
 
 ## Usage
 
@@ -148,7 +194,7 @@ Object.values(dms).filter(x => x.extensions.indexOf('mp4') >= 0);
 
 The easiest way to create a demuxer is with a filename or URL, for example to open a transport stream containing the [Big Buck Bunny]() short movie in file `bbb_1080p_c.ts` in the `movie` sub-directory:
 
-    let tsDemuxer = await beamcoder.demuxer('media/bbb_1080p_c.ts');
+    let tsDemuxer = await beamcoder.demuxer('file:media/bbb_1080p_c.ts');
 
 The `demuxer` operation performs file system and/or network access and so is asynchronous. On successful resolution, the value is a Javascript object describing the contents of the media input after the contents of the file or stream has been probed. Here is a summary of the created demuxer:
 
@@ -197,6 +243,18 @@ The `demuxer` operation performs file system and/or network access and so is asy
 ```
 
 From this it is possible to determine that the file contains two streams, a HD video stream encoded with H.265/HEVC and a stereo audio stream encoded with AAC. The duration of the media is measure in microseconds (`AV_TIME_BASE`), so is approximately 596 seconds or 9m56s.
+
+For formats that require additional metadata, such as raw video formats, it may be necessary to pass additional information such as image size or pixel format. To do this, pass in an options object with a `url` property for the filename(s) (may contain `%d` for a sequence of numbered files) and `options` property for the values. For example:
+
+```Javascript
+let rawDemuxer = await beamcoder.demuxer({
+  url: 'file:movie/bbb/raw_pictures_%d.rgb',
+  options: {
+    video_size: '640x480',
+    pixel_format: 'rgb24'
+  }
+});
+```
 
 #### Reading frames
 
@@ -399,4 +457,4 @@ This software links to libraries from the FFmpeg project, including optional par
 
 ### Acknowledgements
 
-A massive thank you to the FFmpeg development team who's tireless and ongoing work make this and so many other software media projects possible.
+A massive thank you to the FFmpeg development team whom's tireless and ongoing work make this and so many other media software projects possible.
