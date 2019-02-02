@@ -59,7 +59,7 @@ napi_value decoder(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
   status = napi_has_named_property(env, args[0], "codec_id", &hasID);
   CHECK_STATUS;
-  status = napi_has_named_property(env, args[0], "format", &hasFormat);
+  status = napi_has_named_property(env, args[0], "demuxer", &hasFormat);
   CHECK_STATUS;
   status = napi_has_named_property(env, args[0], "stream", &hasStream);
   CHECK_STATUS;
@@ -67,7 +67,7 @@ napi_value decoder(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   if (hasFormat && hasStream) {
-    status = napi_get_named_property(env, args[0], "format", &formatJS);
+    status = napi_get_named_property(env, args[0], "demuxer", &formatJS);
     CHECK_STATUS;
     status = napi_get_named_property(env, formatJS, "_formatContext", &formatExt);
     CHECK_STATUS;

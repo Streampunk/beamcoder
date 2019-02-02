@@ -1,7 +1,7 @@
 {
   "name": "beamcoder",
   "version": "0.0.2",
-  "description": "Node.JS native bindings to FFmpeg.",
+  "description": "Node.js native bindings to FFmpeg.",
   "main": "index.js",
   "scripts": {
     "install": "node install_ffmpeg.js",
