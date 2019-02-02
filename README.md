@@ -2,15 +2,15 @@
 
 [Node.js](https://nodejs.org/) native bindings to [FFmpeg](https://www.ffmpeg.org/) with support for asynchronous processing via streams and promises.
 
-The aim of this module is to facilitate access to the capabilities of FFmpeg - including media muxing, demuxing, encoding, decoding and filtering - from Node.js applications. Rather than using the filesystem and controlling the FFmpeg as an external command line process, the beam coder executes functions of the FFmpeg _libav*_ libraries directly. Work is configured by Javascript objects and jobs execute over data buffers that are shared between Javascript and C. Long running media processing operations are asynchronous, running as promises that execute native code separately from the main event loop.
+The aim of this module is to facilitate access to the capabilities of FFmpeg - including media muxing, demuxing, encoding, decoding and filtering - from Node.js applications. Rather than using the filesystem and controlling the FFmpeg as an external command line process, the beam coder executes functions of the FFmpeg _libav*_ libraries directly. Work is configured with Javascript objects and jobs execute over data buffers that are shared between Javascript and C. Long running media processing operations are asynchronous, running as promises that execute native code separately from the main event loop.
 
 ### Example
 
-The following code snippet is an app that allows a user to access key frames of video from the curremt folder of media files, e.g. `.MP4` media files on a camera memory card, as JPEG images in a browser. For example, to access a key frame near to 42.5 seconds into a file called `GOPR9502.MP4`:
+The following code snippet is an app that allows a user to access key frames of video from the current folder, e.g. `.MP4` media files on a camera memory card, as JPEG images in a browser. For example, to access a key frame near to 42.5 seconds from the start of a file called `GOPR9502.MP4`:
 
     http://localhost:3000/GOPR9502.MP4/42.5
 
-Beam coder uses promises and so the code for the server works best with [koa](https://koajs.com):
+Beam coder uses promises and so the code for the server works well with [koa](https://koajs.com):
 
 ```Javascript
 const beamcoder = require('beamcoder');
@@ -22,7 +22,7 @@ app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
   if ((parts.length < 3) || (isNaN(+parts[2]))) return; // Ignore favicon etc..
   let dm = await beamcoder.demuxer('file:' + parts[1]); // Probe the file
   await dm.seek({ time: +parts[2] }); // Seek to the closest keyframe to time
-  let packet = await dm.read(); // Find the next video packet (assumes strm. 0)
+  let packet = await dm.read(); // Find the next video packet (assumes stream 0)
   for ( ; packet.stream_index !== 0 ; packet = await dm.read() );
   let dec = beamcoder.decoder({ format: dm, stream: 0 }); // Create a decoder
   let decResult = await dec.decode(packet); // Decode the frame
@@ -86,6 +86,9 @@ If you want to use a local version of FFmpeg, before the install, symbolic link 
     node_modules/beamcoder/ffmpeg/ffmpeg-4.1-win64-shared
     node_modules/beamcoder/ffmpeg/ffmpeg-4.1-win64-dev
 
+To ensure that sufficient threads are available to process several requests in parallel, set the `UV_THREADPOOL_SIZE` environment variable, e.g.:
+
+    set UV_THREADPOOL_SIZE=16
 
 #### Linux
 
@@ -101,6 +104,10 @@ Beam coder is intended to be used as a module/package from other applications. I
     npm install beamcoder
 
 This will check for all the necessary dependencies and then compile the native extensions.
+
+To ensure that sufficient threads are available to process several requests in parallel, set the `UV_THREADPOOL_SIZE` environment variable, e.g.:
+
+    export UV_THREADPOOL_SIZE 32
 
 #### Mac
 
@@ -123,7 +130,7 @@ const beamcoder = require('beamcoder');
 
 async function run() {
   let demuxer = await beamcoder.demuxer('/path/to/file.mp4'); // Create a demuxer for a file
-  let decoder = await beamcoder.decoder({ name: 'h264' }); // Codec asserted. Can pass in demuxer.
+  let decoder = beamcoder.decoder({ name: 'h264' }); // Codec asserted. Can pass in demuxer.
   let packet = {};
   for ( let x = 0 ; x < 1000 && packet != null ; x++ ) {
     packet = await format.read(); // Read next frame. Note: returns null for EOF
@@ -179,11 +186,11 @@ q.pts = 12; // Set the value pts for q to 12
 q.data = Buffer.from('Text data for this packet.'); // Set packet data
 ```
 
-This is achieved with [setters and getters](). Note that not every readable property is writeable. This may depend on context. For example some properties are set only by _libav*_ or can only be updated by the user when encoding. The work to convert a value from C to Javascript is only done when each separate property is requested, which is worth bearing in mind before being too liberal with, say, `console.log()` that enumerate every property of an object.
+This is achieved with [setters and getters](https://www.w3schools.com/js/js_object_accessors.asp). Note that not every readable (_enumerable_) property is writeable. This may depend on context. For example, some properties are set only by _libav*_ or can only be updated by the user when encoding. The work to convert a value from C to Javascript is only done when each separate property is requested, which is worth bearing in mind before being too liberal with, say, `console.log()` that enumerates every property of an object.
 
 #### Freeing and deleting
 
-Care has been taken to ensure that the reference-counted then garbage collected data structures of Javascript work in tandem with the allocation and free mechanisms of _libav*_. As such, there is no explicit requirement to free or delete objects. As with any Javascript application, if you hold onto references to objects when they are no longer required, garbage collection is prevented and this may have a detrimental or even catastrophic impact on performance.
+Care has been taken to ensure that the reference-counted then garbage collected data structures of Javascript work in tandem with the allocation and free mechanisms of _libav*_. As such, there is no explicit requirement to free or delete objects. As with any Javascript application, if you hold onto references to objects when they are no longer required, garbage collection is prevented and this may have a detrimental impact on performance.
 
 #### Type mappings
 

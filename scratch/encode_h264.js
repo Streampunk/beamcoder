@@ -70,12 +70,12 @@ async function run() {
     }
 
     let packets = await encoder.encode(frame);
-    console.log(i, packets.totalTime);
+    console.log(i, packets.total_time);
     packets.packets.forEach(x => outFile.write(x.data));
   }
 
   let p2 = await encoder.flush();
-  console.log(p2.packets.length, p2.totalTime);
+  console.log(p2.packets.length, p2.total_time);
   p2.packets.forEach(x => outFile.write(x.data));
   outFile.end(endcode);
 

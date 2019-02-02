@@ -251,7 +251,7 @@ void encodeComplete(napi_env env, napi_status asyncStatus, void* data) {
 
   c->status = napi_create_int64(env, c->totalTime, &value);
   REJECT_STATUS;
-  c->status = napi_set_named_property(env, result, "totalTime", value);
+  c->status = napi_set_named_property(env, result, "total_time", value);
   REJECT_STATUS;
 
   napi_status status;
