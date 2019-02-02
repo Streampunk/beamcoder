@@ -1,5 +1,5 @@
 /*
-  Aerostat Beam Engine - Redis-backed highly-scale-able and cloud-fit media beam engine.
+  Aerostat Beam Coder - Node.js native bindings to FFmpeg
   Copyright (C) 2019 Streampunk Media Ltd.
 
   This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@ const beamcoder = require('bindings')('beamcoder');
 const SegfaultHandler = require('segfault-handler');
 SegfaultHandler.registerHandler('crash.log');
 
-const splash = `Aerostat Beam Engine  Copyright (C) 2019  Streampunk Media Ltd
+const splash = `Aerostat Beam Coder  Copyright (C) 2019  Streampunk Media Ltd
 GPL v3.0 or later license. This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it
 under certain conditions. Conditions and warranty at:
