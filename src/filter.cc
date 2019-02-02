@@ -1,5 +1,5 @@
 /*
-  Aerostat Beam Engine - Redis-backed highly-scale-able and cloud-fit media beam engine.
+  Aerostat Beam Coder - Node.js native bindings for FFmpeg.
   Copyright (C) 2018  Streampunk Media Ltd.
 
   This program is free software: you can redistribute it and/or modify

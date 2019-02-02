@@ -29,11 +29,11 @@ const splash = `Aerostat Beam Coder  Copyright (C) 2019  Streampunk Media Ltd
 GPL v3.0 or later license. This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it
 under certain conditions. Conditions and warranty at:
-https://github.com/Streampunk/aerostat/blob/master/LICENSE`;
+https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
 
 console.log(splash);
 
-const { Writable } = require('stream');
+const { Writable } = require("stream");
 
 function createBeamStream(params) {
   const governor = new beamcoder.governor(params);

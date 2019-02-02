@@ -1,5 +1,5 @@
 /*
-  Aerostat Beam Coder - Node.JS native mappings for FFmpeg.
+  Aerostat Beam Coder - Node.js native bindings for FFmpeg.
   Copyright (C) 2019  Streampunk Media Ltd.
 
   This program is free software: you can redistribute it and/or modify
