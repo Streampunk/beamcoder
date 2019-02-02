@@ -1,27 +1,21 @@
 # Beam Coder
 
-[Node.JS](https://nodejs.org/) native bindings to [FFmpeg](https://www.ffmpeg.org/) with support for asynchronous processing via streams and promises.
+[Node.js](https://nodejs.org/) native bindings to [FFmpeg](https://www.ffmpeg.org/) with support for asynchronous processing via streams and promises.
 
-The aim of this module is to facilitate access to the capabilities of FFmpeg - including media muxing, demuxing, encoding, decoding and filtering - from Node.JS applications. Rather than using the filesystem and controlling the FFmpeg as an external command line process, the beam coder executes functions of the FFmpeg _libav*_ libraries directly. Work is configured by Javascript objects and jobs execute over data buffers that are shared between Javascript and C. Long running media processing operations are asynchronous, running as promises that execute native code separately from the main event loop.
+The aim of this module is to facilitate access to the capabilities of FFmpeg - including media muxing, demuxing, encoding, decoding and filtering - from Node.js applications. Rather than using the filesystem and controlling the FFmpeg as an external command line process, the beam coder executes functions of the FFmpeg _libav*_ libraries directly. Work is configured by Javascript objects and jobs execute over data buffers that are shared between Javascript and C. Long running media processing operations are asynchronous, running as promises that execute native code separately from the main event loop.
 
-The developers created beam coder to enable development of highly-scalable frame-by-frame, packet-by-packet web-fit nanoservices built out the web-platform, combining media IO functions with the comprehensive library of other scalable IO modules for Node, such as [express](https://expressjs.com/), [koa](https://koajs.com/), [ioredis](https://www.npmjs.com/package/ioredis) etc..
+### Example
 
-If you are looking to write your own frame-by-frame transcoder, media mangler or muxer, you are in the right place. However, if you want to control FFmpeg as a command line application over complete files or piped streams from a Node.JS application, many other projects are available, such as [fluent-ffmpeg](https://www.npmjs.com/package/fluent-ffmpeg).
+The following code snippet is an app that allows a user to access key frames of video from the curremt folder of media files, e.g. `.MP4` media files on a camera memory card, as JPEG images in a browser. For example, to access a key frame near to 42.5 seconds into a file called `GOPR9502.MP4`:
 
-Does beam coder support X, Y or Z protocol / format / codec / file type / stream type / hardware etc.? If FFmpeg supports it, its possible and likely. You have to start somewhere, and the developers have been testing with the codecs and formats they are familiar with. Please raise any problems or requests for additional features as issues or raise a pull request to add in missing features. Automated testing per dimension will be extended in due course.
+    http://localhost:3000/GOPR9502.MP4/42.5
 
-Beam coder will be a cross-platform module for Windows, Mac and Linux. In this early release, only Windows is supported. Other platforms will follow shortly.
-
-Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wikipedia.org/wiki/Aerostat) open-source product set, whereby a fleet of media-oriented _aerostats_ (_blimps_, _air ships_, _zeppelins_ etc.) are launched into the clouds. Media content is beamed between the fleet as if light beams, and beamed to and from locations on the planet surface as required. See also the [_Aerostat Beam Engine_](https://www.npmjs.com/package/beamengine).
-
-### Motivating example
-
-The following code snippet is an app that allows a user to access key frames of video from a folder of media files, e.g. `.MP4` media files on a camera memory card, as JPEG images in a browser.
+Beam coder uses promises and so the code for the server works best with [koa](https://koajs.com):
 
 ```Javascript
 const beamcoder = require('beamcoder');
 const Koa = require('koa');
-const app = module.exports = new Koa();
+const app = new Koa();
 
 app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
   let parts = ctx.path.split('/'); // Split the path into filename and time
@@ -35,12 +29,11 @@ app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
   if (decResult.frames.length === 0) // Frame may be buffered, so flush it out
     decResult = await dec.flush();
   // Filtering could be used to transform the picture here, e.g. scaling
-  let params = dec.extractParams(); // Extract decoder details
   let enc = beamcoder.encoder({ // Create an encoder for JPEG data
     name : 'mjpeg',
-    width : params.width,
-    height: params.height,
-    pix_fmt: params.format.indexOf('422') >= 0 ? 'yuvj422p' : 'yuvj420p',
+    width : dec.width,
+    height: dec.height,
+    pix_fmt: dec.pix_fmt.indexOf('422') >= 0 ? 'yuvj422p' : 'yuvj420p',
     time_base: [1, 1] });
   let jpegResult = await enc.encode(decResult.frames[0]); // Encode the frame
   await enc.flush(); // Tidy the encoder
@@ -48,23 +41,70 @@ app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
   ctx.body = jpegResult.packets[0].data; // Return the JPEG image data
 });
 
-if (!module.parent) app.listen(3000); // Start the server
+app.listen(3000); // Start the server on port 3000
 ```
+
+### Scope
+
+The developers created beam coder to enable development of highly-scalable frame-by-frame, packet-by-packet web-fit nanoservices built out the web-platform, combining media IO functions with the comprehensive library of other scalable IO modules for Node, such as [express](https://expressjs.com/), [koa](https://koajs.com/), [ioredis](https://www.npmjs.com/package/ioredis) etc..
+
+If you are looking to write your own frame-by-frame transcoder, media mangler or muxer, you are in the right place. However, if you want to control FFmpeg as a command line application over complete files or piped streams from a Node.JS application, many other projects are available, such as [fluent-ffmpeg](https://www.npmjs.com/package/fluent-ffmpeg).
+
+Does beam coder support X, Y or Z protocol / format / codec / file type / stream type / hardware etc.? If FFmpeg supports it, its possible and likely. You have to start somewhere, and the developers have been testing with the codecs and formats they are familiar with. Please raise any problems or requests for additional features as issues or raise a pull request to add in missing features. Automated testing will be extended in due course.
+
+Beam coder will be a cross-platform module for Windows, Mac and Linux. In this early release, only Windows and Linux are supported. The Mac platform will follow shortly. The release version of FFmpeg that beam coder links with is 4.1.
+
+### Aerostat
+
+Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wikipedia.org/wiki/Aerostat) open-source product set, whereby a fleet of media-oriented _aerostats_ (_blimps_, _air ships_, _zeppelins_ etc.) are launched into the clouds. Media content is beamed between the fleet as if light beams, and beamed to and from locations on the planet surface as required. See also the [_Aerostat Beam Engine_](https://www.npmjs.com/package/beamengine).
 
 ## Installation
 
 ### Pre-requisites
 
-1. Install the LTS version of [Node.JS](https://nodejs.org/en/) for your platform.
+1. Install the LTS version of [Node.js](https://nodejs.org/en/) for your platform.
 2. Enable [node-gyp - the Node.js native addon build tool](https://github.com/nodejs/node-gyp) for your platform by following the [installation instructions](https://github.com/nodejs/node-gyp#installation).
 
 Note: For MacOSX _Mojave_, install the following package after `xcode-select --install`:
 
     /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
 
+This release of Beamcoder only supports 64-bit (`x86_64`) architectures.
+
 ### Installing
 
+#### Windows
 
+Beam coder is intended to be used as a module/package from other Node.js packages and applications. Install beam coder from the root folder of your package as follows:
+
+    npm install beamcoder
+
+This will install all necessary dependencies, download the FFmpeg shared and dev packages with include and library files, and then compile the native extensions.
+
+If you want to use a local version of FFmpeg, before the install, symbolic link appropriate folders to:
+
+    node_modules/beamcoder/ffmpeg/ffmpeg-4.1-win64-shared
+    node_modules/beamcoder/ffmpeg/ffmpeg-4.1-win64-dev
+
+
+#### Linux
+
+On Linux, use the appropriate package manager to install the FFmpeg 4.1 development dependencies first. An error will be printed if these cannot be found at expected locations. For example, on Ubuntu:
+
+    sudo add-apt-repository ppa:jonathonf/ffmpeg-4
+    sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev
+
+An example for Redhat / Fedora / CentOs will follow.
+
+Beam coder is intended to be used as a module/package from other applications. Install beam coder from the root folder of your package as follows:
+
+    npm install beamcoder
+
+This will check for all the necessary dependencies and then compile the native extensions.
+
+#### Mac
+
+To follow.
 
 ## Usage
 

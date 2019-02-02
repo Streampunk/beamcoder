@@ -64,7 +64,6 @@ function createDemuxer(params) {
     return beamcoder.demuxer(params);
 }
 
-module.exports = {
-  beamcoder,
-  createDemuxer
-};
+beamcoder.createDemuxer = createDemuxer;
+
+module.exports = beamcoder;
