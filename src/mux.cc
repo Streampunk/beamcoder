@@ -305,7 +305,6 @@ napi_value openIO(napi_env env, napi_callback_info info) {
 
 void writeHeaderExecute(napi_env env, void* data) {
   writeHeaderCarrier* c = (writeHeaderCarrier*) data;
-  printf("Write header execute\n");
 
   c->result = avformat_write_header(c->format, &c->options);
   if (c->result < 0) {
@@ -411,7 +410,6 @@ napi_value writeHeader(napi_env env, napi_callback_info info) {
 
 void initOutputExecute(napi_env env, void* data) {
   initOutputCarrier* c = (initOutputCarrier*) data;
-  printf("Input output execute\n");
 
   c->result = avformat_init_output(c->format, &c->options);
   if (c->result < 0) {
@@ -517,7 +515,6 @@ napi_value initOutput(napi_env env, napi_callback_info info) {
 
 void writeFrameExecute(napi_env env, void* data) {
   writeFrameCarrier* c = (writeFrameCarrier*) data;
-  printf("Write frame execute\n");
   int ret;
 
   if (c->interleaved) {
@@ -571,6 +568,9 @@ napi_value writeFrame(napi_env env, napi_callback_info info) {
   bool isArray;
   bool hasOptions = false;
   writeFrameCarrier* c = new writeFrameCarrier;
+  packetData* packetData;
+  frameData* frameData;
+  int ret;
 
   c->status = napi_create_promise(env, &c->_deferred, &promise);
   REJECT_RETURN;
@@ -612,8 +612,13 @@ napi_value writeFrame(napi_env env, napi_callback_info info) {
     c->status = napi_typeof(env, prop, &type);
     REJECT_RETURN;
     if (type == napi_external) {
-      c->status = napi_get_value_external(env, prop, (void**) &c->packet);
+      c->status = napi_get_value_external(env, prop, (void**) &packetData);
       REJECT_RETURN;
+      c->packet = av_packet_alloc();
+      if ((ret = av_packet_ref(c->packet, const_cast<AVPacket*>(packetData->packet)))) {
+        REJECT_ERROR_RETURN(avErrorMsg("Failed to reference packet: ", ret),
+          BEAMCODER_ERROR_ENOMEM);
+      };
       goto work;
     }
 
@@ -628,8 +633,13 @@ napi_value writeFrame(napi_env env, napi_callback_info info) {
     c->status = napi_typeof(env, prop, &type);
     REJECT_RETURN;
     if (type == napi_external) {
-      c->status = napi_get_value_external(env, prop, (void**) &c->frame);
+      c->status = napi_get_value_external(env, prop, (void**) &frameData);
       REJECT_RETURN;
+      c->frame = av_frame_alloc();
+      if ((ret = av_frame_ref(c->frame, const_cast<AVFrame*>(frameData->frame)))) {
+        REJECT_ERROR_RETURN(avErrorMsg("Failed to reference frame: ", ret),
+          BEAMCODER_ERROR_ENOMEM);
+      };
     }
 
     c->status = napi_get_named_property(env,
@@ -668,7 +678,6 @@ work:
 void writeTrailerExecute(napi_env env, void* data) {
   writeTrailerCarrier* c = (writeTrailerCarrier*) data;
   int retWrite = 0, retClose = 0;
-  printf("Write trailer execute.\n");
 
   retWrite = av_write_trailer(c->format);
   if (c->format->pb != nullptr) {

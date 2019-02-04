@@ -25,6 +25,7 @@
 #include "node_api.h"
 #include "beamcoder_util.h"
 #include "format.h"
+#include "frame.h"
 
 
 extern "C" {
@@ -89,6 +90,8 @@ struct writeFrameCarrier : carrier {
   int streamIndex = 0;
   bool interleaved = true;
   ~writeFrameCarrier() {
+    if (packet != nullptr) { av_packet_free(&packet); }
+    if (frame != nullptr) { av_frame_free(&frame); }
   }
 };
 

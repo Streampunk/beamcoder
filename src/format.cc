@@ -3101,16 +3101,18 @@ void formatContextFinalizer(napi_env env, void* data, void* hint) {
 
 napi_value newStream(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result, name, assign, global, jsObject, jsContext, jsStreams;
+  napi_value result, name, assign, global, jsObject, jsContext, jsStreams, extInput;
   napi_valuetype type;
   bool isArray;
   AVFormatContext* fmtCtx;
   AVStream* stream;
+  const AVStream* inputStream;
   char* codecName = nullptr;
   size_t strLen;
   AVCodec* codec = nullptr;
   const AVCodecDescriptor* codecDesc = nullptr;
   uint32_t streamCount;
+  int ret;
 
   size_t argc = 1;
   napi_value args[1];
@@ -3136,6 +3138,21 @@ napi_value newStream(napi_env env, napi_callback_info info) {
     status = napi_get_value_string_utf8(env, name, codecName, strLen + 1, &strLen);
     CHECK_STATUS;
 
+    if (strlen(codecName) == 0) {
+      // printf("Searching for input stream codec name.\n");
+      status = napi_get_named_property(env, args[0], "_stream", &extInput);
+      CHECK_STATUS;
+      status = napi_typeof(env, extInput, &type);
+      CHECK_STATUS;
+      if (type != napi_external) {
+        NAPI_THROW_ERROR("Unable to determine the codec name for the new stream.");
+      }
+      status = napi_get_value_external(env, extInput, (void**) &inputStream);
+      CHECK_STATUS;
+      free(codecName);
+      codecName = strdup(avcodec_get_name(inputStream->codecpar->codec_id));
+    }
+
     if (fmtCtx->oformat) { // Look for encoders
       codec = avcodec_find_encoder_by_name(codecName);
       if (codec == nullptr) {
@@ -3154,11 +3171,13 @@ napi_value newStream(napi_env env, napi_callback_info info) {
         }
       }
     }
-    printf("From name %s, selected AVCodec %s\n", codecName,
-      (codec != nullptr) ? codec->name : "");
+    // printf("From name %s, selected AVCodec %s\n", codecName,
+    //   (codec != nullptr) ? codec->name : "");
     free(codecName);
   }
   stream = avformat_new_stream(fmtCtx, codec);
+  // printf("Stupidist codec timebase is %i/%i\n", stream->codec->time_base.num,
+  //   stream->codec->time_base.den);
 
   if (stream == nullptr) {
     NAPI_THROW_ERROR("Unable to create a stream for this format context.");
@@ -3169,9 +3188,28 @@ napi_value newStream(napi_env env, napi_callback_info info) {
     stream->codecpar->codec_id = codec->id;
     // TODO set codec_tag here
   }
+
+  status = napi_get_named_property(env, args[0], "_stream", &extInput);
+  CHECK_STATUS;
+  status = napi_typeof(env, extInput, &type);
+  CHECK_STATUS;
+  // printf("External input type is %i\n", type);
+  if (type == napi_external) { // Output streams set with input stream?
+    // printf("Attempting to set transfer internal stream timing.\n");
+    status = napi_get_value_external(env, extInput, (void**) &inputStream);
+    CHECK_STATUS;
+    ret = avformat_transfer_internal_stream_timing_info(fmtCtx->oformat,
+      stream, inputStream, AVFMT_TBCF_AUTO);
+    if (ret < 0) {
+      printf(avErrorMsg("DEBUG: Failed to transfer timebase: ", ret));
+    }
+  }
+
   status = fromAVStream(env, stream, &result);
   CHECK_STATUS;
 
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
   if ((argc >=1) && (type == napi_object)) {
     status = napi_get_global(env, &global);
     CHECK_STATUS;
@@ -3772,7 +3810,7 @@ napi_value setStreamEventFlags(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value args[1];
 
-  status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &stream);
+  status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &stream);
   CHECK_STATUS;
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set the stream event_flags property.")
@@ -4101,13 +4139,23 @@ napi_value setStreamSideData(napi_env env, napi_callback_info info) {
   return result;
 }
 
+napi_value getStreamTypeName(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value typeName;
+
+  status = napi_create_string_utf8(env, "Stream", NAPI_AUTO_LENGTH, &typeName);
+  CHECK_STATUS;
+
+  return typeName;
+}
+
 napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result) {
   napi_status status;
-  napi_value jsStream, extStream, typeName, undef;
+  napi_value jsStream, extStream, undef, nameValue;
 
   status = napi_create_object(env, &jsStream);
   PASS_STATUS;
-  status = napi_create_string_utf8(env, "Stream", NAPI_AUTO_LENGTH, &typeName);
+  status = napi_create_string_utf8(env, "", NAPI_AUTO_LENGTH, &nameValue);
   PASS_STATUS;
   status = napi_get_undefined(env, &undef);
   PASS_STATUS;
@@ -4117,8 +4165,8 @@ napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result) {
 
   // Note - name is a dummy property used to avoid it being accidentally set
   napi_property_descriptor desc[] = {
-    { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
-    { "index", nullptr, nullptr, getStreamIndex, nullptr, nullptr, napi_enumerable, stream },
+    { "type", nullptr, nullptr, getStreamTypeName, nop, nullptr, napi_enumerable, nullptr },
+    { "index", nullptr, nullptr, getStreamIndex, nop, nullptr, napi_enumerable, stream },
     { "id", nullptr, nullptr, getStreamID, setStreamID, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "time_base", nullptr, nullptr, getStreamTimeBase, setStreamTimeBase, nullptr,
@@ -4140,7 +4188,7 @@ napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result) {
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "avg_frame_rate", nullptr, nullptr, getStreamAvgFrameRate, setStreamAvgFrameRate, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
-    { "attached_pic", nullptr, nullptr, getStreamAttachedPic, nullptr, nullptr,
+    { "attached_pic", nullptr, nullptr, getStreamAttachedPic, nop, nullptr,
        napi_enumerable, stream },
     { "side_data", nullptr, nullptr, getStreamSideData, setStreamSideData, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
@@ -4150,7 +4198,7 @@ napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result) {
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "codecpar", nullptr, nullptr, getStreamCodecPar, setStreamCodecPar, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
-    { "name", nullptr, nullptr, nullptr, nullptr, typeName, napi_writable, nullptr },
+    { "name", nullptr, nullptr, nullptr, nullptr, nameValue, napi_writable, nullptr },
     { "_stream", nullptr, nullptr, nullptr, nullptr, extStream, napi_default, nullptr },
     // 20
     { "__codecPar", nullptr, nullptr, nullptr, nullptr, undef, napi_writable, nullptr }
