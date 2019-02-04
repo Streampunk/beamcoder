@@ -23,8 +23,36 @@ const beamcoder = require('../index.js');
 
 async function run() {
   let demuxer = await beamcoder.demuxer('../media/sound/BBCNewsCountdown.wav');
+  console.log(demuxer.streams[0].codecpar);
   let muxer = beamcoder.muxer({ filename: 'file:test.wav' });
-  let stream = muxer.newStream(demuxer.streams[0]);
+  let stream = muxer.newStream({
+    name: 'pcm_s16le',
+    time_base: [1, 48000 ],
+    interleaved: false });
+  Object.assign(stream.codecpar, {
+    channels: 2,
+    sample_rate: 48000,
+    format: 's16',
+    channel_layout: 'stereo',
+    block_align: 4,
+    bits_per_coded_sample: 16,
+    bit_rate: 48000 * 4 * 8
+  });
+  /* let stream = muxer.newStream({
+    name: 'pcm_s16le',
+    time_base: [1, 48000 ],
+    codecpar: {
+      name: 'pcm_s16le',
+      channels: 2,
+      sample_rate: 48000,
+      format: 's16',
+      channel_layout: 'stereo',
+      block_align: 4,
+      bits_per_coded_sample: 16,
+      bit_rate: 48000*4
+    }
+  }); */
+  console.log(stream.codecpar);
   // stream.time_base = demuxer.streams[0].time_base;
   // stream.codecpar = demuxer.streams[0].codecpar;
   await muxer.openIO();

@@ -376,7 +376,7 @@ The seek operation has two additional flags that can be specified. The `backward
 
     await demuxer.seek({ frame: 31, stream_index: 0, backward: true, any: true});
 
-#### Using Node.js streams
+#### Node.js readable streams
 
 ___Simon___
 
@@ -591,13 +591,97 @@ Call the flush method once and do not use the encoder for further encoding once 
 
 ### Muxing
 
-#### Opening output
+Muxing (multiplexing) is the operation of interleaving media data from single streams into a single file or stream, the opposite process to demuxing. In its simplest form, a single stream is written to a file, adding any necessary headers, padding or trailing data according to the file format, for example writing a WAVE file involves writing a header followed by the PCM audio data.
+
+For more complex formats, such as an MP4 file, video and audio data packets with similar timestamps are written to the same part of the output file. When the file is subsequently read, video and audio that needs to be presented together can be read from the same part of the file.
+
+The muxing procedure has five basic stages:
+
+1. Choosing the output format and setting up the output stream metadata.
+2. Opening the file or streams for writing.
+3. Writing the header metadata.
+4. In a loop, writing packets and/or frames.
+5. Writing the trailer and closing the file or stream.
+
+#### Output format
+
+A first stage of creating a muxer is to select an output format. The complete list of output formats can be queried as follows:
+
+    let mxs = beamcoder.muxers();
+
+Each muxer has an `extensions` property that is a comma-separated list commonly used file extensions for the output format. This can be searched, or alternatively beam coder exposes FFmpeg's capability to guess an output format from a filename, format name or mime type. For example:
+
+    of = beamcoder.guessFormat('mpegts'); // Finds the output format named 'mpegts'
+    of = beamcoder.guessFormat('image/png'); // Output format for PNG image data
+    of = beamcoder.guessFormat('fred.jpeg'); // Output format for '.jpeg' file extension
+
+To create a muxer, user an options object and do one of the following:
+
+* set a `format_name` or `name` property to that of an output format;
+* set a `filename` property to a filename with extension to be used to guess the output format;
+* set an `oformat` property to an output format object retrieved with, say, `beamcoder.muxers()` or `beamcoder.guessFormat()`.
+
+The next step is to add the streams for the format. This can only be done using the `newStream()` method of a muxer and must be done in order. The steps are:
+
+1. Create the stream with a codec name.
+2. Set the `time_base` for the stream.
+3. Update the codec parameters for the stream, ensuring at least `width`, `height` and `format` (pixel format) are set for video streams and `sample_rate`, `channels` and/or `channel_layout` and `format` (sample format) are set of audio streams.
+
+This process is illustrated in the following code:
+
+```javascript
+let muxer = beamcoder.muxer({ filename: 'test.wav' }); // Filename becomes muxer's 'url'
+let stream = muxer.newStream({
+  name: 'pcm_s16le',
+  time_base: [1, 48000 ],
+  interleaved: false }); // Set to false for manual interleaving, true for automatic
+Object.assign(stream.codecpar, { // Object.assign copies over all properties
+  channels: 2,
+  sample_rate: 48000,
+  format: 's16',
+  channel_layout: 'stereo',
+  block_align: 4, // Should be set for WAV
+  bits_per_coded_sample: 16,
+  bit_rate: 48000*4
+});
+```
+
+Note that the stream is added to the muxer automatically with the next available stream index. A reference to the stream is returned by `newStream()` for convenience.
+
+As an alternative, for a transmuxing process (direct connection from demuxer to muxer to rewrap content with transcoding), a new muxer stream can be created with a demuxer. An output format will be found to match the input format and the streams and their codec parameters will be copied over. For example:
+
+    let muxAudioStream = muxer.newStream(demuxer.streams[1]);
+
+#### Opening the output
+
+The next step is to open the output file or stream. If a filename or URL has been provided with the creation of the muxer using the `filename` property, the output can be opened with the `openIO()` method of the muxer.
+
+Alternatively, pass in an options object containing the `filename` or `url`. The options object can also contain additional private data options to configure the behaviour of the muxer. For details of the available options, see the associated `OutputFormat` object which is the `oformat` property of the muxer. Specifically:
+
+    console.log(muxer.oformat.priv_class.options);
+
+An example of opening the muxer's output for a WAVE file:
+
+```javascript
+muxer.openIO({
+  url: 'file:test2.wav', // Update URL
+  options: { // Private class options
+    write_peak: 'on', // Write Peak Envelope chunk - enum of 'off', 'on', 'only'.
+    peak_format: 2, // The format of the peak envelope data (1: uint8, 2: uint16).
+    write_bext: false // Write BEXT chunk.
+  }
+});
+```
 
 #### Writing header
 
 #### Writing packets and frames
 
 #### Writing trailer
+
+#### Node.js writable streams
+
+___Simon___ ?
 
 ### Codec parameters
 

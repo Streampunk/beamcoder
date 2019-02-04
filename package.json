@@ -1,6 +1,6 @@
 {
   "name": "beamcoder",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Node.js native bindings to FFmpeg.",
   "main": "index.js",
   "scripts": {
