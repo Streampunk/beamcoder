@@ -24,7 +24,7 @@ app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
   await dm.seek({ time: +parts[2] }); // Seek to the closest keyframe to time
   let packet = await dm.read(); // Find the next video packet (assumes stream 0)
   for ( ; packet.stream_index !== 0 ; packet = await dm.read() );
-  let dec = beamcoder.decoder({ demuxer: dm, stream: 0 }); // Create a decoder
+  let dec = beamcoder.decoder({ demuxer: dm, stream_index: 0 }); // Create a decoder
   let decResult = await dec.decode(packet); // Decode the frame
   if (decResult.frames.length === 0) // Frame may be buffered, so flush it out
     decResult = await dec.flush();
@@ -182,11 +182,11 @@ Factory methods and their associated introspection methods that allow discovery 
 * `...filterer()` - find details of filters with `...filters()`.
 * `...encoder()` - find encoder codecs with `encoders()`.
 * `...muxer()` - find muxer output formats with `...muxers()`.
-* `...packet()` - create a data packet. See [creating data packets section](#creating_data_packets).
-* `...frame()` - construct frames, normally with a `format` property that is one of `...pix_fmts()` or `...sample_fmts()`. See [creating frames section](#creating_frames).
-* `...codecParameters` - create codec parameters for one of the `...codecs()`. See [codec parameters section](#codec_parameters) below.
+* `...packet()` - create a data packet. See [creating packets section](#creating-packets).
+* `...frame()` - construct frames, normally with a `format` property that is one of `...pix_fmts()` or `...sample_fmts()`. See [creating frames section](#creating-frames).
+* `...codecParameters` - create codec parameters for one of the `...codecs()`. See [codec parameters section](#codec-parameters) below.
 
-Note some special cases to this rule, such as creating a _demuxer_ from a URL or filename. In this case, a single string URL parameter can be passed to the constructor rather than an options object. As a stream or file must be accessed before the demuxer is constructed, a promise to create the demuxer is returned rather than a demuxer directly. This allows the file or streams operation to be asynchronous. See the description of each processing stage for details.
+Note some special cases to this rule, such as creating a _demuxer_ from a URL or filename. In this case, a single string URL parameter can be passed to the constructor rather than an options object. See the [demuxer section](#demuxer) for details.
 
 #### Reading and modifying
 
@@ -482,7 +482,7 @@ Packets for decoding can be created without reading them from a demuxer. For exa
 
 Packet data buffers are shared between C and Javascript so can be written to and modified without having to write the buffer back into the packet.
 
-#### Flush
+#### Flush decoder
 
 Once all packets have been passed to the decoder, it is necessary to call the asynchronous `flush` operation. If any frames are yet to be delivered by the decoder, they will be provided in the resolved value.
 
@@ -577,7 +577,7 @@ Note that when creating buffers from Javascript, FFmpeg recommends that a small 
 
     beamcoder.AV_INPUT_BUFFER_MIN_SIZE
 
-#### Flush
+#### Flush encoder
 
 ### Muxing
 

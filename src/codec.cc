@@ -7331,11 +7331,15 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? flushEnc : flushDec, nullptr, nullptr, nullptr, napi_enumerable, codec},
     { "extractParams", nullptr, extractParams, nullptr, nullptr, nullptr, napi_enumerable, nullptr},
     { "useParams", nullptr, useParams, nullptr, nullptr, nullptr, napi_enumerable, nullptr},
+    // Hidden values - to allow Object.assign to work
     { "params", nullptr, nullptr, nullptr, nop, undef, // Set for muxing
       napi_writable, nullptr},
+    { "stream_index", nullptr, nullptr, nullptr, nop, undef, napi_writable, nullptr },
+    { "demuxer", nullptr, nullptr, nullptr, nop, undef, napi_writable, nullptr},
+    // 140
     { "_CodecContext", nullptr, nullptr, nullptr, nullptr, extCodec, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsCodec, 139, desc);
+  status = napi_define_properties(env, jsCodec, 141, desc);
   PASS_STATUS;
 
   *result = jsCodec;

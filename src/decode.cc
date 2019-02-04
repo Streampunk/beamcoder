@@ -61,7 +61,7 @@ napi_value decoder(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
   status = napi_has_named_property(env, args[0], "demuxer", &hasFormat);
   CHECK_STATUS;
-  status = napi_has_named_property(env, args[0], "stream", &hasStream);
+  status = napi_has_named_property(env, args[0], "stream_index", &hasStream);
   CHECK_STATUS;
   status = napi_has_named_property(env, args[0], "params", &hasParams);
   CHECK_STATUS;
@@ -74,7 +74,7 @@ napi_value decoder(napi_env env, napi_callback_info info) {
     status = napi_get_value_external(env, formatExt, (void**) &format);
     CHECK_STATUS;
 
-    status = napi_get_named_property(env, args[0], "stream", &value);
+    status = napi_get_named_property(env, args[0], "stream_index", &value);
     CHECK_STATUS;
     status = napi_get_value_int32(env, value, &streamIdx);
     CHECK_STATUS;
@@ -160,14 +160,6 @@ create:
 
   status = napi_call_function(env, result, assign, 2, fargs, &result);
   CHECK_BAIL;
-
-  // TODO is this needed?
-  if (streamIdx != -1) {
-    status = napi_create_int32(env, streamIdx, &value);
-    CHECK_BAIL;
-    status = napi_set_named_property(env, result, "stream", value);
-    CHECK_BAIL;
-  }
 
   if (decoder != nullptr) return result;
 

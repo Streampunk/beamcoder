@@ -32,7 +32,7 @@ app.use(async (ctx) => {
   for ( ; packet.stream_index !== 0 ; packet = await dm.read() ) {
     //console.log(count++, packet.size, packet, process.hrtime(start));
   }
-  let dec = beamcoder.decoder({ demuxer: dm, stream: 0 });
+  let dec = beamcoder.decoder({ demuxer: dm, stream_index: 0 });
   let decResult = await dec.decode(packet);
   if (decResult.frames.length === 0) decResult = await dec.flush();
   let enc = beamcoder.encoder({

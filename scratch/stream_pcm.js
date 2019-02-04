@@ -29,7 +29,7 @@ async function run() {
   let demuxer = await createDemuxer(srcStream);
   console.log(demuxer.streams[1]);
 
-  let decoder = await beamcoder.decoder({ format: demuxer, stream : 1 });
+  let decoder = await beamcoder.decoder({ demuxer: demuxer, stream_index : 1 });
   console.log(decoder);
 
   const audStream = demuxer.streams[1];
