@@ -484,7 +484,7 @@ Packet data buffers are shared between C and Javascript so can be written to and
 
 #### Flush decoder
 
-Once all packets have been passed to the decoder, it is necessary to call the asynchronous `flush` operation. If any frames are yet to be delivered by the decoder, they will be provided in the resolved value.
+Once all packets have been passed to the decoder, it is necessary to call its asynchronous `flush()` method. If any frames are yet to be delivered by the decoder, they will be provided in the resolved value.
 
 ```javascript
 let flush_result = await decoder.flush();
@@ -492,7 +492,7 @@ let flush_result = await decoder.flush();
 // flush_result.total_time - microseconds taken to execute the flush operation
 ```
 
-Call the flush operation once and do not use the decoder for further decoding once it has been flushed. The resourced held by the decoder will be cleaned up as part of the Javascript garbage collection process, so make sure that the reference to the decoder goes out of scope.
+Call the flush operation once and do not use the decoder for further decoding once it has been flushed. The resources held by the decoder will be cleaned up as part of the Javascript garbage collection process, so make sure that the reference to the decoder goes out of scope.
 
 ### Filtering
 
@@ -579,6 +579,16 @@ Note that when creating buffers from Javascript, FFmpeg recommends that a small 
 
 #### Flush encoder
 
+Once all frames have been passed to the encoder, it is necessary to call the asynchronous `flush()` method. If any packets are yet to be fully encoded or delivered by the encoder, they will be completed and provided in the resolved value.
+
+```javascript
+let flush_result = await encoder.flush();
+// flush_result.frames - array of any remaining packets to be encoded
+// flush_result.total_time - microseconds taken to execute the flushing process
+```
+
+Call the flush method once and do not use the encoder for further encoding once it has been flushed. The resources held by the encoder will be cleaned up as part of the Javascript garbage collection process, so make sure that the reference to the encoder goes out of scope.
+
 ### Muxing
 
 #### Opening output
@@ -591,7 +601,7 @@ Note that when creating buffers from Javascript, FFmpeg recommends that a small 
 
 ### Codec parameters
 
-Another mechanism of passing parameters from demuxers to decoders to encoders and then muxers is to use _codec parameters_. These are a set of parameters that can be used to uniquely identify and represent the kind of codec of a stream and its dimensions.  
+Another mechanism of passing parameters from demuxers to decoders to encoders and then muxers is to use _codec parameters_. These are a set of parameters that can be used to uniquely identify and represent the kind of codec of a stream and its dimensions and properties.  
 
 ## Status, support and further development
 
