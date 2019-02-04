@@ -21,7 +21,7 @@
 
 const beamcoder = require('../index.js');
 const Koa = require('koa');
-const app = module.exports = new Koa();
+const app = new Koa();
 
 app.use(async (ctx) => {
   let parts = ctx.path.split('/');
@@ -32,7 +32,7 @@ app.use(async (ctx) => {
   for ( ; packet.stream_index !== 0 ; packet = await dm.read() ) {
     //console.log(count++, packet.size, packet, process.hrtime(start));
   }
-  let dec = beamcoder.decoder({ format: dm, stream: 0 });
+  let dec = beamcoder.decoder({ demuxer: dm, stream: 0 });
   let decResult = await dec.decode(packet);
   if (decResult.frames.length === 0) decResult = await dec.flush();
   let enc = beamcoder.encoder({
@@ -47,4 +47,4 @@ app.use(async (ctx) => {
   ctx.body = jpegData.packets[0].data;
 });
 
-if (!module.parent) app.listen(3000);
+app.listen(3000);

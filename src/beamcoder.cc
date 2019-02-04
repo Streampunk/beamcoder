@@ -878,6 +878,10 @@ napi_value sampleFormats(napi_env env, napi_callback_info info) {
 
 napi_value Init(napi_env env, napi_value exports) {
   napi_status status;
+  napi_value padSize;
+  status = napi_create_int32(env, AV_INPUT_BUFFER_PADDING_SIZE, &padSize);
+  CHECK_STATUS;
+
   napi_property_descriptor desc[] = {
     DECLARE_NAPI_METHOD("versions", versions),
     DECLARE_NAPI_METHOD("avVersionInfo", avVersionInfo),
@@ -904,9 +908,11 @@ napi_value Init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD("codecParameters", makeCodecParameters),
     DECLARE_NAPI_METHOD("demuxer", demuxer),
     DECLARE_NAPI_METHOD("muxer", muxer),
-    DECLARE_NAPI_METHOD("guessFormat", guessFormat)
+    DECLARE_NAPI_METHOD("guessFormat", guessFormat),
+    { "AV_INPUT_BUFFER_MIN_SIZE", nullptr, nullptr, nullptr, nullptr,
+      padSize, napi_enumerable, nullptr }
   };
-  status = napi_define_properties(env, exports, 26, desc);
+  status = napi_define_properties(env, exports, 27, desc);
   CHECK_STATUS;
 
   // Iterate over all codecs to makes sure they are registered
