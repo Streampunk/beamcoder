@@ -735,7 +735,7 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
           PASS_STATUS;
         } else {
           if (iValue < 0) {
-            printf("Unknown index for property %s = %i\n", option->name, iValue);
+            // printf("Unknown index for property %s = %i\n", option->name, iValue);
             status = beam_set_string_utf8(env, optionsVal, option->name, "unknown");
             PASS_STATUS;
           } else {
