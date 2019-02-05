@@ -801,7 +801,7 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_CONST:
-        printf("fromPrivOptions: unexpected const option %s: %s\n", option->name, "unmapped");
+        // printf("fromPrivOptions: const option %s: %s\n", option->name, "unmapped");
         // status = beam_set_string_utf8(env, optionsVal, option->name, "unmapped type: const");
         // PASS_STATUS;
         break;
