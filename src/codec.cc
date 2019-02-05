@@ -83,13 +83,6 @@ napi_value getCodecCtxPrivData(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
   AVCodecContext* codec;
-  int64_t iValue;
-  double dValue;
-  uint8_t* data;
-  AVRational qValue;
-  int ret;
-  const AVOption* option = nullptr;
-  const AVOption* prev = nullptr;
 
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
@@ -101,223 +94,42 @@ napi_value getCodecCtxPrivData(napi_env env, napi_callback_info info) {
     return result;
   }
 
-  status = napi_create_object(env, &result);
+  status = fromContextPrivData(env, codec->priv_data, &result);
   CHECK_STATUS;
-  status = beam_set_string_utf8(env, result, "type", (char*) codec->codec->priv_class->class_name);
-  CHECK_STATUS;
-  while ((option = av_opt_next(codec->priv_data, option))) {
-    switch (option->type) {
-      case AV_OPT_TYPE_FLAGS:
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: flags");
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_INT: // based on x264 definitions
-        ret = av_opt_get_int(codec->priv_data, option->name, 0, &iValue);
-        if (ret < 0) {
-          NAPI_THROW_ERROR(avErrorMsg("Error retrieving optional property of type int: ", ret));
-        }
-        if (option->unit == nullptr) {
-          // printf("For %s, return is %i value %i\n", option->name, ret, iValue);
-          status = beam_set_int32(env, result, (char*) option->name, iValue);
-          CHECK_STATUS;
-        } else {
-          if (iValue < 0) {
-            status = beam_set_string_utf8(env, result, (char*) option->name, "unknown");
-            CHECK_STATUS;
-          } else {
-            data = (uint8_t*) option->name;
-            prev = option;
-            option = av_opt_next(codec->priv_data, option);
-            while (option->type == AV_OPT_TYPE_CONST) {
-              if (option->default_val.i64 == iValue) {
-                status = beam_set_string_utf8(env, result, (char*) data, (char*) option->name);
-                CHECK_STATUS;
-                break;
-              }
-              prev = option;
-              option = av_opt_next(codec->priv_data, option);
-            }
-            option = prev;
-          }
-        }
-        break;
-      case AV_OPT_TYPE_INT64:
-      case AV_OPT_TYPE_UINT64:
-        ret = av_opt_get_int(codec->priv_data, option->name, 0, &iValue);
-        if (ret < 0) {
-          NAPI_THROW_ERROR(avErrorMsg("Error retrieving optional property of type uint64: ", ret));
-        }
-        // printf("For %s, return is %i value %i\n", option->name, ret, iValue);
-        status = beam_set_int64(env, result, (char*) option->name, iValue);
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_DOUBLE:
-      case AV_OPT_TYPE_FLOAT:
-        av_opt_get_double(codec->priv_data, option->name, 0, &dValue);
-        status = beam_set_double(env, result, (char*) option->name, dValue);
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_STRING:
-        av_opt_get(codec->priv_data, option->name, 0, &data);
-        status = beam_set_string_utf8(env, result, (char*) option->name, (char*) data);
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_RATIONAL:
-        av_opt_get_q(codec->priv_data, option->name, 0, &qValue);
-        status = beam_set_rational(env, result, (char*) option->name, qValue);
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_BINARY:  ///< offset must point to a pointer immediately followed by an int for the length
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: binary");
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_DICT:
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: dict");
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_CONST:
-        // status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: const");
-        // CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_IMAGE_SIZE: ///< offset must point to two consecutive integers
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: image_size");
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_PIXEL_FMT:
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: pixel_fmt");
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_SAMPLE_FMT:
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: sample_fmt");
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_VIDEO_RATE: ///< offset must point to AVRational
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: AVRational");
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_DURATION:
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: duration");
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_COLOR:
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: color");
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_CHANNEL_LAYOUT:
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unmapped type: channel_layout");
-        CHECK_STATUS;
-        break;
-      case AV_OPT_TYPE_BOOL:
-        av_opt_get_int(codec->priv_data, option->name, 0, &iValue);
-        status = beam_set_bool(env, result, (char*) option->name, iValue);
-        CHECK_STATUS;
-        break;
-      default:
-        status = beam_set_string_utf8(env, result, (char*) option->name, "unknown type");
-        CHECK_STATUS;
-        break;
-    }
-  }
 
   return result;
 }
 
 napi_value setCodecCtxPrivData(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result, value, names, element;
+  napi_value result;
   napi_valuetype type;
   AVCodecContext* codec;
-  bool isArray, flag;
-  double dValue;
-  uint32_t uThirtwo;
-  char* sValue;
-  const char* strProp;
-  size_t sLen;
-  const AVOption* option;
-  int64_t iValue;
-  int ret;
+  bool isArray;
 
   size_t argc = 1;
   napi_value args[1];
   status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &codec);
   CHECK_STATUS;
 
-  if (codec->codec->priv_class == nullptr) {
+  if ((codec->codec->priv_class == nullptr) || (codec->priv_data == nullptr)) {
     goto done;
   }
 
   if (argc == 0) {
-    NAPI_THROW_ERROR("A value must be provided to set private_data.");
+    NAPI_THROW_ERROR("A value must be provided to set priv_data.");
   }
-  value = args[0];
-  status = napi_typeof(env, value, &type);
+
+  status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
-  status = napi_is_array(env, value, &isArray);
+  status = napi_is_array(env, args[0], &isArray);
   CHECK_STATUS;
-  if ((isArray == false) && (type == napi_object)) {
-    status = napi_get_property_names(env, value, &names);
-    CHECK_STATUS;
-    status = napi_get_array_length(env, names, &uThirtwo);
-    CHECK_STATUS;
-    for ( uint32_t x = 0 ; x < uThirtwo ; x++ ) {
-      status = napi_get_element(env, names, x, &element);
-      CHECK_STATUS;
-      status = napi_get_value_string_utf8(env, element, nullptr, 0, &sLen);
-      CHECK_STATUS;
-      sValue = (char*) malloc(sizeof(char) * (sLen + 1));
-      CHECK_STATUS;
-      status = napi_get_value_string_utf8(env, element, sValue, sLen + 1, &sLen);
-      CHECK_STATUS;
-      option = av_opt_find(codec->priv_data, sValue, nullptr, 0, 0);
-      if (option != nullptr) {
-        status = napi_get_named_property(env, value, sValue, &element);
-        CHECK_STATUS;
-        status = napi_typeof(env, element, &type);
-        CHECK_STATUS;
-        switch (type) {
-          case napi_boolean:
-            status = napi_get_value_bool(env, element, &flag);
-            CHECK_STATUS;
-            ret = av_opt_set_int(codec->priv_data, sValue, flag, 0);
-            if (ret < 0) printf("DEBUG: Unable to set %s with a boolean value.\n", sValue);
-            break;
-          case napi_number:
-            if ((option->type == AV_OPT_TYPE_DOUBLE) ||
-                (option->type == AV_OPT_TYPE_FLOAT)) {
-              status = napi_get_value_double(env, element, &dValue);
-              CHECK_STATUS;
-              ret = av_opt_set_double(codec->priv_data, sValue, dValue, 0);
-              if (ret < 0) printf("DEBUG: Unable to set %s with a double value %f.\n", sValue, dValue);
-              break;
-            }
-            status = napi_get_value_int64(env, element, &iValue);
-            CHECK_STATUS;
-            ret = av_opt_set_int(codec->priv_data, sValue, iValue, 0);
-            if (ret < 0) printf("DEBUG: Unable to set %s with an integer value %" PRId64 ".\n", sValue, iValue);
-            break;
-          case napi_string:
-            status = napi_get_value_string_utf8(env, element, nullptr, 0, &sLen);
-            CHECK_STATUS;
-            strProp = (const char*) malloc(sizeof(char) * (sLen + 1));
-            CHECK_STATUS;
-            status = napi_get_value_string_utf8(env, element, (char*) strProp, sLen + 1, &sLen);
-            CHECK_STATUS;
-            ret = av_opt_set(codec->priv_data, sValue, strProp, 0);
-            if (ret < 0) printf("DEBUG: Uable to set %s with a string value %s.\n", sValue, strProp);
-            // TODO where does strProp get freed
-            break;
-          default:
-            printf("DEBUG: Failed to set a private data value %s\n", sValue);
-            break;
-        }
-      } else {
-        printf("DEBUG: Option %s not found.\n", sValue);
-      }
-      free(sValue);
-    }
-  } else {
-    NAPI_THROW_ERROR("An object with key/value pairs is required to set private data.");
+  if (isArray || (type != napi_object)) {
+    NAPI_THROW_ERROR("An object of private property values must be provided to set priv_data.");
   }
+
+  status = toContextPrivData(env, args[0], codec->priv_data);
+  CHECK_STATUS;
 
 done:
   status = napi_get_undefined(env, &result);

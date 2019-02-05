@@ -2871,6 +2871,65 @@ napi_value setFmtCtxSkipEstDurFromPTS(napi_env env, napi_callback_info info) {
   return result;
 }
 
+napi_value getFmtCtxPrivData(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVFormatContext* fmtCtx;
+
+  size_t argc = 0;
+  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &fmtCtx);
+  CHECK_STATUS;
+
+  if (fmtCtx->priv_data == nullptr) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+    return result;
+  }
+
+  status = fromContextPrivData(env, fmtCtx->priv_data, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
+napi_value setFmtCtxPrivData(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  napi_valuetype type;
+  AVFormatContext* fmtCtx;
+  bool isArray;
+
+  size_t argc = 1;
+  napi_value args[1];
+  status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &fmtCtx);
+  CHECK_STATUS;
+
+  if (fmtCtx->priv_data == nullptr) {
+    goto done;
+  }
+
+  if (argc == 0) {
+    NAPI_THROW_ERROR("A value must be provided to set priv_data.");
+  }
+
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
+  status = napi_is_array(env, args[0], &isArray);
+  CHECK_STATUS;
+  if (isArray || (type != napi_object)) {
+    NAPI_THROW_ERROR("An object of private property values must be provided to set priv_data.");
+  }
+
+  printf("Well hello!\n");
+  status = toContextPrivData(env, args[0], fmtCtx->priv_data);
+  CHECK_STATUS;
+
+done:
+  status = napi_get_undefined(env, &result);
+  CHECK_STATUS;
+  return result;
+}
+
 napi_value failSetter(napi_env env, napi_callback_info info) {
   NAPI_THROW_ERROR("Cannot set this read-only property value.");
 }
@@ -2898,7 +2957,8 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
       isMuxer ? getFmtCtxOFormat : getFmtCtxIFormat,
       isMuxer ? setFmtCtxOFormat : nullptr, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
-    // FIXME priv_data
+    { "priv_data", nullptr, nullptr, getFmtCtxPrivData, setFmtCtxPrivData, nullptr,
+      (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
     { "ctx_flags", nullptr, nullptr, getFmtCtxCtxFlags, nullptr, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
     { "streams", nullptr, nullptr, getFmtCtxStreams, setFmtCtxStreams, nullptr,
@@ -2914,9 +2974,9 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
       (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
     { "bit_rate", nullptr, nullptr, getFmtCtxBitRate, setFmtCtxBitRate, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
+    // 10
     { "packet_size", nullptr, nullptr, getFmtCtxPacketSize, setFmtCtxPacketSize, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
-    // 10
     { "max_delay", nullptr, nullptr, getFmtCtxMaxDelay, setFmtCtxMaxDelay, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
     { "flags", nullptr, nullptr, getFmtCtxFlags, setFmtCtxFlags, nullptr,
@@ -2943,9 +3003,9 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
       // chapters?
     { "metadata", nullptr, nullptr, getFmtCtxMetadata, setFmtCtxMetadata, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
+    // 20
     { "start_time_realtime", nullptr, nullptr, getFmtCtxStartTRealT, setFmtCtxStartTRealT, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
-    // 20
     { "fps_probe_size", nullptr, nullptr,
       isMuxer ? nullptr : getFmtCtxFpsProbeSize,
       isMuxer ? failSetter : setFmtCtxFpsProbeSize, nullptr,
@@ -2977,11 +3037,11 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
       isMuxer ? getFmtCtxAudioPreload : nullptr,
       isMuxer ? setFmtCtxAudioPreload : failSetter, nullptr,
       isMuxer ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, fmtCtx },
+    // 30
     { "max_chunk_duration", nullptr, nullptr,
       isMuxer ? getFmtCtxMaxChunkDur : nullptr,
       isMuxer ? setFmtCtxMaxChunkDur : failSetter, nullptr,
       isMuxer ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, fmtCtx },
-    // 30
     { "max_chunk_size", nullptr, nullptr,
       isMuxer ? getFmtCtxMaxChunkSize : nullptr,
       isMuxer ? setFmtCtxMaxChunkSize : failSetter, nullptr,
@@ -3016,11 +3076,11 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
     { "probe_score", nullptr, nullptr,
       isMuxer ? nullptr : getFmtCtxProbeScore, failSetter, nullptr,
       isMuxer ? napi_default : napi_enumerable, fmtCtx },
+    // 40
     { "format_probesize", nullptr, nullptr,
       isMuxer ? nullptr : getFmtCtxFmtProbesize,
       isMuxer ? failSetter : setFmtCtxFmtProbesize, nullptr,
       isMuxer ? napi_default : (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
-    // 40
     { "codec_whitelist", nullptr, nullptr,
       isMuxer ? nullptr : getFmtCtxCodecWhitelist,
       isMuxer ? failSetter : setFmtCtxCodecWhitelist, nullptr,
@@ -3055,11 +3115,11 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
       isMuxer ? nullptr : getFmtCtxMaxStreams,
       isMuxer ? failSetter : setFmtCtxMaxStreams, nullptr,
       isMuxer ? napi_default : (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
+    // 50
     { "skip_estimate_duration_from_pts", nullptr, nullptr,
       isMuxer ? nullptr : getFmtCtxSkipEstDurFromPTS,
       isMuxer ? failSetter : setFmtCtxSkipEstDurFromPTS, nullptr,
       isMuxer ? napi_default : (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
-    // 50
     { "interleaved", nullptr, nullptr, nullptr, nullptr, truth,
       (napi_property_attributes) (napi_writable | napi_enumerable), nullptr }, // format is interleaved?
     { "newStream", nullptr, newStream, nullptr, nullptr, nullptr,
@@ -3067,7 +3127,7 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
     { "_formatContext", nullptr, nullptr, nullptr, nullptr, extFmtCtx, napi_default, nullptr },
     { "__streams", nullptr, nullptr, nullptr, nullptr, undef, napi_writable, nullptr }
   };
-  status = napi_define_properties(env, jsFmtCtx, 53, desc);
+  status = napi_define_properties(env, jsFmtCtx, 54, desc);
   PASS_STATUS;
 
   *result = jsFmtCtx;
