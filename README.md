@@ -30,7 +30,7 @@ app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
     decResult = await dec.flush();
   // Filtering could be used to transform the picture here, e.g. scaling
   let enc = beamcoder.encoder({ // Create an encoder for JPEG data
-    name : 'mjpeg', // FFmpeg does not have a dedicated 'jpeg' encoder
+    name : 'mjpeg', // FFmpeg does not have an encoder called 'jpeg'
     width : dec.width,
     height: dec.height,
     pix_fmt: dec.pix_fmt.indexOf('422') >= 0 ? 'yuvj422p' : 'yuvj420p',
