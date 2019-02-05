@@ -35,13 +35,9 @@ extern "C" {
 
 napi_status setFilterOptions(napi_env env, napi_value value, AVFilterContext *filterContext, napi_value* result) {
   napi_status status;
-  napi_value names, element;
-  napi_valuetype type;
-  bool flag;
-  double dValue;
+  napi_value names, element, valueStr;
   uint32_t uThirtwo;
   const AVOption* option;
-  int64_t iValue;
   int ret;
 
   AVFilterGraph *graph = filterContext->graph;
@@ -65,50 +61,17 @@ napi_status setFilterOptions(napi_env env, napi_value value, AVFilterContext *fi
     if (option != nullptr) {
       status = napi_get_named_property(env, value, keyStr, &element);
       PASS_STATUS;
-      status = napi_typeof(env, element, &type);
+      status = napi_coerce_to_string(env, element, &valueStr);
       PASS_STATUS;
-      bool setValue = true;
-      char propStr[64];
-      switch (type) {
-        case napi_boolean:
-          if (AV_OPT_TYPE_BOOL != option->type)
-            printf("Error: unexpected value type boolean for option /'%s/'\n", keyStr);
-          status = napi_get_value_bool(env, element, &flag);
-          PASS_STATUS;
-          snprintf(propStr, 64, "%s", flag ? "true" : "false"); 
-          break;
-        case napi_number:
-          if ((AV_OPT_TYPE_DOUBLE != option->type) && 
-              (AV_OPT_TYPE_FLOAT != option->type) &&
-              (AV_OPT_TYPE_UINT64 != option->type) &&
-              (AV_OPT_TYPE_INT64 != option->type))
-            printf("Error: unexpected value type number for option /'%s/'\n", keyStr);
-          if ((option->type == AV_OPT_TYPE_DOUBLE) ||
-              (option->type == AV_OPT_TYPE_FLOAT)) {
-            status = napi_get_value_double(env, element, &dValue);
-            PASS_STATUS;
-            snprintf(propStr, 64, "%f", dValue); 
-          } else {
-            status = napi_get_value_int64(env, element, &iValue);
-            PASS_STATUS;
-            snprintf(propStr, 64, "%" PRIu64 "", iValue); 
-          }
-          break;
-        case napi_string:
-          if (AV_OPT_TYPE_STRING != option->type)
-            printf("Error: unexpected value type string for option /'%s/'\n", keyStr);
-          status = napi_get_value_string_utf8(env, element, propStr, 64, nullptr);
-          PASS_STATUS;
-          break;
-        default:
-          setValue = false;
-          printf("DEBUG: Failed to set a private data value %s\n", keyStr);
-          break;
-      }
-      if (setValue) {
-        ret = avfilter_graph_send_command (graph, filterContext->name, keyStr, propStr, nullptr, 0, 0);
-        if (ret < 0) printf("DEBUG: Unable to set option %s with value %s.\n", keyStr, propStr);
-      }
+      std::string propStr;
+      size_t strLen;
+      status = napi_get_value_string_utf8(env, valueStr, nullptr, 0, &strLen);
+      PASS_STATUS;
+      propStr.resize(strLen);
+      status = napi_get_value_string_utf8(env, valueStr, (char *)propStr.data(), strLen+1, nullptr);
+      PASS_STATUS;
+      ret = avfilter_graph_send_command (graph, filterContext->name, keyStr, propStr.c_str(), nullptr, 0, 0);
+      if (ret < 0) printf("DEBUG: Unable to set option %s with value %s.\n", keyStr, propStr.c_str());
     } else {
       printf("DEBUG: Filter option %s not found.\n", keyStr);
     }
