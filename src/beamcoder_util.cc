@@ -722,7 +722,7 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
     switch (option->type) {
       case AV_OPT_TYPE_FLAGS:
         printf("fromPrivOptions: flags option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, *result, (char*) option->name, "unmapped type: flags");
+        status = beam_set_string_utf8(env, *result, option->name, "unmapped type: flags");
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_INT:
@@ -731,11 +731,11 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
           return napi_number_expected;
         }
         if (nullptr == option->unit) {
-          status = beam_set_int32(env, optionsVal, (char*) option->name, (int32_t)iValue);
+          status = beam_set_int32(env, optionsVal, option->name, (int32_t)iValue);
           PASS_STATUS;
         } else {
           if (iValue < 0) {
-            status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unknown index");
+            status = beam_set_string_utf8(env, optionsVal, option->name, "unknown index");
             PASS_STATUS;
           } else {
             data = (uint8_t *)option->name;
@@ -744,8 +744,8 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
             while (option && (AV_OPT_TYPE_CONST == option->type)) {
               prev = option;
               if (option->default_val.i64 == iValue) {
-                // printf("fromPrivOptions: int option %s: %s\n", (char*) data, option->name);
-                status = beam_set_string_utf8(env, optionsVal, (char*) data, (char*) option->name);
+                // printf("fromPrivOptions: int option %s: %s\n", (const char*) data, option->name);
+                status = beam_set_string_utf8(env, optionsVal, (const char*) data, option->name);
                 PASS_STATUS;
                 break;
               }
@@ -761,27 +761,27 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
         if (ret < 0) {
           return napi_number_expected;
         }
-        status = beam_set_int64(env, optionsVal, (char*) option->name, iValue);
+        status = beam_set_int64(env, optionsVal, option->name, iValue);
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_DOUBLE:
       case AV_OPT_TYPE_FLOAT:
         av_opt_get_double(privData, option->name, 0, &dValue);
         // printf("fromPrivOptions: double/float option %s: %f\n", option->name, dValue);
-        status = beam_set_double(env, optionsVal, (char*) option->name, dValue);
+        status = beam_set_double(env, optionsVal, option->name, dValue);
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_STRING:
         av_opt_get(privData, option->name, 0, &data);
         // printf("fromPrivOptions: string option %s: %s\n", option->name, (char*)data);
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, (char*) data);
+        status = beam_set_string_utf8(env, optionsVal, option->name, (char*) data);
         av_free(data);
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_RATIONAL:
         ret = av_opt_get_q(privData, option->name, 0, &qValue);
         // printf("fromPrivOptions: rational option %s: %d:%d\n", option->name, qValue.num, qValue.den);
-        status = beam_set_rational(env, optionsVal, (char*) option->name, qValue);
+        status = beam_set_rational(env, optionsVal, option->name, qValue);
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_BINARY:  ///< offset must point to a pointer immediately followed by an int for the length
@@ -792,35 +792,35 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
         else
           status = napi_get_null(env, &bufferVal);
         PASS_STATUS;
-        status = napi_set_named_property(env, optionsVal, (char*) option->name, bufferVal);
+        status = napi_set_named_property(env, optionsVal, option->name, bufferVal);
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_DICT:
         printf("fromPrivOptions: dict option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unmapped type: dict");
+        status = beam_set_string_utf8(env, optionsVal, option->name, "unmapped type: dict");
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_CONST:
-        // printf("fromPrivOptions: const option %s: %s\n", option->name, "unmapped");
-        // status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unmapped type: const");
+        printf("fromPrivOptions: unexpected const option %s: %s\n", option->name, "unmapped");
+        // status = beam_set_string_utf8(env, optionsVal, option->name, "unmapped type: const");
         // PASS_STATUS;
         break;
       case AV_OPT_TYPE_IMAGE_SIZE: ///< offset must point to two consecutive integers
         sizeData = (imageSizeData *)((uint8_t*)privData + option->offset);
         // printf("fromPrivOptions: image size option %s: %dx%d\n", option->name, sizeData->x, sizeData->y);
-        status = beam_set_rational(env, optionsVal, (char*) option->name, av_make_q(sizeData->x, sizeData->y));
+        status = beam_set_rational(env, optionsVal, option->name, av_make_q(sizeData->x, sizeData->y));
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_PIXEL_FMT:
         ret = av_opt_get_pixel_fmt(privData, option->name, 0, &pixFmt);
         // printf("fromPrivOptions: pixel format option %s: %d - %s\n", option->name, pixFmt, av_get_pix_fmt_name(pixFmt));
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, (char *)av_get_pix_fmt_name(pixFmt));
+        status = beam_set_string_utf8(env, optionsVal, option->name, av_get_pix_fmt_name(pixFmt));
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_SAMPLE_FMT:
         ret = av_opt_get_sample_fmt(privData, option->name, 0, &sampleFmt);
         // printf("fromPrivOptions: sample format option %s: %s\n", option->name, av_get_sample_fmt_name(sampleFmt));
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, (char *)av_get_sample_fmt_name(sampleFmt));
+        status = beam_set_string_utf8(env, optionsVal, option->name, av_get_sample_fmt_name(sampleFmt));
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_VIDEO_RATE: ///< offset must point to AVRational
@@ -843,18 +843,18 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
         ret = av_opt_get_channel_layout(privData, option->name, 0, &iValue);
         av_get_channel_layout_string(chanLayStr, 64, 0, iValue);
         // printf("fromPrivOptions: channel layout option %s: %lli - %s\n", option->name, iValue, chanLayStr);
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, chanLayStr);
+        status = beam_set_string_utf8(env, optionsVal, option->name, chanLayStr);
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_BOOL:
         av_opt_get_int(privData, option->name, 0, &iValue);
         // printf("fromPrivOptions: bool option %s: %lli\n", option->name, iValue);
-        status = beam_set_bool(env, optionsVal, (char*) option->name, iValue);
+        status = beam_set_bool(env, optionsVal, option->name, iValue);
         PASS_STATUS;
         break;
       default:
         printf("fromPrivOptions: unknown (type %d) option %s: %s\n", option->type, option->name, "unmapped");
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unknown type");
+        status = beam_set_string_utf8(env, optionsVal, option->name, "unknown type");
         PASS_STATUS;
         break;
     }
