@@ -46,7 +46,7 @@ app.listen(3000); // Start the server on port 3000
 
 ### Scope
 
-The developers created beam coder to enable development of highly-scalable frame-by-frame, packet-by-packet, web-fit nanoservices and lambda functions. Beam coder enables the combination of media IO and processing functions with the comprehensive library of scalable IO modules for Node, such as [express](https://expressjs.com/), [koa](https://koajs.com/), [ioredis](https://www.npmjs.com/package/ioredis) etc..
+The developers created beam coder to enable development of highly-scalable frame-by-frame, packet-by-packet, web-fit clustered microservices and lambda functions. Beam coder enables the combination of media IO and processing functions with the comprehensive library of scalable IO modules for Node, such as [express](https://expressjs.com/), [koa](https://koajs.com/), [ioredis](https://www.npmjs.com/package/ioredis) etc..
 
 If you are looking to write your own frame-by-frame transcoder, media mangler or muxer, you are in the right place. However, if you want to control FFmpeg as a command line application over complete files or piped streams from a Node.js application, many other projects are available, such as [fluent-ffmpeg](https://www.npmjs.com/package/fluent-ffmpeg).
 
@@ -56,7 +56,7 @@ Beam coder will be a cross-platform module for Windows, Mac and Linux. In this e
 
 ### Aerostat
 
-Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wikipedia.org/wiki/Aerostat) open-source product set, whereby a fleet of media-oriented _aerostats_ (_blimps_, _air ships_, _zeppelins_ etc.) are launched into the clouds. Media content is beamed between the fleet as if light beams, and beamed to and from locations on the planet surface as required. See also the [_Aerostat Beam Engine_](https://www.npmjs.com/package/beamengine).
+Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wikipedia.org/wiki/Aerostat) open-source product set, whereby a conceptual fleet of media-oriented _aerostats_ (_blimps_, _air ships_, _zeppelins_ etc.) are launched into the clouds. Media content is beamed between the fleet as if light beams, and beamed to and from locations on the planet surface as required. See also the [_Aerostat Beam Engine_](https://www.npmjs.com/package/beamengine).
 
 ## Installation
 
@@ -79,14 +79,14 @@ Beam coder is intended to be used as a module/package from other Node.js package
 
 This will install all necessary dependencies, download the FFmpeg shared and dev packages with include and library files, and then compile the native extensions.
 
-Note that if you want to use a local version of FFmpeg then, before the install, symbolic link appropriate folders to:
+Note that if you want to use a local version of FFmpeg then, before the install, symbolic link or copy appropriate folders to:
 
     ./node_modules/beamcoder/ffmpeg/ffmpeg-4.1-win64-shared
     ./node_modules/beamcoder/ffmpeg/ffmpeg-4.1-win64-dev
 
 To ensure that sufficient threads are available to process several requests in parallel, set the `UV_THREADPOOL_SIZE` environment variable, e.g.:
 
-    set UV_THREADPOOL_SIZE=32
+    set UV_THREADPOOL_SIZE 32
 
 #### Linux
 
@@ -105,7 +105,7 @@ This will check for all the necessary dependencies and then compile the native e
 
 To ensure that sufficient threads are available to process several requests in parallel, set the `UV_THREADPOOL_SIZE` environment variable, e.g.:
 
-    export UV_THREADPOOL_SIZE 32
+    export UV_THREADPOOL_SIZE=32
 
 #### Mac
 
@@ -121,7 +121,7 @@ Note: For MacOSX _Mojave_, install the following package after `xcode-select --i
 
 The basic usage pattern is as follows:
 
-1. Use promises to create processing stages for an item of media, for example a demuxer and a decoder. One can be used to configure the other.
+1. Use promises to create processing stages for an item of media, for example a demuxer and a decoder. One stage can be used to configure the other (see codec parameters).
 2. In a loop, use a promise to move data through a sequence of processing stages, working with the data as required. For example, read some frames from a file and send them to a decoder, receiving uncompressed data for each frame. This data may be suitable for display or analysis.
 3. Flush the buffers of each processing stage, close resources and collect any outstanding frames.
 
