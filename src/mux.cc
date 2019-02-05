@@ -655,6 +655,9 @@ napi_value writeFrame(napi_env env, napi_callback_info info) {
       REJECT_ERROR_RETURN("Frame for writing must be provided with a stream_index, either as an internal property or in an options object.",
         BEAMCODER_INVALID_ARGS);
     }
+  } else {
+    REJECT_ERROR_RETURN("A packet or frame must be provided.",
+      BEAMCODER_INVALID_ARGS);
   }
 
 work:

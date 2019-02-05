@@ -2898,6 +2898,7 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
       isMuxer ? getFmtCtxOFormat : getFmtCtxIFormat,
       isMuxer ? setFmtCtxOFormat : nullptr, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
+    // FIXME priv_data
     { "ctx_flags", nullptr, nullptr, getFmtCtxCtxFlags, nullptr, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
     { "streams", nullptr, nullptr, getFmtCtxStreams, setFmtCtxStreams, nullptr,
