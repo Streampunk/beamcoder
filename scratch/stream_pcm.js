@@ -63,6 +63,8 @@ async function run() {
       console.log(filtFrames);
     }
   }
+
+  demuxerStream.destroy();
 }
 
 run().catch(console.error);

@@ -43,10 +43,6 @@ function createBeamStream(params, governor) {
     write: async (chunk, encoding, cb) => {
       await governor.write(chunk);
       cb();
-    },
-    final: cb => {
-      governor.finish();
-      cb();
     }
   });
   return beamStream;
@@ -55,6 +51,8 @@ function createBeamStream(params, governor) {
 function demuxerStream(params) {
   const governor = new beamcoder.governor({});
   const stream = createBeamStream(params, governor);
+  stream.on('close', () => governor.finish());
+  stream.on('error', console.error);
   stream.demuxer = () => beamcoder.demuxer(governor);
   return stream;
 }

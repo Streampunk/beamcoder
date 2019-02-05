@@ -376,7 +376,7 @@ The seek operation has two additional flags that can be specified. The `backward
 
     await demuxer.seek({ frame: 31, stream_index: 0, backward: true, any: true});
 
-#### Node.js readable streams
+#### Node.js streams
 
 Beam coder offers a Node.js Writable stream interface to a demuxer, allowing source data to be streamed to the demuxer from a file or other stream source.
 
