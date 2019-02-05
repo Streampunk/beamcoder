@@ -378,7 +378,21 @@ The seek operation has two additional flags that can be specified. The `backward
 
 #### Node.js readable streams
 
-___Simon___
+Beam coder offers a Node.js Writable stream interface to a demuxer, allowing source data to be streamed to the demuxer from a file or other stream source.
+
+To create a Writable stream interface with for example a 64kbyte threshold, use:
+
+    let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
+
+This stream can then have data written to it or piped from a source stream
+
+    fs.createReadStream('file:media/bbb_1080p_c.ts').pipe(demuxerStream);
+
+Once the source data is connected to the stream, the demuxer can be created:
+
+    let demuxer = await demuxerStream.demuxer();
+
+This function will return a promise that will resolve when it has determined sufficient format details by consuming data from the source. The promise will wait indefinitely until sufficient source data has been provided.
 
 ### Decoding
 

@@ -33,11 +33,9 @@ https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
 
 console.log(splash);
 
-const { Writable } = require("stream");
+const { Writable } = require('stream');
 
-function createBeamStream(params) {
-  const governor = new beamcoder.governor(params);
-
+function createBeamStream(params, governor) {
   const beamStream = new Writable({
     decodeStrings: params.decodeStrings || false,
     highWaterMark: params.highwaterMark || 16384,
@@ -51,19 +49,16 @@ function createBeamStream(params) {
       cb();
     }
   });
-  beamStream.governor = governor;
   return beamStream;
 }
 
-function createDemuxer(params) {
-  if (typeof params.pipe === 'function') {
-    const beamStream = createBeamStream({});
-    params.pipe(beamStream);
-    return beamcoder.demuxer(beamStream.governor);
-  } else
-    return beamcoder.demuxer(params);
+function demuxerStream(params) {
+  const governor = new beamcoder.governor({});
+  const stream = createBeamStream(params, governor);
+  stream.demuxer = () => beamcoder.demuxer(governor);
+  return stream;
 }
 
-beamcoder.createDemuxer = createDemuxer;
+beamcoder.demuxerStream = demuxerStream;
 
 module.exports = beamcoder;
