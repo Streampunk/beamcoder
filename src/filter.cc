@@ -24,7 +24,6 @@
 #include "frame.h"
 #include <map>
 #include <deque>
-#include <inttypes.h>
 
 extern "C" {
   #include <libavfilter/avfilter.h>
@@ -32,6 +31,110 @@ extern "C" {
   #include <libavcodec/avcodec.h>
   #include <libavfilter/buffersink.h>
   #include <libavfilter/buffersrc.h>
+}
+
+napi_status setFilterOptions(napi_env env, napi_value value, AVFilterContext *filterContext, napi_value* result) {
+  napi_status status;
+  napi_value names, element, valueStr;
+  uint32_t uThirtwo;
+  const AVOption* option;
+  int ret;
+
+  AVFilterGraph *graph = filterContext->graph;
+
+  status = napi_get_property_names(env, value, &names);
+  PASS_STATUS;
+  status = napi_get_array_length(env, names, &uThirtwo);
+  PASS_STATUS;
+  for ( uint32_t x = 0 ; x < uThirtwo ; x++ ) {
+    status = napi_get_element(env, names, x, &element);
+    PASS_STATUS;
+    std::string optionKey;
+    size_t keyLen;
+    status = napi_get_value_string_utf8(env, element, nullptr, 0, &keyLen);
+    PASS_STATUS;
+    optionKey.resize(keyLen);
+    status = napi_get_value_string_utf8(env, element, (char *)optionKey.data(), keyLen+1, nullptr);
+    PASS_STATUS;
+    const char *keyStr = optionKey.c_str();
+    option = av_opt_find(filterContext->priv, keyStr, nullptr, 0, 0);
+    if (option != nullptr) {
+      status = napi_get_named_property(env, value, keyStr, &element);
+      PASS_STATUS;
+      status = napi_coerce_to_string(env, element, &valueStr);
+      PASS_STATUS;
+      std::string propStr;
+      size_t strLen;
+      status = napi_get_value_string_utf8(env, valueStr, nullptr, 0, &strLen);
+      PASS_STATUS;
+      propStr.resize(strLen);
+      status = napi_get_value_string_utf8(env, valueStr, (char *)propStr.data(), strLen+1, nullptr);
+      PASS_STATUS;
+      ret = avfilter_graph_send_command (graph, filterContext->name, keyStr, propStr.c_str(), nullptr, 0, 0);
+      if (ret < 0) printf("DEBUG: Unable to set option %s with value %s.\n", keyStr, propStr.c_str());
+    } else {
+      printf("DEBUG: Filter option %s not found.\n", keyStr);
+    }
+  }
+
+  status = napi_get_undefined(env, result);
+  PASS_STATUS;
+  return napi_ok;
+}
+
+napi_value getFilterCtxPrivData(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVFilterContext *filterContext;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterContext);
+  CHECK_STATUS;
+
+  if (nullptr == filterContext->priv) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+    return result;
+  }
+
+  status = fromContextPrivData(env, filterContext->priv, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
+napi_value setFilterCtxPrivData(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result, value;
+  napi_valuetype type;
+  AVFilterContext* filterContext;
+  bool isArray;
+
+  size_t argc = 1;
+  napi_value args[1];
+  status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &filterContext);
+  CHECK_STATUS;
+
+  if (nullptr == filterContext->priv)
+    NAPI_THROW_ERROR("Filter does not have private_data.");
+
+  if (argc == 0)
+    NAPI_THROW_ERROR("A value must be provided to set private_data.");
+
+  value = args[0];
+  status = napi_typeof(env, value, &type);
+  CHECK_STATUS;
+  status = napi_is_array(env, value, &isArray);
+  CHECK_STATUS;
+  if ((isArray == false) && (type == napi_object)) {
+    status = setFilterOptions(env, value, filterContext, &result);
+    CHECK_STATUS;
+  } else {
+    NAPI_THROW_ERROR("An object with key/value pairs is required to set private data.");
+  }
+
+  status = napi_get_undefined(env, &result);
+  CHECK_STATUS;
+  return result;
 }
 
 napi_value getFilterName(napi_env env, napi_callback_info info) {
@@ -57,258 +160,6 @@ napi_value getFilterDesc(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   status = napi_create_string_utf8(env, filter->description, NAPI_AUTO_LENGTH, &result);
-  CHECK_STATUS;
-
-  return result;
-}
-
-napi_status fromAVFilterPad(napi_env env, const AVFilterPad* filterPads, uint32_t padsIndex, napi_value* result) {
-  napi_status status;
-  napi_value nameVal, typeVal;
-
-  status = napi_create_object(env, result);
-  PASS_STATUS;
-
-  status = napi_create_string_utf8(env, avfilter_pad_get_name(filterPads, padsIndex), NAPI_AUTO_LENGTH, &nameVal);
-  PASS_STATUS;
-
-  status = napi_create_string_utf8(env, av_get_media_type_string(avfilter_pad_get_type(filterPads, padsIndex)),
-                                   NAPI_AUTO_LENGTH, &typeVal);
-  PASS_STATUS;
-
-  napi_property_descriptor desc[] = {
-    { "name", nullptr, nullptr, nullptr, nullptr, nameVal, napi_enumerable, nullptr },
-    { "type", nullptr, nullptr, nullptr, nullptr, typeVal, napi_enumerable, nullptr }
-  };
-  status = napi_define_properties(env, *result, 2, desc);
-  PASS_STATUS;
-
-  return napi_ok;
-}
-
-napi_value getFilterInputPads(napi_env env, napi_callback_info info) {
-  napi_status status;
-  napi_value array, element;
-  AVFilter* filter;
-
-  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filter);
-  CHECK_STATUS;
-
-  uint32_t numInputs = avfilter_pad_count(filter->inputs);
-  if (0 == numInputs) {
-    status = napi_get_null(env, &array);
-  } else {
-    status = napi_create_array(env, &array);
-    CHECK_STATUS;
-    for (uint32_t i = 0; i < numInputs; ++i) {
-      status = fromAVFilterPad(env, filter->inputs, i, &element);
-      CHECK_STATUS;
-      status = napi_set_element(env, array, i, element);
-      CHECK_STATUS;
-    }
-  }
-
-  CHECK_STATUS;
-  return array;
-}
-
-napi_value getFilterOutputPads(napi_env env, napi_callback_info info) {
-  napi_status status;
-  napi_value array, element;
-  AVFilter* filter;
-
-  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filter);
-  CHECK_STATUS;
-
-  uint32_t numOutputs = avfilter_pad_count(filter->outputs);
-  if (0 == numOutputs) {
-    status = napi_get_null(env, &array);
-  } else {
-    status = napi_create_array(env, &array);
-    CHECK_STATUS;
-    for (uint32_t i = 0; i < numOutputs; ++i) {
-      status = fromAVFilterPad(env, filter->outputs, i, &element);
-      CHECK_STATUS;
-      status = napi_set_element(env, array, i, element);
-      CHECK_STATUS;
-    }
-  }
-
-  CHECK_STATUS;
-  return array;
-}
-
-napi_status fromPrivOptions(napi_env env, void *privData, void *baseAddr, napi_value* result) {
-  napi_status status;
-  napi_value optionsVal, bufferVal;
-  int64_t iValue;
-  double dValue;
-  uint8_t *data;
-  AVRational qValue;
-  AVSampleFormat sampleFmt;
-  struct offsetData { uint8_t *addr; int len; };
-  offsetData *offData;
-
-  int ret;
-  const AVOption *option = nullptr;
-  const AVOption *prev = nullptr;
-
-  status = napi_create_object(env, &optionsVal);
-  PASS_STATUS;
-  while ((option = av_opt_next(privData, option))) {
-    switch (option->type) {
-      case AV_OPT_TYPE_FLAGS:
-        printf("fromPrivOptions: flags option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, *result, (char*) option->name, "unmapped type: flags");
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_INT:
-        ret = av_opt_get_int(privData, option->name, 0, &iValue);
-        if (ret < 0) {
-          return napi_number_expected;
-        }
-        if (nullptr == option->unit) {
-          status = beam_set_int32(env, optionsVal, (char*) option->name, (int32_t)iValue);
-          PASS_STATUS;
-        } else {
-          if (iValue < 0) {
-            status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unknown index");
-            PASS_STATUS;
-          } else {
-            data = (uint8_t *)option->name;
-            prev = option;
-            option = av_opt_next(privData, option);
-            while (option && (AV_OPT_TYPE_CONST == option->type)) {
-              prev = option;
-              if (option->default_val.i64 == iValue) {
-                // printf("fromPrivOptions: int option %s: %s\n", (char*) data, option->name);
-                status = beam_set_string_utf8(env, optionsVal, (char*) data, (char*) option->name);
-                PASS_STATUS;
-                break;
-              }
-              option = av_opt_next(privData, option);
-            }
-            option = prev;
-          }
-        }
-        break;
-      case AV_OPT_TYPE_INT64:
-      case AV_OPT_TYPE_UINT64:
-        ret = av_opt_get_int(privData, option->name, 0, &iValue);
-        // printf("fromPrivOptions: int64/uint64 option %s: %lli\n", option->name, iValue);
-        status = beam_set_int64(env, optionsVal, (char*) option->name, iValue);
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_DOUBLE:
-      case AV_OPT_TYPE_FLOAT:
-        av_opt_get_double(privData, option->name, 0, &dValue);
-        // printf("fromPrivOptions: double/float option %s: %f\n", option->name, dValue);
-        status = beam_set_double(env, optionsVal, (char*) option->name, dValue);
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_STRING:
-        av_opt_get(privData, option->name, 0, &data);
-        // printf("fromPrivOptions: string option %s: %s\n", option->name, (char*)data);
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, (char*) data);
-        av_free(data);
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_RATIONAL:
-        av_opt_get_q(privData, option->name, 0, &qValue);
-        // printf("fromPrivOptions: rational option %s: %d:%d\n", option->name, qValue.num, qValue.den);
-        status = beam_set_rational(env, optionsVal, (char*) option->name, qValue);
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_BINARY:  ///< offset must point to a pointer immediately followed by an int for the length
-        offData = (offsetData *)((uint8_t*)privData + option->offset);
-        // printf("fromPrivOptions: binary option %s: %p, len 0x%x\n", option->name, offData->addr, offData->len);
-        if ((nullptr != offData->addr) && (0 != offData->len))
-          status = napi_create_buffer_copy(env, offData->len, offData->addr, (void **)&data, &bufferVal);
-        else
-          status = napi_get_null(env, &bufferVal);
-        PASS_STATUS;
-        status = napi_set_named_property(env, optionsVal, (char*) option->name, bufferVal);
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_DICT:
-        printf("fromPrivOptions: dict option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unmapped type: dict");
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_CONST:
-        // printf("fromPrivOptions: const option %s: %s\n", option->name, "unmapped");
-        // status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unmapped type: const");
-        // PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_IMAGE_SIZE: ///< offset must point to two consecutive integers
-        printf("fromPrivOptions: image size option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unmapped type: image_size");
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_PIXEL_FMT:
-        printf("fromPrivOptions: pixel format option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unmapped type: pixel_fmt");
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_SAMPLE_FMT:
-        av_opt_get_sample_fmt(privData, option->name, 0, &sampleFmt);
-        // printf("fromPrivOptions: sample format option %s: %s\n", option->name, av_get_sample_fmt_name(sampleFmt));
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, (char *)av_get_sample_fmt_name(sampleFmt));
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_VIDEO_RATE: ///< offset must point to AVRational
-        printf("fromPrivOptions: video rate option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unmapped type: AVRational");
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_DURATION:
-        printf("fromPrivOptions: duration option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unmapped type: duration");
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_COLOR:
-        printf("fromPrivOptions: color option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unmapped type: color");
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_CHANNEL_LAYOUT:
-        printf("fromPrivOptions: channel layout option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unmapped type: channel_layout");
-        PASS_STATUS;
-        break;
-      case AV_OPT_TYPE_BOOL:
-        av_opt_get_int(privData, option->name, 0, &iValue);
-        // printf("fromPrivOptions: bool option %s: %lli\n", option->name, iValue);
-        status = beam_set_bool(env, optionsVal, (char*) option->name, iValue);
-        PASS_STATUS;
-        break;
-      default:
-        printf("fromPrivOptions: unknown (type %d) option %s: %s\n", option->type, option->name, "unmapped");
-        status = beam_set_string_utf8(env, optionsVal, (char*) option->name, "unknown type");
-        PASS_STATUS;
-        break;
-    }
-  }
-
-  *result = optionsVal;
-  return napi_ok;
-}
-
-napi_value getFilterCtxPrivData(napi_env env, napi_callback_info info) {
-  napi_status status;
-  napi_value result;
-  AVFilterContext *filterContext;
-
-  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterContext);
-  CHECK_STATUS;
-
-  if (nullptr == filterContext->priv) {
-    status = napi_get_null(env, &result);
-    CHECK_STATUS;
-    return result;
-  }
-
-  status = fromPrivOptions(env, filterContext->priv, (void *)filterContext, &result);
   CHECK_STATUS;
 
   return result;
@@ -360,68 +211,12 @@ napi_status fromAVFilter(napi_env env, const AVFilter* filter, napi_value* resul
     { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
     { "name", nullptr, nullptr, getFilterName, nullptr, nullptr, napi_enumerable, (void*)filter },
     { "description", nullptr, nullptr, getFilterDesc, nullptr, nullptr, napi_enumerable, (void*)filter },
-    { "input_pads", nullptr, nullptr, getFilterInputPads, nullptr, nullptr, napi_enumerable, (void*)filter },
-    { "output_pads", nullptr, nullptr, getFilterOutputPads, nullptr, nullptr, napi_enumerable, (void*)filter },
     { "flags", nullptr, nullptr, getFilterFlags, nullptr, nullptr, napi_enumerable, (void*)filter }
   };
-  status = napi_define_properties(env, *result, 6, desc);
+  status = napi_define_properties(env, *result, 4, desc);
   PASS_STATUS;
 
   return napi_ok;
-}
-
-napi_value getFilter(napi_env env, napi_callback_info info) {
-  napi_status status;
-  napi_value result;
-  AVFilterContext* filterContext;
-
-  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterContext);
-  CHECK_STATUS;
-
-  status = fromAVFilter(env, filterContext->filter, &result);
-  CHECK_STATUS;
-
-  return result;
-}
-
-napi_value getFilterContextName(napi_env env, napi_callback_info info) {
-  napi_status status;
-  napi_value result;
-  AVFilterContext* filterContext;
-
-  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterContext);
-  CHECK_STATUS;
-
-  status = napi_create_string_utf8(env, filterContext->name, NAPI_AUTO_LENGTH, &result);
-  CHECK_STATUS;
-
-  return result;
-}
-
-napi_value getFiltCtxInputPads(napi_env env, napi_callback_info info) {
-  napi_status status;
-  napi_value array, element;
-  AVFilterContext* filterContext;
-
-  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterContext);
-  CHECK_STATUS;
-
-  uint32_t numInputs = avfilter_pad_count(filterContext->input_pads);
-  if (0 == numInputs) {
-    status = napi_get_null(env, &array);
-  } else {
-    status = napi_create_array(env, &array);
-    CHECK_STATUS;
-    for (uint32_t i = 0; i < numInputs; ++i) {
-      status = fromAVFilterPad(env, filterContext->input_pads, i, &element);
-      CHECK_STATUS;
-      status = napi_set_element(env, array, i, element);
-      CHECK_STATUS;
-    }
-  }
-
-  CHECK_STATUS;
-  return array;
 }
 
 napi_value getLinkSrc(napi_env env, napi_callback_info info) {
@@ -653,6 +448,84 @@ napi_status fromAVFilterLink(napi_env env, const AVFilterLink* link, napi_value*
   return napi_ok;
 }
 
+napi_value getFilter(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVFilterContext* filterContext;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterContext);
+  CHECK_STATUS;
+
+  status = fromAVFilter(env, filterContext->filter, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
+napi_value getFilterContextName(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVFilterContext* filterContext;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterContext);
+  CHECK_STATUS;
+
+  status = napi_create_string_utf8(env, filterContext->name, NAPI_AUTO_LENGTH, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
+napi_status fromAVFilterPad(napi_env env, const AVFilterPad* filterPads, uint32_t padsIndex, napi_value* result) {
+  napi_status status;
+  napi_value nameVal, typeVal;
+
+  status = napi_create_object(env, result);
+  PASS_STATUS;
+
+  status = napi_create_string_utf8(env, avfilter_pad_get_name(filterPads, padsIndex), NAPI_AUTO_LENGTH, &nameVal);
+  PASS_STATUS;
+
+  status = napi_create_string_utf8(env, av_get_media_type_string(avfilter_pad_get_type(filterPads, padsIndex)),
+                                   NAPI_AUTO_LENGTH, &typeVal);
+  PASS_STATUS;
+
+  napi_property_descriptor desc[] = {
+    { "name", nullptr, nullptr, nullptr, nullptr, nameVal, napi_enumerable, nullptr },
+    { "type", nullptr, nullptr, nullptr, nullptr, typeVal, napi_enumerable, nullptr }
+  };
+  status = napi_define_properties(env, *result, 2, desc);
+  PASS_STATUS;
+
+  return napi_ok;
+}
+
+napi_value getFiltCtxInputPads(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value array, element;
+  AVFilterContext* filterContext;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterContext);
+  CHECK_STATUS;
+
+  uint32_t numInputs = filterContext->nb_inputs;
+  if (0 == numInputs) {
+    status = napi_get_null(env, &array);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_array(env, &array);
+    CHECK_STATUS;
+    for (uint32_t i = 0; i < numInputs; ++i) {
+      status = fromAVFilterPad(env, filterContext->input_pads, i, &element);
+      CHECK_STATUS;
+      status = napi_set_element(env, array, i, element);
+      CHECK_STATUS;
+    }
+  }
+
+  return array;
+}
+
 napi_value getFiltCtxInputs(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value array, element;
@@ -687,7 +560,7 @@ napi_value getFiltCtxOutputPads(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterContext);
   CHECK_STATUS;
 
-  uint32_t numOutputs = avfilter_pad_count(filterContext->output_pads);
+  uint32_t numOutputs = filterContext->nb_outputs;
   if (0 == numOutputs) {
     status = napi_get_null(env, &array);
   } else {
@@ -790,7 +663,7 @@ napi_status fromAVFilterCtx(napi_env env, AVFilterContext* filtCtx, napi_value* 
     { "inputs", nullptr, nullptr, getFiltCtxInputs, nullptr, nullptr, napi_enumerable, filtCtx },
     { "output_pads", nullptr, nullptr, getFiltCtxOutputPads, nullptr, nullptr, napi_enumerable, filtCtx },
     { "outputs", nullptr, nullptr, getFiltCtxOutputs, nullptr, nullptr, napi_enumerable, filtCtx },
-    { "priv", nullptr, nullptr, getFilterCtxPrivData, nullptr, nullptr, napi_enumerable, filtCtx },
+    { "priv", nullptr, nullptr, getFilterCtxPrivData, setFilterCtxPrivData, nullptr, napi_enumerable, filtCtx },
     { "nb_threads", nullptr, nullptr, getNumThreads, nullptr, nullptr, napi_enumerable, filtCtx },
     { "ready", nullptr, nullptr, getReady, nullptr, nullptr, napi_enumerable, filtCtx },
     { "extra_hw_frames", nullptr, nullptr, getExtraHwFrames, nullptr, nullptr, napi_enumerable, filtCtx }
