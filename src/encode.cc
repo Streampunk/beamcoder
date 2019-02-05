@@ -26,7 +26,7 @@ napi_value encoder(napi_env env, napi_callback_info info) {
   napi_value value, result, global, jsObject, assign, jsParams;
   napi_valuetype type;
   bool isArray, hasName, hasID, hasParams;
-  char* codecName;
+  char* codecName = nullptr;
   size_t codecNameLen = 0;
   int32_t codecID = -1;
   const AVCodec* codec = nullptr;
@@ -97,7 +97,7 @@ napi_value encoder(napi_env env, napi_callback_info info) {
   }
 
 create:
-  codec = (codecID == -1) ?
+  codec = ((codecID == -1) && (codecName != nullptr)) ?
     avcodec_find_encoder_by_name(codecName) :
     avcodec_find_encoder((AVCodecID) codecID);
   if ((codec == nullptr) && (codecID == -1)) { // one more go via codec descriptor
@@ -137,7 +137,7 @@ create:
   if (encoder != nullptr) return result;
 
 bail:
-  if (decoder != nullptr) {
+  if (encoder != nullptr) {
     avcodec_close(encoder);
     avcodec_free_context(&encoder);
   }

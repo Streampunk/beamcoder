@@ -113,6 +113,9 @@ napi_value getCodecCtxPrivData(napi_env env, napi_callback_info info) {
         break;
       case AV_OPT_TYPE_INT: // based on x264 definitions
         ret = av_opt_get_int(codec->priv_data, option->name, 0, &iValue);
+        if (ret < 0) {
+          NAPI_THROW_ERROR(avErrorMsg("Error retrieving optional property of type int: ", ret));
+        }
         if (option->unit == nullptr) {
           // printf("For %s, return is %i value %i\n", option->name, ret, iValue);
           status = beam_set_int32(env, result, (char*) option->name, iValue);
@@ -141,6 +144,9 @@ napi_value getCodecCtxPrivData(napi_env env, napi_callback_info info) {
       case AV_OPT_TYPE_INT64:
       case AV_OPT_TYPE_UINT64:
         ret = av_opt_get_int(codec->priv_data, option->name, 0, &iValue);
+        if (ret < 0) {
+          NAPI_THROW_ERROR(avErrorMsg("Error retrieving optional property of type uint64: ", ret));
+        }
         // printf("For %s, return is %i value %i\n", option->name, ret, iValue);
         status = beam_set_int64(env, result, (char*) option->name, iValue);
         CHECK_STATUS;

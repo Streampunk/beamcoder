@@ -24,6 +24,7 @@
 #include "frame.h"
 #include <map>
 #include <deque>
+#include <inttypes.h>
 
 extern "C" {
   #include <libavfilter/avfilter.h>
@@ -163,7 +164,9 @@ napi_status fromPrivOptions(napi_env env, void *privData, void *baseAddr, napi_v
         break;
       case AV_OPT_TYPE_INT:
         ret = av_opt_get_int(privData, option->name, 0, &iValue);
-        // printf("fromPrivOptions: int option %s: %lli\n", option->name, iValue);
+        if (ret < 0) {
+          return napi_number_expected;
+        }
         if (nullptr == option->unit) {
           status = beam_set_int32(env, optionsVal, (char*) option->name, (int32_t)iValue);
           PASS_STATUS;
@@ -579,13 +582,13 @@ napi_value getLinkFormat(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterLink);
   CHECK_STATUS;
 
-  char *formatName;
+  const char *formatName;
   switch (filterLink->type) {
   case AVMEDIA_TYPE_VIDEO:
-    formatName = (char*)av_get_pix_fmt_name((AVPixelFormat)filterLink->format);
+    formatName = av_get_pix_fmt_name((AVPixelFormat)filterLink->format);
     break;
   case AVMEDIA_TYPE_AUDIO:
-    formatName = (char*)av_get_sample_fmt_name((AVSampleFormat)filterLink->format);
+    formatName = av_get_sample_fmt_name((AVSampleFormat)filterLink->format);
     break;
   default:
     formatName = "unrecognised";
@@ -1294,7 +1297,7 @@ napi_value filterer(napi_env env, napi_callback_info info) {
     char args[512];
     if (0 == c->filterType.compare("audio")) {
       snprintf(args, sizeof(args),
-              "time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%llx",
+              "time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=%" PRIu64 "",
               timeBase.num, timeBase.den, sampleRate,
               sampleFormat.c_str(), av_get_channel_layout(channelLayout.c_str()));
     } else {

@@ -1999,8 +1999,8 @@ napi_value makeFrame(napi_env env, napi_callback_info info) {
     }
     else if (f->frame->nb_samples > 0 && (f->frame->channel_layout || f->frame->channels > 0)) {
       int channels;
-      int planar = av_sample_fmt_is_planar((AVSampleFormat) f->frame->format);
-      int planes;
+      // int planar = av_sample_fmt_is_planar((AVSampleFormat) f->frame->format);
+      // int planes;
       int ret;
 
       if (f->frame->channels < 2) { // Bump up from default of 1 if necessary
@@ -2009,7 +2009,7 @@ napi_value makeFrame(napi_env env, napi_callback_info info) {
       }
 
       channels = f->frame->channels;
-      planes = planar ? channels : 1;
+      // planes = planar ? channels : 1;
 
       // TODO: is this needed? CHECK_CHANNELS_CONSISTENCY(f->frame);
       if (!f->frame->linesize[0]) {

@@ -26,14 +26,13 @@ napi_value decoder(napi_env env, napi_callback_info info) {
   napi_value result, value, formatJS, formatExt, global, jsObject, assign, jsParams;
   napi_valuetype type;
   bool isArray, hasName, hasID, hasFormat, hasStream, hasParams;
-  AVCodecID id = AV_CODEC_ID_NONE;
   AVCodecContext* decoder = nullptr;
   AVFormatContext* format = nullptr;
   const AVCodec* codec = nullptr;
   int ret = 0, streamIdx = -1;
   const AVCodecDescriptor* codecDesc = nullptr;
   AVCodecParameters* params = nullptr;
-  char* codecName;
+  char* codecName = nullptr;
   size_t codecNameLen = 0;
   int32_t codecID = -1;
 
@@ -125,7 +124,7 @@ napi_value decoder(napi_env env, napi_callback_info info) {
   }
 
 create:
-  codec = (codecID == -1) ?
+  codec = ((codecID == -1) && (codecName != nullptr)) ?
     avcodec_find_decoder_by_name(codecName) :
     avcodec_find_decoder((AVCodecID) codecID);
   if ((codec == nullptr) && (codecID == -1)) { // one more go via codec descriptor

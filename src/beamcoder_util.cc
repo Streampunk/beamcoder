@@ -179,7 +179,7 @@ char* avErrorMsg(const char* base, int avError) {
   return both;
 }
 
-napi_status beam_set_uint32(napi_env env, napi_value target, char* name, uint32_t value) {
+napi_status beam_set_uint32(napi_env env, napi_value target, const char* name, uint32_t value) {
   napi_status status;
   napi_value prop;
   status = napi_create_uint32(env, value, &prop);
@@ -197,7 +197,7 @@ napi_status beam_get_uint32(napi_env env, napi_value target, char* name, uint32_
   return napi_ok;
 }
 
-napi_status beam_set_int32(napi_env env, napi_value target, char* name, int32_t value) {
+napi_status beam_set_int32(napi_env env, napi_value target, const char* name, int32_t value) {
   napi_status status;
   napi_value prop;
   status = napi_create_int32(env, value, &prop);
@@ -205,7 +205,7 @@ napi_status beam_set_int32(napi_env env, napi_value target, char* name, int32_t 
   return napi_set_named_property(env, target, name, prop);
 }
 
-napi_status beam_get_int32(napi_env env, napi_value target, char* name, int32_t* value) {
+napi_status beam_get_int32(napi_env env, napi_value target, const char* name, int32_t* value) {
   napi_status status;
   napi_value prop;
   status = napi_get_named_property(env, target, name, &prop);
@@ -215,7 +215,7 @@ napi_status beam_get_int32(napi_env env, napi_value target, char* name, int32_t*
   return napi_ok;
 }
 
-napi_status beam_set_int64(napi_env env, napi_value target, char* name, int64_t value) {
+napi_status beam_set_int64(napi_env env, napi_value target, const char* name, int64_t value) {
   napi_status status;
   napi_value prop;
   status = napi_create_int64(env, value, &prop);
@@ -223,7 +223,7 @@ napi_status beam_set_int64(napi_env env, napi_value target, char* name, int64_t 
   return napi_set_named_property(env, target, name, prop);
 }
 
-napi_status beam_get_int64(napi_env env, napi_value target, char* name, int64_t* value) {
+napi_status beam_get_int64(napi_env env, napi_value target, const char* name, int64_t* value) {
   napi_status status;
   napi_value prop;
   status = napi_get_named_property(env, target, name, &prop);
@@ -233,7 +233,7 @@ napi_status beam_get_int64(napi_env env, napi_value target, char* name, int64_t*
   return napi_ok;
 }
 
-napi_status beam_set_double(napi_env env, napi_value target, char* name, double value) {
+napi_status beam_set_double(napi_env env, napi_value target, const char* name, double value) {
   napi_status status;
   napi_value prop;
   status = napi_create_double(env, value, &prop);
@@ -241,7 +241,7 @@ napi_status beam_set_double(napi_env env, napi_value target, char* name, double 
   return napi_set_named_property(env, target, name, prop);
 }
 
-napi_status beam_get_double(napi_env env, napi_value target, char* name, double* value) {
+napi_status beam_get_double(napi_env env, napi_value target, const char* name, double* value) {
   napi_status status;
   napi_value prop;
   status = napi_get_named_property(env, target, name, &prop);
@@ -251,7 +251,7 @@ napi_status beam_get_double(napi_env env, napi_value target, char* name, double*
   return napi_ok;
 }
 
-napi_status beam_set_string_utf8(napi_env env, napi_value target, char* name, char* value) {
+napi_status beam_set_string_utf8(napi_env env, napi_value target, const char* name, const char* value) {
   napi_status status;
   napi_value prop;
   if (value == nullptr) {
@@ -265,7 +265,7 @@ napi_status beam_set_string_utf8(napi_env env, napi_value target, char* name, ch
 }
 
 // TODO improve memory management
-napi_status beam_get_string_utf8(napi_env env, napi_value target, char* name, char** value) {
+napi_status beam_get_string_utf8(napi_env env, napi_value target, const char* name, char** value) {
   napi_status status;
   napi_value prop;
   char* str;
@@ -285,7 +285,7 @@ napi_status beam_get_string_utf8(napi_env env, napi_value target, char* name, ch
   return napi_ok;
 }
 
-napi_status beam_set_bool(napi_env env, napi_value target, char* name, bool value) {
+napi_status beam_set_bool(napi_env env, napi_value target, const char* name, bool value) {
   napi_status status;
   napi_value prop;
   status = napi_get_boolean(env, value, &prop);
@@ -293,7 +293,7 @@ napi_status beam_set_bool(napi_env env, napi_value target, char* name, bool valu
   return napi_set_named_property(env, target, name, prop);
 }
 
-napi_status beam_get_bool(napi_env env, napi_value target, char* name, bool* present, bool* value) {
+napi_status beam_get_bool(napi_env env, napi_value target, const char* name, bool* present, bool* value) {
   napi_status status;
   napi_value prop;
   status = napi_get_named_property(env, target, name, &prop);
@@ -310,7 +310,7 @@ napi_status beam_get_bool(napi_env env, napi_value target, char* name, bool* pre
   return napi_ok;
 }
 
-napi_status beam_set_rational(napi_env env, napi_value target, char* name, AVRational value) {
+napi_status beam_set_rational(napi_env env, napi_value target, const char* name, AVRational value) {
   napi_status status;
   napi_value pair, element;
   status = napi_create_array(env, &pair);
@@ -326,7 +326,7 @@ napi_status beam_set_rational(napi_env env, napi_value target, char* name, AVRat
   return napi_set_named_property(env, target, name, pair);
 }
 
-napi_status beam_get_rational(napi_env env, napi_value target, char* name, AVRational* value) {
+napi_status beam_get_rational(napi_env env, napi_value target, const char* name, AVRational* value) {
   napi_status status;
   napi_value prop, element;
   int32_t num = 0, den = 1;
@@ -350,7 +350,7 @@ napi_status beam_get_rational(napi_env env, napi_value target, char* name, AVRat
   return napi_ok;
 }
 
-napi_status beam_set_null(napi_env env, napi_value target, char* name) {
+napi_status beam_set_null(napi_env env, napi_value target, const char* name) {
   napi_status status;
   napi_value value;
   status = napi_get_null(env, &value);
@@ -361,7 +361,7 @@ napi_status beam_set_null(napi_env env, napi_value target, char* name) {
   return napi_ok;
 };
 
-napi_status beam_is_null(napi_env env, napi_value props, char* name, bool* isNull) {
+napi_status beam_is_null(napi_env env, napi_value props, const char* name, bool* isNull) {
   napi_status status;
   napi_value value;
   napi_valuetype type;
@@ -392,7 +392,7 @@ int beam_lookup_enum(std::unordered_map<std::string, int> m, char* value) {
   }
 }
 
-napi_status beam_set_enum(napi_env env, napi_value target, char* name,
+napi_status beam_set_enum(napi_env env, napi_value target, const char* name,
     const beamEnum* enumDesc, int value) {
   napi_status status;
   napi_value prop;
@@ -406,7 +406,7 @@ napi_status beam_set_enum(napi_env env, napi_value target, char* name,
   return napi_set_named_property(env, target, name, prop);
 };
 
-napi_status beam_get_enum(napi_env env, napi_value target, char* name,
+napi_status beam_get_enum(napi_env env, napi_value target, const char* name,
     const beamEnum* enumDesc, int* value) {
   napi_status status;
   napi_value prop;
@@ -594,7 +594,7 @@ napi_status makeAVDictionary(napi_env env, napi_value options, AVDictionary** me
    AVPacketSideData* array in C maps to a JSObject of packet side data type named
    properties with Buffer values. Data is copied to avoid lifecycle issues.
 
-   e.g. { afd: Buffer.from([7]), a53_cc: Buffer.from('subtitle bytes') }  
+   e.g. { afd: Buffer.from([7]), a53_cc: Buffer.from('subtitle bytes') }
 */
 
 napi_status fromAVPacketSideDataArray(napi_env env, AVPacketSideData* data,
@@ -727,7 +727,9 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
         break;
       case AV_OPT_TYPE_INT:
         ret = av_opt_get_int(privData, option->name, 0, &iValue);
-        // printf("fromPrivOptions: int option %s: %lli\n", option->name, iValue);
+        if (ret < 0) {
+          return napi_number_expected;
+        }
         if (nullptr == option->unit) {
           status = beam_set_int32(env, optionsVal, (char*) option->name, (int32_t)iValue);
           PASS_STATUS;
@@ -756,7 +758,9 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
       case AV_OPT_TYPE_INT64:
       case AV_OPT_TYPE_UINT64:
         ret = av_opt_get_int(privData, option->name, 0, &iValue);
-        // printf("fromPrivOptions: int64/uint64 option %s: %lli\n", option->name, iValue);
+        if (ret < 0) {
+          return napi_number_expected;
+        }
         status = beam_set_int64(env, optionsVal, (char*) option->name, iValue);
         PASS_STATUS;
         break;

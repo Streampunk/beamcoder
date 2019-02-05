@@ -32,7 +32,7 @@ class Queue {
 public:
   Queue(uint32_t maxQueue) : mActive(true), mMaxQueue(maxQueue), qu(), m(), cv() {}
   ~Queue() {}
-  
+
   void enqueue(T t) {
     std::unique_lock<std::mutex> lk(m);
     while(mActive && (qu.size() >= mMaxQueue)) {
@@ -41,13 +41,13 @@ public:
     qu.push(t);
     cv.notify_one();
   }
-  
+
   T dequeue() {
     std::unique_lock<std::mutex> lk(m);
     while(mActive && qu.empty()) {
       cv.wait(lk);
     }
-    T val;
+    T val = 0;
     if (mActive) {
       val = qu.front();
       qu.pop();

@@ -102,8 +102,8 @@ int32_t rejectStatus(napi_env env, carrier* c, char* file, int32_t line);
 }
 
 #define NAPI_THROW_ERROR(msg) { \
-  char errorMsg[100]; \
-  sprintf(errorMsg, msg); \
+  char errorMsg[256]; \
+  sprintf(errorMsg, "%s", msg); \
   napi_throw_error(env, nullptr, errorMsg); \
   return nullptr; \
 }
@@ -123,22 +123,22 @@ int32_t rejectStatus(napi_env env, carrier* c, char* file, int32_t line);
 napi_value nop(napi_env env, napi_callback_info info);
 char* avErrorMsg(const char* base, int avErrorCode);
 
-napi_status beam_set_uint32(napi_env env, napi_value target, char* name, uint32_t value);
-napi_status beam_get_uint32(napi_env env, napi_value target, char* name, uint32_t* value);
-napi_status beam_set_int32(napi_env env, napi_value target, char* name, int32_t value);
-napi_status beam_get_int32(napi_env env, napi_value target, char* name, int32_t* value);
-napi_status beam_set_int64(napi_env env, napi_value target, char* name, int64_t value);
-napi_status beam_get_int64(napi_env env, napi_value target, char* name, int64_t* value);
-napi_status beam_set_double(napi_env env, napi_value target, char* name, double value);
-napi_status beam_get_double(napi_env env, napi_value target, char* name, double* value);
-napi_status beam_set_string_utf8(napi_env env, napi_value target, char* name, char* value);
-napi_status beam_get_string_utf8(napi_env env, napi_value target, char* name, char** value);
-napi_status beam_set_bool(napi_env env, napi_value target, char* name, bool value);
-napi_status beam_get_bool(napi_env env, napi_value target, char* name, bool* present, bool* value);
-napi_status beam_set_rational(napi_env env, napi_value target, char* name, AVRational value);
-napi_status beam_get_rational(napi_env env, napi_value target, char* name, AVRational* value);
-napi_status beam_set_null(napi_env env, napi_value target, char* name);
-napi_status beam_is_null(napi_env env, napi_value props, char* name, bool* isNull);
+napi_status beam_set_uint32(napi_env env, napi_value target, const char* name, uint32_t value);
+napi_status beam_get_uint32(napi_env env, napi_value target, const char* name, uint32_t* value);
+napi_status beam_set_int32(napi_env env, napi_value target, const char* name, int32_t value);
+napi_status beam_get_int32(napi_env env, napi_value target, const char* name, int32_t* value);
+napi_status beam_set_int64(napi_env env, napi_value target, const char* name, int64_t value);
+napi_status beam_get_int64(napi_env env, napi_value target, const char* name, int64_t* value);
+napi_status beam_set_double(napi_env env, napi_value target, const char* name, double value);
+napi_status beam_get_double(napi_env env, napi_value target, const char* name, double* value);
+napi_status beam_set_string_utf8(napi_env env, napi_value target, const char* name, const char* value);
+napi_status beam_get_string_utf8(napi_env env, napi_value target, const char* name, char** value);
+napi_status beam_set_bool(napi_env env, napi_value target, const char* name, bool value);
+napi_status beam_get_bool(napi_env env, napi_value target, const char* name, bool* present, bool* value);
+napi_status beam_set_rational(napi_env env, napi_value target, const char* name, AVRational value);
+napi_status beam_get_rational(napi_env env, napi_value target, const char* name, AVRational* value);
+napi_status beam_set_null(napi_env env, napi_value target, const char* name);
+napi_status beam_is_null(napi_env env, napi_value props, const char* name, bool* isNull);
 
 #define BEAM_ENUM_UNKNOWN -42
 

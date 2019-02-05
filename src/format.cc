@@ -3202,7 +3202,7 @@ napi_value newStream(napi_env env, napi_callback_info info) {
     ret = avformat_transfer_internal_stream_timing_info(fmtCtx->oformat,
       stream, inputStream, AVFMT_TBCF_AUTO);
     if (ret < 0) {
-      printf(avErrorMsg("DEBUG: Failed to transfer timebase: ", ret));
+      printf("%s", avErrorMsg("DEBUG: Failed to transfer timebase: ", ret));
     }
   }
 

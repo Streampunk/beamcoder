@@ -262,7 +262,7 @@ napi_status fromAVCodec(napi_env env, const AVCodec* codec, napi_value *result) 
   const AVCodecDescriptor* codecDesc;
   const enum AVSampleFormat* samplefmt;
   const uint64_t* chanlay;
-  int32_t index = 0, count = 0;
+  int32_t index = 0;
 
   status = napi_get_null(env, &nullval);
   PASS_STATUS;

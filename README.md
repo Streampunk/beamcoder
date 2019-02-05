@@ -747,7 +747,7 @@ The trailer is the end of the file or stream and is written after the muxer has 
 
     await muxer.writeTrailer();
 
-Do not try to write other data to the muxer after calling this method. Any other resources held by the muxer will be released by Javascript garbage collection.
+The promise resolves to an `undefined` value. Do not try to write other data to the muxer after calling this method. Any other resources held by the muxer will be released by Javascript garbage collection.
 
 To abandon the muxing process and forcibly close a file or stream without completing it, call the synchronous `forceClose()` method. This assumes that any result of the muxing process is to be left in an incomplete state.
 
