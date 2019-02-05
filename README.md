@@ -603,6 +603,22 @@ The muxing procedure has five basic stages:
 4. In a loop, writing packets and/or frames.
 5. Writing the trailer and closing the file or stream.
 
+Here is an example of reading and writing a WAV file as an illustration:
+
+```javascript
+let demuxer = await beamcoder.demuxer('file:input.wav');
+let muxer = beamcoder.muxer({ filename: 'file:test.wav' });
+let stream = muxer.newStream(demuxer.streams[0]);
+await muxer.openIO();
+await muxer.writeHeader();
+let packet = {};
+for ( let x = 0 ; x < 100 && packet !== null ; x++ ) {
+  packet = await demuxer.read();
+  await muxer.writeFrame(packet);
+}
+await muxer.writeTrailer();
+```
+
 #### Output format
 
 A first stage of creating a muxer is to select an output format. The complete list of output formats can be queried as follows:
@@ -621,6 +637,12 @@ To create a muxer, user an options object and do one of the following:
 * set a `filename` property to a filename with extension to be used to guess the output format;
 * set an `oformat` property to an output format object retrieved with, say, `beamcoder.muxers()` or `beamcoder.guessFormat()`.
 
+    muxer = beamcoder.muxer({ format_name: 'mp4' });
+    muxer = beamcoder.muxer({ filename: 'example.wav' });
+    muxer = beamcoder.muxer({ oformat: of });
+
+For details of the properties of a `muxer`, see the [FFmpeg AVFormatContext documentation](http://ffmpeg.org/doxygen/4.1/structAVFormatContext.html).
+
 The next step is to add the streams for the format. This can only be done using the `newStream()` method of a muxer and must be done in order. The steps are:
 
 1. Create the stream with a codec name.
@@ -630,7 +652,7 @@ The next step is to add the streams for the format. This can only be done using 
 This process is illustrated in the following code:
 
 ```javascript
-let muxer = beamcoder.muxer({ filename: 'test.wav' }); // Filename becomes muxer's 'url'
+let muxer = beamcoder.muxer({ filename: 'test.wav' }); // Filename set muxer's 'url' property
 let stream = muxer.newStream({
   name: 'pcm_s16le',
   time_base: [1, 48000 ],
@@ -646,25 +668,45 @@ Object.assign(stream.codecpar, { // Object.assign copies over all properties
 });
 ```
 
-Note that the stream is added to the muxer automatically with the next available stream index. A reference to the stream is returned by `newStream()` for convenience.
+Note that the stream is added to the muxer automatically with the next available stream index. A reference to the stream is returned by `newStream()` for convenience. For details of the properties of stream, see FFmpeg's [AVStream](http://ffmpeg.org/doxygen/4.1/structAVStream.html) and [AVCodecParameters](http://ffmpeg.org/doxygen/4.1/structAVCodecParameters.html) documentation.
 
-As an alternative, for a transmuxing process (direct connection from demuxer to muxer to rewrap content with transcoding), a new muxer stream can be created with a demuxer. An output format will be found to match the input format and the streams and their codec parameters will be copied over. For example:
+An alternative way to create muxers, e.g. for a transmuxing process (direct connection from demuxer to muxer to rewrap content with transcoding), a new muxer stream can be created with a demuxer. An output format will be found to match the input format and the streams and their codec parameters will be copied over. For example:
 
     let muxAudioStream = muxer.newStream(demuxer.streams[1]);
 
 #### Opening the output
 
-The next step is to open the output file or stream. If a filename or URL has been provided with the creation of the muxer using the `filename` property, the output can be opened with the `openIO()` method of the muxer.
+The next step is to open the output file or stream. If a filename or URL has been provided with the creation of the muxer using the `filename` property, the output can be opened with the asynchronous `openIO()` method of the muxer.
 
-Alternatively, pass in an options object containing the `filename` or `url`. The options object can also contain additional private data options to configure the behaviour of the muxer. For details of the available options, see the associated `OutputFormat` object which is the `oformat` property of the muxer. Specifically:
+Alternatively, pass in an options object containing the `filename` or `url`. The options object can also contain additional private data `options` property, an object, to further configure the protocol. See the [FFmpeg protocol documetation](https://ffmpeg.org/ffmpeg-protocols.html) for information about protocol-specific options.
 
-    console.log(muxer.oformat.priv_class.options);
+In the simplest case, where a filename was provided when the muxer was created, simply call the method without any arguments:
 
-An example of opening the muxer's output for a WAVE file:
+    await muxer.openIO();
+
+An example of opening the muxer's output for a WAVE file with options:
 
 ```javascript
-muxer.openIO({
+await muxer.openIO({
   url: 'file:test2.wav', // Update URL
+  options: { // Protocol private options
+    blocksize: 8192
+  }
+});
+```
+
+On success, the returned promise resolves to `undefined` or, if some of the options could not be set, an object containing an `unset` property detailing which of the properties could not be set. The options can now be viewed and modified through the `priv_data` property of the muxer.
+
+#### Writing the header
+
+The next stage is to write the header to the file. This must be done even for formats that don't have a header as part of the internal process is to initialize the internal data structures for writing. This is as simple as calling the asynchronous `writeHeader()` method of the muxer:
+
+    await muxer.writeHeader();
+
+As with `openIO()`, it is possible to pass in private data options at this stage:
+
+```javascript
+await muxer.writeHeader({
   options: { // Private class options
     write_peak: 'on', // Write Peak Envelope chunk - enum of 'off', 'on', 'only'.
     peak_format: 2, // The format of the peak envelope data (1: uint8, 2: uint16).
@@ -673,11 +715,41 @@ muxer.openIO({
 });
 ```
 
-#### Writing header
+For details of the available options per format, see the associated `OutputFormat` object which is the `oformat` property of the muxer. Specifically:
+
+    console.log(muxer.oformat.priv_class.options);
+
+In some cases, it is necessary to initialize the structures of the muxer before writing the header. In this case, call the asynchronous `initOutput()` method of the muxer. This method can also take `options` to initialise muxer-specific parameters. Further configure the initialized muxer and then call `writeHeader()` before writing any packets or frames.
+
+On success, the `writeHeader()` and `initOutput()` methods both resolve to an object that states where the initialisation of the muxer took place and any of the options that were `unset`. For example:
+
+    { INIT_IN: 'WRITE_HEADER', unset: { write_bext: false } }
 
 #### Writing packets and frames
 
-#### Writing trailer
+To write the actual media data to the file, it is necessary to send frames and packets containing the data of the media streams, sub-divided into packets or frames. Packets must contain their stream index, frames must be sent with their stream index and both must have timestamps in the timebase of their stream. (With the exception of streams that don't have a timebase, in which case set `beamcoder.AV_NOPTS_VALUE`.)
+
+The muxer has an `interleaved` property that determines whether beam coder asks FFmpeg does the interleaving of streams or whether the user is taking charge. Set the property to `true` for FFmpeg to do the work, otherwise set it to `false`. Set this property by now and don't change it. From here on in you can only do one or the other.
+
+Send packets or frames from across all the streams with similar presentation timings in the stream in a round robin-like loop, sending more packets per iteration for streams where the packets/frames have shorter durations. In interleaving mode, FFmpeg builds up a buffer of time-related packets and writes them when it has sufficient information to cover a given time segment.
+
+Packets or frames are sent to the muxer with its asynchronous `writeFrame()` method. The method expects a single argument that is either a packet or an options object. If an options object, provide either a single `packet` property, or a `frame` and a `stream_index` property. Here are some examples:
+
+    await muxer.writeFrame(packet);
+    await muxer.writeFrame({ packet: packet });
+    await muxer.writeFrame({ frame: frame, stream_index: 0 });
+
+The `writeFrame()` promise resolves to `undefined` on success, otherwise the promise rejects with an error.
+
+#### Writing the trailer
+
+The trailer is the end of the file or stream and is written after the muxer has drained its buffers of all remaining packets and frames. Writing the trailer also closes the file or stream. Use the asynchronous `writeTrailer()` method. It takes no arguments:
+
+    await muxer.writeTrailer();
+
+Do not try to write other data to the muxer after calling this method. Any other resources held by the muxer will be released by Javascript garbage collection.
+
+To abandon the muxing process and forcibly close a file or stream without completing it, call the synchronous `forceClose()` method. This assumes that any result of the muxing process is to be left in an incomplete state.
 
 #### Node.js writable streams
 
