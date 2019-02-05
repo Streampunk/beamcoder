@@ -201,4 +201,6 @@ napi_status fromAVPacketSideDataArray(napi_env env, AVPacketSideData* data,
 napi_status toAVPacketSideDataArray(napi_env env, napi_value sided,
   AVPacketSideData** data, int* dataSize);
 
+napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result);
+
 #endif // BEAMCODER_UTIL_H
