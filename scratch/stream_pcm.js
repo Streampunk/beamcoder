@@ -20,13 +20,13 @@
 */
 
 const beamcoder = require('../index.js');
-const createDemuxer = beamcoder.createDemuxer;
 const fs = require('fs');
 const util = require('util');
 
 async function run() {
-  const srcStream = fs.createReadStream('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
-  let demuxer = await createDemuxer(srcStream);
+  let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
+  fs.createReadStream('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf').pipe(demuxerStream);
+  let demuxer = await demuxerStream.demuxer();
   console.log(demuxer.streams[1]);
 
   let decoder = await beamcoder.decoder({ demuxer: demuxer, stream_index : 1 });
@@ -63,6 +63,8 @@ async function run() {
       console.log(filtFrames);
     }
   }
+
+  demuxerStream.destroy();
 }
 
 run().catch(console.error);

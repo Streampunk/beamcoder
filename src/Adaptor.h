@@ -97,7 +97,7 @@ private:
 class Adaptor {
 public:
   Adaptor(Queue<Chunk *> *queue)
-    : mQueue(queue), mCurPos(0), mCurChunk(nullptr), mChunkPos(0), mFinished(false), m() {}
+    : mQueue(queue), mCurPos(0), mCurChunk(nullptr), mChunkPos(0), m() {}
   ~Adaptor() {
     delete mQueue;
     mDone.clear();
@@ -126,9 +126,7 @@ public:
     return bufOff;
   }
 
-  void finish() {
-    mFinished = true;
-  }
+  void finish()  { mQueue->quit(); }
 
   napi_status finaliseBufs(napi_env env) {
     napi_status status = napi_ok;
@@ -149,7 +147,6 @@ private:
   size_t mCurPos;
   Chunk *mCurChunk;
   size_t mChunkPos;
-  bool mFinished;
   mutable std::mutex m;
 
   bool nextChunk() {
@@ -158,14 +155,9 @@ private:
       mDone.push_back(mCurChunk);
     }
 
-    bool result = true;
-    if (mFinished && (0 == mQueue->size()))
-      result = false;
-    else {
-      mCurChunk = mQueue->dequeue();
-      mChunkPos = 0;
-    }
-    return result;
+    mCurChunk = mQueue->dequeue();
+    mChunkPos = 0;
+    return nullptr != mCurChunk;
   }
 };
 

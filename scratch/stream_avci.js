@@ -20,14 +20,14 @@
 */
 
 const beamcoder = require('../index.js');
-const createDemuxer = beamcoder.createDemuxer;
 const fs = require('fs');
 const util = require('util');
 
 async function run() {
-  // const srcStream = fs.createReadStream('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
-  // let demuxer = await createDemuxer(srcStream);
-  let demuxer = await createDemuxer('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
+  // let demuxer = await createDemuxer('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
+  let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
+  fs.createReadStream('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf').pipe(demuxerStream);
+  let demuxer = await demuxerStream.demuxer();
   // console.log(demuxer);
 
   let decoder = await beamcoder.decoder({ name: 'h264' });
@@ -57,9 +57,18 @@ async function run() {
     outputNames: [ 'out0:v' ],
     filterSpec: '[in0:v] scale=1280:720 [left]; [in1:v] scale=640:360 [right]; [left][right] overlay=format=auto:x=640 [out0:v]'
   });
-  console.log(filterer.graph);
-  console.log(util.inspect(filterer.graph.filters[5], {depth: null}));
+  // console.log(filterer.graph);
+  // console.log(util.inspect(filterer.graph, {depth: null}));
   console.log(filterer.graph.dump());
+
+  // width = '1000';
+  // const scaleFilter = filterer.graph.filters.find(f => 'scale' === f.filter.name);
+  // scaleFilter.priv = { width: 1000 };
+  // console.log(util.inspect(scaleFilter, {depth: null}));
+
+  // const overlayFilter = filterer.graph.filters.find(f => 'overlay' === f.filter.name);
+  // overlayFilter.priv = { x: 100, y: 100 };
+  // console.log(util.inspect(overlayFilter, {depth: null}));
 
   let encParams = {
     name: 'libx264',
@@ -84,7 +93,9 @@ async function run() {
 
   let outFile = fs.createWriteStream('wibble.h264');
 
-  for ( let x = 0 ; x < 1000 ; x++ ) {
+  // await demuxer.seek({ frame: 4200, stream_index: 0});
+
+  for ( let x = 0 ; x < 10000 ; x++ ) {
     let packet = await demuxer.read();
     if (packet.stream_index == 0) {
       // console.log(packet);
@@ -103,6 +114,8 @@ async function run() {
   }
   let frames = await decoder.flush();
   console.log('flush', frames.total_time, frames.frames.length);
+
+  demuxerStream.destroy();
 }
 
 run().catch(console.error);
