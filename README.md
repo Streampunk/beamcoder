@@ -518,7 +518,168 @@ Call the flush operation once and do not use the decoder for further decoding on
 
 ### Filtering
 
-___Simon___
+Filtering is the process of taking streams of uncompressed data in the form of _frames_ and processing them through a chain of connected filters in order to produce modified uncompressed data again in the form of _frames_. Filtering takes place on a single type of stream, either audio or video. Filtering chains may have multiple inputs and/or multiple outputs.
+
+To see a list of available filters, use:
+
+    let filters = beamcoder.filters();
+
+```javascript
+{ abench:
+   { name: 'abench',
+     description: 'Benchmark part of a filtergraph.',
+     inputs: [ [Object] ],
+     outputs: [ [Object] ],
+     priv_class: { type: 'Class', class_name: 'abench', options: [Object] },
+     flags:
+      { DYNAMIC_INPUTS: false,
+        DYNAMIC_OUTPUTS: false,
+        SLICE_THREADS: false,
+        SUPPORT_TIMELINE_GENERIC: false,
+        SUPPORT_TIMELINE_INTERNAL: false } },
+  acompressor:
+   { name: 'acompressor',
+     description: 'Audio compressor.',
+     inputs: [ [Object] ],
+     outputs: [ [Object] ],
+     priv_class:
+      { type: 'Class', class_name: 'acompressor', options: [Object] },
+     flags:
+      { DYNAMIC_INPUTS: false,
+        DYNAMIC_OUTPUTS: false,
+        SLICE_THREADS: false,
+        SUPPORT_TIMELINE_GENERIC: false,
+        SUPPORT_TIMELINE_INTERNAL: false } },
+  /* ... */
+}
+```
+
+#### Filterer
+
+To create an instance of a filterer, request a `filterer` from beam coder, specifying the stream type, input parameters and a filter definition string. The parameters will typically be read from the selected demuxer stream object.
+
+```javascript
+let a_Filterer = await beamcoder.filterer({
+  filterType: 'audio',
+  inputParams: [
+    {
+      sampleRate: audStream.codecpar.sample_rate,
+      sampleFormat: audStream.codecpar.format,
+      channelLayout: 'mono',
+      timeBase: audStream.time_base
+    }
+  ],
+  filterSpec: 'aresample=8000, aformat=sample_fmts=s16:channel_layouts=mono'
+});
+
+let v_filterer = await beamcoder.filterer({
+  filterType: 'video',
+  inputParams: [
+    {
+      width: vidStream.codecpar.width,
+      height: vidStream.codecpar.height,
+      pixelFormat: vidStream.codecpar.format,
+      timeBase: vidStream.time_base,
+      pixelAspect: vidStream.sample_aspect_ratio,
+    }
+  ],
+  filterSpec: 'scale=1280:720'
+});
+```
+
+The filter format string describes the filters to use, their parameters and the connections between them. See the [filtering documentation from FFmpeg](https://www.ffmpeg.org/ffmpeg-filters.html).
+
+In order to support multiple inputs and outputs, name parameters are used. As above if there is only a single input or a single output, the name is optional. The name parameters when present must match the names in the filter string:
+
+```javascript
+let v_filterer = await beamcoder.filterer({
+  filterType: 'video',
+  inputParams: [
+    {
+      name: 'in0:v',
+      width: vidStream0.codecpar.width,
+      height: vidStream0.codecpar.height,
+      pixelFormat: vidStream0.codecpar.format,
+      timeBase: vidStream0.time_base,
+      pixelAspect: vidStream0.sample_aspect_ratio,
+    },
+    {
+      name: 'in1:v',
+      width: vidStream1.codecpar.width,
+      height: vidStream1.codecpar.height,
+      pixelFormat: vidStream1.codecpar.format,
+      timeBase: vidStream1.time_base,
+      pixelAspect: vidStream1.sample_aspect_ratio,
+    }
+  ],
+  outputNames: [ 'out0:v' ],
+  filterSpec: '[in0:v] scale=1280:720 [left]; [in1:v] scale=640:360 [right]; [left][right] overlay=format=auto:x=640 [out0:v]'
+});
+```
+
+The properties of the resolved filterer object can be examined through the object's `graph` property.
+
+```javascript
+{ type: 'filterGraph',
+  filters:
+   [ { type: 'FilterContext',
+       filter: [Object],
+       name: '0:a',
+       /* ... */
+       priv: [Object],
+       /* ... */
+     { type: 'FilterContext',
+       filter: [Object],
+       name: 'out',
+       /* ... */
+       priv: [Object],
+       /* ... */
+     { type: 'FilterContext',
+       filter: [Object],
+       name: 'Parsed_aresample_0',
+       /* ... */
+       priv: [Object],
+       /* ... */
+     { type: 'FilterContext',
+       filter: [Object],
+       name: 'Parsed_aformat_1',
+       /* ... */
+       priv: [Object],
+       /* ... */ } ],
+  /* ... */
+  dump: [Function] }
+```
+
+An ascii string represention of the filter graph can be accessed via:
+
+    let dump = filterer.graph.dump();
+
+The parameters of an individual filter are available via that filter's `priv` property. These parameters can be read from Javascript and some of them are able to be set (a per-filter implementation decision) by providing a complete value. For example to set the `scale` filter `width` parameter:
+
+```javascript
+let scaleFilter = filterer.graph.filters.find(f => 'scale' === f.filter.name); // find the first 'scale' filter
+scaleFilter.priv = { width: 1000 }; // only the included properties are changed, other existing properties are unaltered
+// scaleFilter.priv.width = 1000; - this will not work !!
+```
+
+#### Filter
+
+To filter uncompressed frames and create uncompressed result frames (which may each be frames-worth of audio), use the _filter_ method of a filterer, passing an array of _frame_ objects, for example from the output of a decoder:
+
+    let filtFrames = await filterer.filter([{ frames: frames }]);
+
+The result is an array containing objects with a frames property which is an array of _frame_ objects. Multiple inputs are supported with name parameters that must match the input parameters and the filter string used in the filterer setup:
+
+```javascript
+let filtFrames = await filterer.filter([
+  { name: 'in0:v', frames: frames0 },
+  { name: 'in1:v', frames: frames1 },
+]);
+```
+
+Multiple output objects appear in the output array with each object having a name property that matches the output name property defined in the filter string. For single input and single output filters the name property is optional, though if the filter string has defined a name the same name must be used.
+
+The output array objects also contain a total_time property which logs the time the operation took to complete.
 
 ### Encoding
 
