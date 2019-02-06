@@ -619,19 +619,19 @@ The properties of the resolved filterer object can be examined through the objec
        name: '0:a',
        /* ... */
        priv: [Object],
-       /* ... */
+       /* ... */ },
      { type: 'FilterContext',
        filter: [Object],
        name: 'out',
        /* ... */
        priv: [Object],
-       /* ... */
+       /* ... */ },
      { type: 'FilterContext',
        filter: [Object],
        name: 'Parsed_aresample_0',
        /* ... */
        priv: [Object],
-       /* ... */
+       /* ... */ },
      { type: 'FilterContext',
        filter: [Object],
        name: 'Parsed_aformat_1',
