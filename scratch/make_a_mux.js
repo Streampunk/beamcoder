@@ -28,7 +28,7 @@ async function run() {
   let stream = muxer.newStream({
     name: 'pcm_s16le',
     time_base: [1, 48000 ],
-    interleaved: false });
+    interleaved: false, });
   Object.assign(stream.codecpar, {
     channels: 2,
     sample_rate: 48000,

@@ -118,7 +118,7 @@ create:
     if ((ret = avcodec_parameters_to_context(encoder, (const AVCodecParameters*) codecParams))) {
       NAPI_THROW_ERROR(avErrorMsg("Failed to set encoder paramters from provided params: ", ret));
     }
-    printf("Params to context result: %i\n", ret);
+    // printf("Params to context result: %i\n", ret);
   }
 
   status = fromAVCodecContext(env, encoder, &result, true);

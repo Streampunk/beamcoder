@@ -3235,6 +3235,8 @@ napi_value newStream(napi_env env, napi_callback_info info) {
     // printf("From name %s, selected AVCodec %s\n", codecName,
     //   (codec != nullptr) ? codec->name : "");
     free(codecName);
+  } else {
+    NAPI_THROW_ERROR("Stream requires an options object with a codec name.");
   }
   stream = avformat_new_stream(fmtCtx, codec);
   // printf("Stupidist codec timebase is %i/%i\n", stream->codec->time_base.num,

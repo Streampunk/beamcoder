@@ -480,7 +480,7 @@ let packet = demuxer.read();
 while (packet != null) {
   let dec_result = await decoder.decode(packet);
   // dec_result.frames - possibly empty array of frames for further processing
-  // dec_result.total_time - log the microseconds that the operation took to complete
+  // dec_result.total_time - microseconds that the operation took to complete
   // Get the next packet, e.g. packet = demuxer.read();
 }
 ```
@@ -627,19 +627,19 @@ The properties of the resolved filterer object can be examined through the objec
        name: '0:a',
        /* ... */
        priv: [Object],
-       /* ... */
+       /* ... */ },
      { type: 'FilterContext',
        filter: [Object],
        name: 'out',
        /* ... */
        priv: [Object],
-       /* ... */
+       /* ... */ },
      { type: 'FilterContext',
        filter: [Object],
        name: 'Parsed_aresample_0',
        /* ... */
        priv: [Object],
-       /* ... */
+       /* ... */ },
      { type: 'FilterContext',
        filter: [Object],
        name: 'Parsed_aformat_1',
@@ -679,11 +679,13 @@ let filtFrames = await filterer.filter([
 
 Multiple output objects appear in the output array with each object having a name property that matches the output name property defined in the filter string. For single input and single output filters the name property is optional, though if the filter string has defined a name the same name must be used.
 
-The output array objects also contain a total_time property which logs the time the operation took to complete.
+The output array objects also contain a `total_time` property which logs the time the operation took to complete.
+
+Filters do not need to be flushed.
 
 ### Encoding
 
-Encoding is the process of taking a stream of uncompressed data in the form of _frames_ and converting them into coded _packets_. Encoding takes place on a single type of stream, for example audio or video. Streams maybe combined downstream by a _muxer_.
+Encoding is the process of taking a stream of uncompressed data in the form of _frames_ and converting them into coded _packets_. Encoding takes place on a single type of stream, for example audio or video. Downstream, encoded date maybe combined into outputs by a [_muxer_](#muxing).
 
 To see a list of available encoders, use:
 
@@ -715,7 +717,7 @@ Additional properties may be set on the encoder object either during constructio
 
 Each codec may have additional private data settings and these are available in the encoder's `priv_data` property. These can be read and set from Javascript but note that the value can only be set by providing a complete value. For example, to set the `libx264` encoder to the `slow` preset:
 
-    v_encoder.priv_data = { preset: 'slow' }; // Only included properties change
+    v_encoder.priv_data = { preset: 'slow' }; // Only the included properties change
 
 The following will not work:
 
@@ -729,15 +731,20 @@ To encode an uncompressed _frame_ and create a compressed _packet_ (may be a fra
 // Get or make the first frame of data, store in frame
 while (frame != nullptr) {
   let enc_result = await encoder.encode(frame);
-  // enc_result.packets - possible empty array of packets for further processing
-  // enc_result.total_time - log the microseconds that the operation took to complete
+  // enc_result.packets - possibly empty array of packets for further processing
+  // enc_result.total_time - microseconds that the operation took to complete
   // Get or make the next frame of data
 }
 ```
 
+As with decoding, it is possible to encode more than one frame at a time. Pass in an array of frames or a sequence of frames as arguments to the method:
+
+    enc_result = await encoder.encode([ frame_1, frame_2, ...  ]);
+    enc_result = await encoder.encoder(frame_1, frame_2, ... );
+
 #### Creating frames
 
-Frames for encoding or filtering can be created as follows:
+Frames for encoding or filtering can be created from Javascript as follows:
 
     beamcoder.frame({ pts: 43210, width: 1920, height: 1920, format: 'yuv420p',
       data: [ Buffer.from(...plane_1...), Buffer.from(...plane_2...), ... ] });
@@ -750,13 +757,13 @@ Planar audio representations - those with a `p` in their name - use planes to re
 
     beamcoder.sample_fmts();
 
-Beam coder exposes some of FFmpeg's ability to calculate the size of data buffers. If you pass `width`, `height` and `format` properties for video frames, or `channels`/`channel_layout` and `format` frames, as options to the frame constructor, the `linesize` array (number of bytes per line per plane) is computed. For video, multiply each value by the height to get the minimum buffer size for the plane. For audio, the first element of the array is the buffer size for each plane.
+Beam coder exposes some of FFmpeg's ability to calculate the size of data buffers. If you pass `width`, `height` and `format` properties for video frames, or `channels`/`channel_layout`, `sample_rate` and `format` for audio frames, as options to the frame constructor then the `linesize` array (number of bytes per line per plane) is computed. For video, multiply each value by the height to get the minimum buffer size for the plane. For audio, the first element of the array is the buffer size for each plane.
 
 To use the linesize numbers to automatically allocate buffers of the correct size, call `alloc()` after the factory method. For example:
 
     let f = beamcoder.frame({ width: 1920, height: 1080, format: 'yuv422p' }).alloc();
 
-Note that when creating buffers from Javascript, FFmpeg recommends that a small amount of headroom is added to the length. The minimum amount of padding is exposed to Javascript as constant:
+Note that when creating buffers from Javascript, FFmpeg recommends that a small amount of headroom is added to the minimum length of each buffer. The minimum amount of padding is exposed to Javascript as constant:
 
     beamcoder.AV_INPUT_BUFFER_MIN_SIZE
 
@@ -774,19 +781,19 @@ Call the flush method once and do not use the encoder for further encoding once 
 
 ### Muxing
 
-Muxing (multiplexing) is the operation of interleaving media data from single streams into a single file or stream, the opposite process to demuxing. In its simplest form, a single stream is written to a file, adding any necessary headers, padding or trailing data according to the file format, for example writing a WAVE file involves writing a header followed by the PCM audio data.
+Muxing (multiplexing) is the operation of interleaving media data from multiple streams into a single file or stream, the opposite process to demuxing. In its simplest form, a single stream is written to a file, adding any necessary headers, padding or trailing data according to the file format. For example, writing a WAVE file involves writing a header followed by the PCM audio data.
 
-For more complex formats, such as an MP4 file, video and audio data packets with similar timestamps are written to the same part of the output file. When the file is subsequently read, video and audio that needs to be presented together can be read from the same part of the file.
+For more complex formats, such as an MP4 file, video and audio data packets with similar timestamps are written to the same section of the output file. When the file is subsequently read, video and audio that needs to be presented together can be read from the same part of the file.
 
 The muxing procedure has five basic stages:
 
-1. Choosing the output format and setting up the output stream metadata.
+1. Choosing the output format, creating the muxer and setting up the output stream metadata.
 2. Opening the file or streams for writing.
 3. Writing the header metadata.
 4. In a loop, writing packets and/or frames.
 5. Writing the trailer and closing the file or stream.
 
-Here is an example of reading and writing a WAV file as an illustration:
+Here is an example of reading and writing a WAVE file as an illustration:
 
 ```javascript
 let demuxer = await beamcoder.demuxer('file:input.wav');
@@ -802,13 +809,13 @@ for ( let x = 0 ; x < 100 && packet !== null ; x++ ) {
 await muxer.writeTrailer();
 ```
 
-#### Output format
+#### Muxer
 
 A first stage of creating a muxer is to select an output format. The complete list of output formats can be queried as follows:
 
     let mxs = beamcoder.muxers();
 
-Each muxer has an `extensions` property that is a comma-separated list commonly used file extensions for the output format. This can be searched, or alternatively beam coder exposes FFmpeg's capability to guess an output format from a filename, format name or mime type. For example:
+Each muxer has an `extensions` property that is a comma-separated list commonly used file extensions for the output format. This can be searched (see [demuxing example](#demuxing)), or alternatively beam coder exposes FFmpeg's capability to guess an output format from a filename, format name or mime type. For example, for output format `of`:
 
     of = beamcoder.guessFormat('mpegts'); // Finds the output format named 'mpegts'
     of = beamcoder.guessFormat('image/png'); // Output format for PNG image data
@@ -832,7 +839,7 @@ The next step is to add the streams for the format. This can only be done using 
 2. Set the `time_base` for the stream.
 3. Update the codec parameters for the stream, ensuring at least `width`, `height` and `format` (pixel format) are set for video streams and `sample_rate`, `channels` and/or `channel_layout` and `format` (sample format) are set of audio streams.
 
-This process is illustrated in the following code:
+This procedure is illustrated in the following code:
 
 ```javascript
 let muxer = beamcoder.muxer({ filename: 'test.wav' }); // Filename set muxer's 'url' property
@@ -851,9 +858,9 @@ Object.assign(stream.codecpar, { // Object.assign copies over all properties
 });
 ```
 
-Note that the stream is added to the muxer automatically with the next available stream index. A reference to the stream is returned by `newStream()` for convenience. For details of the properties of stream, see FFmpeg's [AVStream](http://ffmpeg.org/doxygen/4.1/structAVStream.html) and [AVCodecParameters](http://ffmpeg.org/doxygen/4.1/structAVCodecParameters.html) documentation.
+Note that `newStream()` adds the stream to the muxer automatically using the next available stream index. A reference to the created stream is returned by `newStream()` for convenience. For details of the properties of stream, see FFmpeg's [AVStream](http://ffmpeg.org/doxygen/4.1/structAVStream.html) and [AVCodecParameters](http://ffmpeg.org/doxygen/4.1/structAVCodecParameters.html) documentation.
 
-An alternative way to create muxers, e.g. for a transmuxing process (direct connection from demuxer to muxer to rewrap content with transcoding), a new muxer stream can be created with a demuxer. An output format will be found to match the input format and the streams and their codec parameters will be copied over. For example:
+An alternative way to create muxers, e.g. for a transmuxing process (direct connection from demuxer to muxer to rewrap content without transcoding), a new muxer stream can be created with a demuxer. An output format will be found to match the input format and the streams and their codec parameters will be copied over. For example:
 
     let muxAudioStream = muxer.newStream(demuxer.streams[1]);
 
@@ -861,8 +868,7 @@ An alternative way to create muxers, e.g. for a transmuxing process (direct conn
 
 The next step is to open the output file or stream. If a filename or URL has been provided with the creation of the muxer using the `filename` property, the output can be opened with the asynchronous `openIO()` method of the muxer.
 
-Alternatively, pass in an options object containing the `filename` or `url`. The options object can also contain additional private data `options` property, an object, to further configure the protocol. See the [FFmpeg protocol documetation](https://ffmpeg.org/ffmpeg-protocols.html) for information about protocol-specific options.
-
+Alternatively, pass in an options object containing the `filename` or `url`. The options object can also itself contain an `options` property, an object, to further configure the protocol with private data. See the [FFmpeg protocol documetation](https://ffmpeg.org/ffmpeg-protocols.html) for information about protocol-specific options.
 In the simplest case, where a filename was provided when the muxer was created, simply call the method without any arguments:
 
     await muxer.openIO();
@@ -878,15 +884,17 @@ await muxer.openIO({
 });
 ```
 
-On success, the returned promise resolves to `undefined` or, if some of the options could not be set, an object containing an `unset` property detailing which of the properties could not be set. The options can now be viewed and modified through the `priv_data` property of the muxer.
+On success, the returned promise resolves to `undefined` or, if some of the options could not be set, an object containing an `unset` property detailing which of the properties could not be set.
+
+Note: An outstanding task is to provide some kind of getter for the protocol private data through the Javascript API.
 
 #### Writing the header
 
-The next stage is to write the header to the file. This must be done even for formats that don't have a header as part of the internal process is to initialize the internal data structures for writing. This is as simple as calling the asynchronous `writeHeader()` method of the muxer:
+The next stage is to write the header to the file. This must be done even for formats that don't have a header as part of the internal structure as this step also initializes the internal data structures for writing. This is the simplest example of calling the asynchronous `writeHeader()` method of the muxer:
 
     await muxer.writeHeader();
 
-As with `openIO()`, it is possible to pass in private data options at this stage:
+As with `openIO()`, it is possible to pass in private data `options` at this stage that set the private data fields of the muxer:
 
 ```javascript
 await muxer.writeHeader({
@@ -898,21 +906,21 @@ await muxer.writeHeader({
 });
 ```
 
-For details of the available options per format, see the associated `OutputFormat` object which is the `oformat` property of the muxer. Specifically:
+Subsequently to writing the header, the options can be viewed and modified through the `priv_data` property of the muxer. For details of the available options per format, see the [FFmpeg muser documentation](https://ffmpeg.org/ffmpeg-formats.html#Muxers) or the associated `OutputFormat` object which is the `oformat` property of the muxer. Specifically:
 
     console.log(muxer.oformat.priv_class.options);
 
-In some cases, it is necessary to initialize the structures of the muxer before writing the header. In this case, call the asynchronous `initOutput()` method of the muxer. This method can also take `options` to initialise muxer-specific parameters. Further configure the initialized muxer and then call `writeHeader()` before writing any packets or frames.
+In some cases, it is necessary to initialize the structures of the muxer before writing the header. In this case, call the asynchronous `initOutput()` method of the muxer first. This method can also take `options` to initialise muxer-specific parameters. Further configure the initialized muxer and then call `writeHeader()` before writing any packets or frames.
 
-On success, the `writeHeader()` and `initOutput()` methods both resolve to an object that states where the initialisation of the muxer took place and any of the options that were `unset`. For example:
+On success, the `writeHeader()` and `initOutput()` methods both resolve to an object that says where the initialisation of the muxer took place, with details of any of the options that were `unset`. For example:
 
     { INIT_IN: 'WRITE_HEADER', unset: { write_bext: false } }
 
 #### Writing packets and frames
 
-To write the actual media data to the file, it is necessary to send frames and packets containing the data of the media streams, sub-divided into packets or frames. Packets must contain their stream index, frames must be sent with their stream index and both must have timestamps in the timebase of their stream. (With the exception of streams that don't have a timebase, in which case set `beamcoder.AV_NOPTS_VALUE`.)
+To write the actual media data to the file, it is necessary to send _frames_ and _packets_ containing the data of the media streams. Packets must contain their stream index, frames must be sent with alongside their stream index and both must have timestamps measured in the `time_base` of their stream. (With the exception of streams that don't have a `time_base`, in which case set `beamcoder.AV_NOPTS_VALUE`.)
 
-The muxer has an `interleaved` property that determines whether beam coder asks FFmpeg does the interleaving of streams or whether the user is taking charge. Set the property to `true` for FFmpeg to do the work, otherwise set it to `false`. Set this property by now and don't change it. From here on in you can only do one or the other.
+The muxer has an `interleaved` property that determines whether beam coder asks FFmpeg to do the interleaving of streams or whether the user is taking charge. Set the property to `true` (default) for FFmpeg to do the work, otherwise set it to `false`. Set this property by this point and don't change it. From here on in, the approaches cannot be mixed and matched.
 
 Send packets or frames from across all the streams with similar presentation timings in the stream in a round robin-like loop, sending more packets per iteration for streams where the packets/frames have shorter durations. In interleaving mode, FFmpeg builds up a buffer of time-related packets and writes them when it has sufficient information to cover a given time segment.
 
@@ -930,17 +938,49 @@ The trailer is the end of the file or stream and is written after the muxer has 
 
     await muxer.writeTrailer();
 
-The promise resolves to an `undefined` value. Do not try to write other data to the muxer after calling this method. Any other resources held by the muxer will be released by Javascript garbage collection.
+On success, the promise resolves to an `undefined` value. Do not try to write other data to the muxer after calling this method. Any other resources held by the muxer will be released by Javascript garbage collection.
 
-To abandon the muxing process and forcibly close a file or stream without completing it, call the synchronous `forceClose()` method. This assumes that any result of the muxing process is to be left in an incomplete state.
+To abandon the muxing process and forcibly close a file or stream without completing it, call the synchronous `forceClose()` method of the muxer. This assumes that any result of the muxing process is to be left in an incomplete and invalid state.
 
 #### Node.js writable streams
 
-___Simon___ ?
+To follow.
 
 ### Codec parameters
 
-Another mechanism of passing parameters from demuxers to decoders to encoders and then muxers is to use _codec parameters_. These are a set of parameters that can be used to uniquely identify and represent the kind of codec of a stream and its dimensions and properties.  
+Another mechanism of passing parameters from demuxers to decoders to encoders and then muxers is to use _codec parameters_. These are a set of parameters that are codec-type specific, e.g. common to all codec implementations of a codec family such as H.264. They can be used to uniquely identify and represent the kind of codec of a stream and its dimensions and properties.
+
+Here are the various places that codec parameters can be found:
+
+* In previous sections, examples of codec parameters as the `codecpar` property of a demuxer's `streams` were provided. Codec parameters can be referenced from streams and used to set up decoders.
+* In previous examples, codec parameters were used to set the properties of a muxer's new `streams`.
+* Codec parameters have a factory method `beamcoder.codecParameters()`. Pass in a name parameter and other property values in an options object to configure the parameters on construction, or set these properties using setter methods.
+* Instead of using a codec name, decoders and encoders can be created from codec parameters. Use the `params` property of the factory method.
+* A copy of codec parameters can be extracted from a decoder or a decoder using their `extractParameters()` method.
+* Codec parameters can be used to override the currently set properties for a decoder or an encoder using the `useParams()` method. Note that the `codec_type` and `codec_id` must be the same as that already set for decoder or encoder.
+
+Here are some contrived examples of using codec parameters:
+
+```javascript
+let demuxer = await beamcoder.demuxer('file:bbb_1080p_c.ts');
+let videoParams = demuxer.streams.find(x => x.codecpar.codec_type === 'video').codecpar;
+// Set up a decoder using demuxer stream parameters
+let decoder = beamcoder.decoder({ params: videoParams });
+
+let encParams = decoder.extractParams(); // Make a copy of the decoder paramerers
+encParams.name = 'h264'; // Change the codec but keep the other parameters ...
+let encoder = beamcoder.encoder({ params: videoParams }); // ... to set up an encoder
+
+let muxer = beamcoder.muxer({ filename: 'file:bbb.mp4' });
+let stream = muxer.newStream({ // ... to set up a new stream in the muxer
+  name: encParams.name,
+  time_base: [1, 90000],
+  codecpar: encParams
+});
+
+```
+
+Care must be taken not to change codec parameters by side effects, for example using the same codec parameters in a transcoder where the decoder parameters are used to set up the encoder without copying them (extracting them) first. Modifications to the shared codec parameters object could effect both the decoder and encoder.
 
 ## Status, support and further development
 
@@ -949,7 +989,8 @@ Although the architecture of the aerostat beam coder is such that it could be us
 The developers of beam coder aimed to find a balance between being a faithful mapping of FFmpeg to Javascript while creating a Javascript API that is useful and easy to use. This may mean that certain features of FFmpeg are not yet exposed or choices have been made that lead to sub-optimal performance. Areas that are known to need further development and optimisation include:
 
 * imporved shared memory management between Javascript and C, specifically adding support for pools;
-* hardware acceleration.
+* hardware acceleration,
+* improving support for the `codec_tag` property.
 
 Contributions can be made via pull requests and will be considered by the author on their merits. Enhancement requests and bug reports should be raised as github issues. For support, donations or to sponsor further development, please contact [Streampunk Media](http://www.streampunk.media/).
 
