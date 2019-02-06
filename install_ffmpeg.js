@@ -120,7 +120,7 @@ async function linux() {
     console.error('libswresample.so.3 is not installed.');
     result = 1;
   }
-  if (stdout.indexOf('libswscale.so.4') < 0) {
+  if (stdout.indexOf('libswscale.so.5') < 0) {
     console.error('libswscale.so.5 is not installed.');
     result = 1;
   }
