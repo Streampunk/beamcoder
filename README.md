@@ -1,4 +1,4 @@
-# Beam Coder
+# Aerostat Beam Coder
 
 <img align="right" src="images/beamcoder_small.jpg">[Node.js](https://nodejs.org/) native bindings to [FFmpeg](https://www.ffmpeg.org/) with support for asynchronous processing via streams and promises.
 
@@ -6,7 +6,7 @@ The purpose of this package is to facilitate access to the capabilities of FFmpe
 
 ### Example
 
-View JPEGs in a browser of any key frame in the current folder, e.g. `.MP4` media files on a camera memory card, with the following code snippet. For example, to access a key frame around 42.5 seconds from the start of a file called `GOPR9502.MP4`:
+View JPEGs in a browser of any key frame of media files in the current folder, e.g. `.MP4` media files on a camera memory card, with the following code snippet. For example, to access a key frame around 42.5 seconds from the start of a file called `GOPR9502.MP4`:
 
     http://localhost:3000/GOPR9502.MP4/42.5
 

@@ -1,5 +1,5 @@
 /*
-  Aerostat Beam Coder - Redis-backed highly-scale-able and cloud-fit media beam engine.
+  Aerostat Beam Coder - Node.js native bindings for FFmpeg.
   Copyright (C) 2019  Streampunk Media Ltd.
 
   This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,14 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const beamcoder = require('../index.js');
+/* Generate a 200 frame test pattern and encode it as a raw H.264 file.
+
+  Usage: node encode_h264.js <filename.h264>
+
+  Output can be viewed in VLC. Make sure "All Files" is selected to see the file.
+*/
+
+const beamcoder = require('../index.js'); // Use require('beamcoder') externally
 const fs = require('fs');
 
 let endcode = Buffer.from([0, 0, 1, 0xb7]);
@@ -40,10 +47,9 @@ async function run() {
   };
 
   let encoder = await beamcoder.encoder(encParams);
-  console.log(encoder);
-  //console.log(encoder.getProperties());
+  console.log('Encoder', encoder);
 
-  let outFile = fs.createWriteStream('wibble.h264');
+  let outFile = fs.createWriteStream(process.argv[2]);
 
   for ( let i = 0 ; i < 200 ; i++ ) {
     let frame = beamcoder.frame({
@@ -70,17 +76,17 @@ async function run() {
     }
 
     let packets = await encoder.encode(frame);
-    console.log(i, packets.total_time);
+    if ( i % 10 === 0) console.log('Encoding frame', i);
     packets.packets.forEach(x => outFile.write(x.data));
   }
 
   let p2 = await encoder.flush();
-  console.log(p2.packets.length, p2.total_time);
+  console.log('Flushing', p2.packets.length, 'frames.');
   p2.packets.forEach(x => outFile.write(x.data));
   outFile.end(endcode);
 
-  // global.gc();
   console.log('Total time ', process.hrtime(start));
 }
 
-run();
+if (typeof process.argv[2] === 'string') { run(); }
+else { console.error('Error: Please provide a file name.'); }
