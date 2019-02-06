@@ -165,6 +165,24 @@ napi_value getFilterDesc(napi_env env, napi_callback_info info) {
   return result;
 }
 
+napi_value getFilterPrivData(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVFilter* filter;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filter);
+  CHECK_STATUS;
+
+  if (filter->priv_class != nullptr) {
+    status = fromAVClass(env, (const AVClass*) filter->priv_class, &result);
+    CHECK_STATUS;
+  } else {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+  }
+  return result;
+}
+
 napi_value getFilterFlags(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
@@ -211,9 +229,10 @@ napi_status fromAVFilter(napi_env env, const AVFilter* filter, napi_value* resul
     { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
     { "name", nullptr, nullptr, getFilterName, nullptr, nullptr, napi_enumerable, (void*)filter },
     { "description", nullptr, nullptr, getFilterDesc, nullptr, nullptr, napi_enumerable, (void*)filter },
+    { "priv_class", nullptr, nullptr, getFilterPrivData, nullptr, nullptr, napi_enumerable, (void*)filter },
     { "flags", nullptr, nullptr, getFilterFlags, nullptr, nullptr, napi_enumerable, (void*)filter }
   };
-  status = napi_define_properties(env, *result, 4, desc);
+  status = napi_define_properties(env, *result, 5, desc);
   PASS_STATUS;
 
   return napi_ok;
@@ -800,8 +819,9 @@ private:
 struct filtererCarrier : carrier {
   std::string filterType;
   std::vector<std::string> inNames;
-  std::vector<std::string> outNames;
   std::vector<std::string> inParams;
+  std::vector<std::string> outNames;
+  std::vector<std::map<std::string, std::string> > outParams;
   std::string filterSpec;
 
   filtContexts *srcCtxs = nullptr;
@@ -865,7 +885,7 @@ void filtererExecute(napi_env env, void* data) {
   }
 
   c->sinkCtxs = new filtContexts;
-  for (size_t i = 0; i < c->outNames.size(); ++i) {
+  for (size_t i = 0; i < c->outParams.size(); ++i) {
     const AVFilter *buffersink = avfilter_get_by_name(0 == c->filterType.compare("audio")?"abuffersink":"buffersink");
     AVFilterContext *sinkCtx = nullptr;
     ret = avfilter_graph_create_filter(&sinkCtx, buffersink, c->outNames[i].c_str(), NULL, NULL, c->filterGraph);
@@ -875,26 +895,34 @@ void filtererExecute(napi_env env, void* data) {
       goto end;
     }
     if (0 == c->filterType.compare("audio")) {
-      static const enum AVSampleFormat out_sample_fmts[] = { AV_SAMPLE_FMT_S16, AV_SAMPLE_FMT_NONE };
-      static const int64_t out_channel_layouts[] = { AV_CH_LAYOUT_MONO, -1 };
-      static const int out_sample_rates[] = { 8000, -1 };
-      ret = av_opt_set_int_list(sinkCtx, "sample_fmts", out_sample_fmts, -1,
-                                AV_OPT_SEARCH_CHILDREN);
-      if (ret < 0) {
-          av_log(NULL, AV_LOG_ERROR, "Cannot set output sample format\n");
-          goto end;
+      auto p = c->outParams[i].find("sample_rates");
+      if (p != c->outParams[i].end()) {
+        const int out_sample_rates[] = { std::stoi(p->second.c_str()), -1 };
+        ret = av_opt_set_int_list(sinkCtx, "sample_rates", out_sample_rates, -1,
+                                  AV_OPT_SEARCH_CHILDREN);
+        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output sample rate\n"); }
       }
-      ret = av_opt_set_int_list(sinkCtx, "channel_layouts", out_channel_layouts, -1,
-                                AV_OPT_SEARCH_CHILDREN);
-      if (ret < 0) {
-          av_log(NULL, AV_LOG_ERROR, "Cannot set output channel layout\n");
-          goto end;
+      p = c->outParams[i].find("sample_fmts");
+      if (p != c->outParams[i].end()) {
+        const enum AVSampleFormat out_sample_fmts[] = { av_get_sample_fmt(p->second.c_str()), AV_SAMPLE_FMT_NONE };
+        ret = av_opt_set_int_list(sinkCtx, "sample_fmts", out_sample_fmts, AV_SAMPLE_FMT_NONE,
+                                  AV_OPT_SEARCH_CHILDREN);
+        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output sample format\n"); }
       }
-      ret = av_opt_set_int_list(sinkCtx, "sample_rates", out_sample_rates, -1,
-                                AV_OPT_SEARCH_CHILDREN);
-      if (ret < 0) {
-          av_log(NULL, AV_LOG_ERROR, "Cannot set output sample rate\n");
-          goto end;
+      p = c->outParams[i].find("channel_layouts");
+      if (p != c->outParams[i].end()) {
+        const uint64_t out_channel_layouts[] = { av_get_channel_layout(p->second.c_str()), 0 };
+        ret = av_opt_set_int_list(sinkCtx, "channel_layouts", out_channel_layouts, 0,
+                                  AV_OPT_SEARCH_CHILDREN);
+        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output sample format\n"); }
+      }
+    } else {
+      auto p = c->outParams[i].find("pix_fmts");
+      if (p != c->outParams[i].end()) {
+        enum AVPixelFormat pix_fmts[] = { av_get_pix_fmt(p->second.c_str()), AV_PIX_FMT_NONE };
+        ret = av_opt_set_int_list(sinkCtx, "pix_fmts", pix_fmts, AV_PIX_FMT_NONE,
+                                  AV_OPT_SEARCH_CHILDREN);
+        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output pixel format\n"); }
       }
     }
 
@@ -997,18 +1025,18 @@ napi_value filterer(napi_env env, napi_callback_info info) {
       BEAMCODER_INVALID_ARGS);
   }
 
-  bool hasFilterType, hasInParams, hasOutNames, hasFilterSpec;
+  bool hasFilterType, hasInParams, hasOutParams, hasFilterSpec;
   c->status = napi_has_named_property(env, args[0], "filterType", &hasFilterType);
   REJECT_RETURN;
   c->status = napi_has_named_property(env, args[0], "inputParams", &hasInParams);
   REJECT_RETURN;
-  c->status = napi_has_named_property(env, args[0], "outputNames", &hasOutNames);
+  c->status = napi_has_named_property(env, args[0], "outputParams", &hasOutParams);
   REJECT_RETURN;
   c->status = napi_has_named_property(env, args[0], "filterSpec", &hasFilterSpec);
   REJECT_RETURN;
 
-  if (!(hasFilterType && hasInParams && hasFilterSpec)) {
-    REJECT_ERROR_RETURN("Filterer parameter object requires type, inputParams and filterSpec to be defined.",
+  if (!(hasFilterType && hasInParams && hasOutParams && hasFilterSpec)) {
+    REJECT_ERROR_RETURN("Filterer parameter object requires type, inputParams, outputParams and filterSpec to be defined.",
       BEAMCODER_INVALID_ARGS);
   }
 
@@ -1089,7 +1117,7 @@ napi_value filterer(napi_env env, napi_callback_info info) {
       size_t sampleFmtLen;
       c->status = napi_get_value_string_utf8(env, sampleFmtVal, nullptr, 0, &sampleFmtLen);
       REJECT_RETURN;
-      pixFmt.resize(sampleFmtLen);
+      sampleFormat.resize(sampleFmtLen);
       c->status = napi_get_value_string_utf8(env, sampleFmtVal, (char *)sampleFormat.data(), sampleFmtLen+1, nullptr);
       REJECT_RETURN;
 
@@ -1182,36 +1210,96 @@ napi_value filterer(napi_env env, napi_callback_info info) {
     c->inParams.push_back(args);
   }
 
-  if (hasOutNames) {
-    napi_value namesArrayVal;
-    uint32_t namesArrayLen;
-    c->status = napi_get_named_property(env, args[0], "outputNames", &namesArrayVal);
+  c->status = napi_get_named_property(env, args[0], "outputParams", &paramsArrayVal);
+  REJECT_RETURN;
+  c->status = napi_is_array(env, paramsArrayVal, &isArray);
+  REJECT_RETURN;
+  if (!isArray) {
+    REJECT_ERROR_RETURN("Filterer outputParams must be an array.",
+      BEAMCODER_INVALID_ARGS);
+  }
+  c->status = napi_get_array_length(env, paramsArrayVal, &paramsArrayLen);
+  REJECT_RETURN;
+
+  for (uint32_t i = 0; i < paramsArrayLen; ++i) {
+    napi_value outParamsVal;
+    c->status = napi_get_element(env, paramsArrayVal, i, &outParamsVal);
     REJECT_RETURN;
-    c->status = napi_is_array(env, namesArrayVal, &isArray);
+
+    std::string name;
+    uint32_t sampleRate;
+    std::string sampleFormat;
+    std::string channelLayout;
+    std::string pixFmt;
+
+    bool hasNameVal;
+    c->status = napi_has_named_property(env, outParamsVal, "name", &hasNameVal);
     REJECT_RETURN;
-    if (!isArray) {
-      REJECT_ERROR_RETURN("Filterer outputNames must be an array.",
+    if (!hasNameVal && (i > 0)) {
+      REJECT_ERROR_RETURN("Filterer outputParams must include a name value if there is more than one output.",
         BEAMCODER_INVALID_ARGS);
     }
-    c->status = napi_get_array_length(env, namesArrayVal, &namesArrayLen);
-    REJECT_RETURN;
-
-    for (uint32_t i = 0; i < namesArrayLen; ++i) {
-      napi_value outNameVal;
-      c->status = napi_get_element(env, namesArrayVal, i, &outNameVal);
+    if (hasNameVal) {
+      napi_value nameVal;
+      c->status = napi_get_named_property(env, outParamsVal, "name", &nameVal);
       REJECT_RETURN;
-
-      std::string name;
       size_t nameLen;
-      c->status = napi_get_value_string_utf8(env, outNameVal, nullptr, 0, &nameLen);
+      c->status = napi_get_value_string_utf8(env, nameVal, nullptr, 0, &nameLen);
       REJECT_RETURN;
       name.resize(nameLen);
-      c->status = napi_get_value_string_utf8(env, outNameVal, (char *)name.data(), nameLen+1, nullptr);
+      c->status = napi_get_value_string_utf8(env, nameVal, (char *)name.data(), nameLen+1, nullptr);
       REJECT_RETURN;
       c->outNames.push_back(name);
+    } else
+      c->outNames.push_back("out");
+
+    if (0 == c->filterType.compare("audio")) {
+      napi_value sampleRateVal;
+      c->status = napi_get_named_property(env, outParamsVal, "sampleRate", &sampleRateVal);
+      REJECT_RETURN;
+      c->status = napi_get_value_uint32(env, sampleRateVal, &sampleRate);
+      REJECT_RETURN;
+
+      napi_value sampleFmtVal;
+      c->status = napi_get_named_property(env, outParamsVal, "sampleFormat", &sampleFmtVal);
+      REJECT_RETURN;
+      size_t sampleFmtLen;
+      c->status = napi_get_value_string_utf8(env, sampleFmtVal, nullptr, 0, &sampleFmtLen);
+      REJECT_RETURN;
+      sampleFormat.resize(sampleFmtLen);
+      c->status = napi_get_value_string_utf8(env, sampleFmtVal, (char *)sampleFormat.data(), sampleFmtLen+1, nullptr);
+      REJECT_RETURN;
+
+      napi_value channelLayoutVal;
+      c->status = napi_get_named_property(env, outParamsVal, "channelLayout", &channelLayoutVal);
+      REJECT_RETURN;
+      size_t channelLayoutLen;
+      c->status = napi_get_value_string_utf8(env, channelLayoutVal, nullptr, 0, &channelLayoutLen);
+      REJECT_RETURN;
+      channelLayout.resize(channelLayoutLen);
+      c->status = napi_get_value_string_utf8(env, channelLayoutVal, (char *)channelLayout.data(), channelLayoutLen+1, nullptr);
+      REJECT_RETURN;
+
+      std::map<std::string, std::string> paramMap;
+      paramMap.emplace("sample_rates", std::to_string(sampleRate));
+      paramMap.emplace("sample_fmts", sampleFormat);
+      paramMap.emplace("channel_layouts", channelLayout);
+      c->outParams.push_back(paramMap);
+    } else {
+      napi_value pixFmtVal;
+      c->status = napi_get_named_property(env, outParamsVal, "pixelFormat", &pixFmtVal);
+      REJECT_RETURN;
+      size_t pixFmtLen;
+      c->status = napi_get_value_string_utf8(env, pixFmtVal, nullptr, 0, &pixFmtLen);
+      REJECT_RETURN;
+      pixFmt.resize(pixFmtLen);
+      c->status = napi_get_value_string_utf8(env, pixFmtVal, (char *)pixFmt.data(), pixFmtLen+1, nullptr);
+      REJECT_RETURN;
+
+      std::map<std::string, std::string> paramMap;
+      paramMap.emplace("pix_fmts", pixFmt);
+      c->outParams.push_back(paramMap);
     }
-  } else {
-    c->outNames.push_back("out");
   }
 
   napi_value filterSpecJS;
@@ -1241,9 +1329,7 @@ struct filterCarrier : carrier {
   filtContexts *sinkCtxs = nullptr;
   std::map<std::string, std::deque<AVFrame *> > srcFrames;
   std::map<std::string, std::vector<AVFrame *> > dstFrames;
-  ~filterCarrier() {
-    // printf("Filter carrier destructor.\n");
-  }
+  ~filterCarrier() {}
 };
 
 namespace {

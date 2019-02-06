@@ -43,7 +43,7 @@ async function run() {
         height: vidStream.codecpar.height,
         pixelFormat: vidStream.codecpar.format,
         timeBase: vidStream.time_base,
-        pixelAspect: vidStream.sample_aspect_ratio,
+        pixelAspect: vidStream.sample_aspect_ratio
       },
       {
         name: 'in1:v',
@@ -51,10 +51,15 @@ async function run() {
         height: vidStream.codecpar.height,
         pixelFormat: vidStream.codecpar.format,
         timeBase: vidStream.time_base,
-        pixelAspect: vidStream.sample_aspect_ratio,
+        pixelAspect: vidStream.sample_aspect_ratio
       }
     ],
-    outputNames: [ 'out0:v' ],
+    outputParams: [
+      {
+        name: 'out0:v',
+        pixelFormat: 'yuv422p'
+      }
+    ],
     filterSpec: '[in0:v] scale=1280:720 [left]; [in1:v] scale=640:360 [right]; [left][right] overlay=format=auto:x=640 [out0:v]'
   });
   // console.log(filterer.graph);
@@ -66,9 +71,9 @@ async function run() {
   // scaleFilter.priv = { width: 1000 };
   // console.log(util.inspect(scaleFilter, {depth: null}));
 
-  // const overlayFilter = filterer.graph.filters.find(f => 'overlay' === f.filter.name);
-  // overlayFilter.priv = { x: 100, y: 100 };
-  // console.log(util.inspect(overlayFilter, {depth: null}));
+  const overlayFilter = filterer.graph.filters.find(f => 'overlay' === f.filter.name);
+  overlayFilter.priv = { x: 100, y: 100 };
+  console.log(util.inspect(overlayFilter, {depth: null}));
 
   let encParams = {
     name: 'libx264',
@@ -95,7 +100,7 @@ async function run() {
 
   // await demuxer.seek({ frame: 4200, stream_index: 0});
 
-  for ( let x = 0 ; x < 10000 ; x++ ) {
+  for ( let x = 0 ; x < 10 ; x++ ) {
     let packet = await demuxer.read();
     if (packet.stream_index == 0) {
       // console.log(packet);

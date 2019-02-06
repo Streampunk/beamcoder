@@ -556,10 +556,10 @@ To see a list of available filters, use:
 
 #### Filterer
 
-To create an instance of a filterer, request a `filterer` from beam coder, specifying the stream type, input parameters and a filter definition string. The parameters will typically be read from the selected demuxer stream object.
+To create an instance of a filterer, request a `filterer` from beam coder, specifying the stream type, input parameters, output parameters and a filter definition string. The input parameters will typically be read from the selected demuxer stream object.
 
 ```javascript
-let a_Filterer = await beamcoder.filterer({
+let a_filterer = await beamcoder.filterer({
   filterType: 'audio',
   inputParams: [
     {
@@ -567,6 +567,13 @@ let a_Filterer = await beamcoder.filterer({
       sampleFormat: audStream.codecpar.format,
       channelLayout: 'mono',
       timeBase: audStream.time_base
+    }
+  ],
+  outputParams: [
+    {
+      sampleRate: 8000,
+      sampleFormat: 's16',
+      channelLayout: 'mono'
     }
   ],
   filterSpec: 'aresample=8000, aformat=sample_fmts=s16:channel_layouts=mono'
@@ -581,6 +588,11 @@ let v_filterer = await beamcoder.filterer({
       pixelFormat: vidStream.codecpar.format,
       timeBase: vidStream.time_base,
       pixelAspect: vidStream.sample_aspect_ratio,
+    }
+  ],
+  outputParams: [
+    {
+      pixelFormat: 'yuv422'
     }
   ],
   filterSpec: 'scale=1280:720'
@@ -612,10 +624,17 @@ let v_filterer = await beamcoder.filterer({
       pixelAspect: vidStream1.sample_aspect_ratio,
     }
   ],
-  outputNames: [ 'out0:v' ],
+  outputParams: [
+    {
+      name: 'out0:v',
+      pixelFormat: 'yuv422'
+    }
+  ],
   filterSpec: '[in0:v] scale=1280:720 [left]; [in1:v] scale=640:360 [right]; [left][right] overlay=format=auto:x=640 [out0:v]'
 });
 ```
+
+If the specified output parameters differ from the format produced by the last filter specified in the filter string then a resample or scaler filter will be automatically inserted.
 
 The properties of the resolved filterer object can be examined through the object's `graph` property.
 
