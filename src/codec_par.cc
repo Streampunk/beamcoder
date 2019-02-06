@@ -168,6 +168,7 @@ napi_value setCodecParName(napi_env env, napi_callback_info info) {
     NAPI_THROW_ERROR("Codec parameter codec_name does not match a known codec.");
   }
   c->codec_id = codecDesc->id;
+  c->codec_type = codecDesc->type;
 
   free(codecName);
 

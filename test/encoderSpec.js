@@ -20,7 +20,7 @@
 */
 
 const test = require('tape');
-const { beamcoder } = require('../index.js');
+const beamcoder = require('../index.js');
 
 test('Creating an encoder', t => {
   let enc = beamcoder.encoder({ name: 'h264' });
