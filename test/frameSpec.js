@@ -21,9 +21,24 @@
 
 const test = require('tape');
 const beamcoder = require('../index.js');
+const util = require('util');
 
 test('Create a frame', t => {
   let fr = beamcoder.frame();
   t.ok(fr, 'is truthy.');
   t.end();
 });
+
+test('Minimal JSON serialization', t => {
+  let fr = beamcoder.frame();
+  let fp = JSON.stringify(fr);
+  t.ok(fp, 'JSON serialization is truthy.');
+  let pfp = JSON.parse(fp);
+  t.deepEqual(pfp, { type: 'Frame', linesize: [] }, 'makes minimal JSON.');
+  let rf = beamcoder.frame(fp);
+  t.ok(rf, 'roundtrip is truthy.');
+  t.equal(util.inspect(rf), util.inspect(beamcoder.frame()), 'same as a new frame.');
+  t.end();
+});
+
+// TODO JSON maximal test
