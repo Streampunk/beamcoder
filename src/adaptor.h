@@ -97,9 +97,15 @@ private:
 class Adaptor {
 public:
   Adaptor(uint32_t queueLen)
-    : mQueue(new Queue<Chunk *>(queueLen)), mCurPos(0), mCurChunk(nullptr), mChunkPos(0), m() {}
+    : mQueue(new Queue<Chunk *>(queueLen)), mCurPos(0), mCurChunk(nullptr), mChunkPos(0), m(), mBuf(4096) {}
   ~Adaptor() {
     delete mQueue;
+    std::unique_lock<std::mutex> lk(m);
+    while (mDone.size()) {
+      Chunk *chunk = mDone.back();
+      mDone.pop_back();
+      delete chunk;
+    }
     mDone.clear();
   }
 
@@ -146,6 +152,11 @@ public:
     return status;
   }
 
+  // convenience buffer for avio_alloc_context
+  //  - it shouldn't be needed but avformat_write_header crashes if no buffer is provided
+  unsigned char *buf()  { return &mBuf[0]; }
+  int bufLen() const  { return (int)mBuf.size(); }
+
 private:
   Queue<Chunk *> *mQueue;
   std::vector<Chunk *> mDone;
@@ -153,6 +164,7 @@ private:
   Chunk *mCurChunk;
   size_t mChunkPos;
   mutable std::mutex m;
+  std::vector<unsigned char> mBuf;
 
   int fillBuf(uint8_t *buf, size_t numBytes) {
     int bufOff = 0;

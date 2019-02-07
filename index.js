@@ -49,6 +49,7 @@ function createBeamWritableStream(params, governor) {
 function demuxerStream(params) {
   const governor = new beamcoder.governor({});
   const stream = createBeamWritableStream(params, governor);
+  stream.on('close', () => governor.finish());
   stream.on('finish', () => governor.finish());
   stream.on('error', console.error);
   stream.demuxer = () => beamcoder.demuxer(governor);

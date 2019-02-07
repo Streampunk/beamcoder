@@ -121,8 +121,7 @@ napi_value muxer(napi_env env, napi_callback_info info) {
 
   AVIOContext* avio_ctx = nullptr;
   if (adaptor) {
-    uint8_t *avio_ctx_buffer = (uint8_t *)av_malloc(4096); // !!! write_header crash if no buffer ??? !!!
-    avio_ctx = avio_alloc_context(avio_ctx_buffer, 4096, 1, adaptor, nullptr, &write_packet, nullptr);
+    avio_ctx = avio_alloc_context(adaptor->buf(), adaptor->bufLen(), 1, adaptor, nullptr, &write_packet, nullptr);
     if (!avio_ctx) {
       NAPI_THROW_ERROR("Problem allocating muxer stream output context.");
     }

@@ -100,8 +100,9 @@ async function run() {
 
   // await demuxer.seek({ frame: 4200, stream_index: 0});
 
-  for ( let x = 0 ; x < 10 ; x++ ) {
-    let packet = await demuxer.read();
+  let packet = {};
+  for ( let x = 0 ; x < 10 && packet !== null; x++ ) {
+    packet = await demuxer.read();
     if (packet.stream_index == 0) {
       // console.log(packet);
       let frames = await decoder.decode(packet);
