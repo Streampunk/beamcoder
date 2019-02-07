@@ -21,6 +21,12 @@
 
 #include "mux.h"
 
+int write_packet(void *opaque, uint8_t *buf, int buf_size)
+{
+  Adaptor *adaptor = (Adaptor *)opaque;
+  return adaptor->write(buf, buf_size);
+}
+
 napi_value muxer(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, prop, subprop;
@@ -32,6 +38,7 @@ napi_value muxer(napi_env env, napi_callback_info info) {
   napi_valuetype type;
   bool isArray;
   AVFormatContext* fmtCtx = nullptr;
+  Adaptor *adaptor = nullptr;
   size_t argc = 1;
   napi_value args[1];
 
@@ -94,7 +101,34 @@ napi_value muxer(napi_env env, napi_callback_info info) {
     }
   }
 
+  status = napi_get_named_property(env, args[0], "governor", &prop);
+  CHECK_STATUS;
+  status = napi_typeof(env, prop, &type);
+  CHECK_STATUS;
+  if (type == napi_object) {
+    napi_value adaptorValue;
+    status = napi_get_named_property(env, prop, "_adaptor", &adaptorValue);
+    CHECK_STATUS;
+    status = napi_typeof(env, adaptorValue, &type);
+    CHECK_STATUS;
+    if (type == napi_external) {
+      status = napi_get_value_external(env, adaptorValue, (void**)&adaptor);
+      CHECK_STATUS;
+    } else if (type != napi_undefined) {
+      NAPI_THROW_ERROR("Adaptor must be of external type when specified.");
+    }
+  }
+
+  AVIOContext* avio_ctx = nullptr;
+  if (adaptor) {
+    uint8_t *avio_ctx_buffer = (uint8_t *)av_malloc(4096); // !!! write_header crash if no buffer ??? !!!
+    avio_ctx = avio_alloc_context(avio_ctx_buffer, 4096, 1, adaptor, nullptr, &write_packet, nullptr);
+    if (!avio_ctx) {
+      NAPI_THROW_ERROR("Problem allocating muxer stream output context.");
+    }
+  }
   ret = avformat_alloc_output_context2(&fmtCtx, oformat, formatName, filename);
+  fmtCtx->pb = avio_ctx;
 
   free(formatName);
   free(filename);
@@ -103,7 +137,7 @@ napi_value muxer(napi_env env, napi_callback_info info) {
     NAPI_THROW_ERROR(avErrorMsg("Error allocating muxer context: ", ret));
   }
 
-  status = fromAVFormatContext(env, fmtCtx, &result, true);
+  status = fromAVFormatContext(env, fmtCtx, adaptor, &result, true);
   CHECK_STATUS;
 
   status = napi_create_function(env, "openIO", NAPI_AUTO_LENGTH,
@@ -148,11 +182,12 @@ napi_value muxer(napi_env env, napi_callback_info info) {
 void openIOExecute(napi_env env, void* data) {
   openIOCarrier* c = (openIOCarrier*) data;
   int ret;
-
-  ret = avio_open2(&c->format->pb, c->format->url, c->flags, nullptr, &c->options);
-  if (ret < 0) {
-    c->status = BEAMCODER_ERROR_OPENIO;
-    c->errorMsg = avErrorMsg("Problem opening IO context: ", ret);
+  if (c->format->pb == nullptr) {
+    ret = avio_open2(&c->format->pb, c->format->url, c->flags, nullptr, &c->options);
+    if (ret < 0) {
+      c->status = BEAMCODER_ERROR_OPENIO;
+      c->errorMsg = avErrorMsg("Problem opening IO context: ", ret);
+    }
   }
 }
 
@@ -272,22 +307,22 @@ napi_value openIO(napi_env env, napi_callback_info info) {
       c->status = beam_get_bool(env, prop, "WRITE", &present, &flag);
       REJECT_RETURN;
       if (present) { c->flags = (flag) ?
-        c->flags | AVIO_FLAG_READ :
-        c->flags & ~AVIO_FLAG_READ; }
+        c->flags | AVIO_FLAG_WRITE :
+        c->flags & ~AVIO_FLAG_WRITE; }
       c->status = beam_get_bool(env, prop, "NONBLOCK", &present, &flag);
       REJECT_RETURN;
       if (present) { c->flags = (flag) ?
-        c->flags | AVIO_FLAG_READ :
-        c->flags & ~AVIO_FLAG_READ; }
+        c->flags | AVIO_FLAG_NONBLOCK :
+        c->flags & ~AVIO_FLAG_NONBLOCK; }
       c->status = beam_get_bool(env, prop, "DIRECT", &present, &flag);
       REJECT_RETURN;
       if (present) { c->flags = (flag) ?
-        c->flags | AVIO_FLAG_READ :
-        c->flags & ~AVIO_FLAG_READ; }
+        c->flags | AVIO_FLAG_DIRECT :
+        c->flags & ~AVIO_FLAG_DIRECT; }
     }
   }
 
-  if (c->format->url == nullptr) {
+  if ((c->format->url == nullptr) && (c->format->pb == nullptr)) {
     REJECT_ERROR_RETURN("Cannot open muxer IO without a URL or filename.",
       BEAMCODER_INVALID_ARGS);
   }
@@ -684,7 +719,12 @@ void writeTrailerExecute(napi_env env, void* data) {
 
   retWrite = av_write_trailer(c->format);
   if (c->format->pb != nullptr) {
-    retClose = avio_closep(&c->format->pb);
+    if (c->adaptor) {
+      c->adaptor->finish();
+      avio_context_free(&c->format->pb);
+    }
+    else
+      retClose = avio_closep(&c->format->pb);
   }
   if ((retWrite < 0) && (retClose < 0)) {
     c->status = BEAMCODER_ERROR_WRITE_TRAILER;
@@ -724,7 +764,7 @@ void writeTrailerComplete(napi_env env, napi_status asyncStatus, void* data) {
 }
 
 napi_value writeTrailer(napi_env env, napi_callback_info info) {
-  napi_value promise, formatJS, formatExt, resourceName;
+  napi_value promise, formatJS, formatExt, adaptorExt, resourceName;
   writeTrailerCarrier* c = new writeTrailerCarrier;
 
   c->status = napi_create_promise(env, &c->_deferred, &promise);
@@ -736,6 +776,10 @@ napi_value writeTrailer(napi_env env, napi_callback_info info) {
   c->status = napi_get_named_property(env, formatJS, "_formatContext", &formatExt);
   REJECT_RETURN;
   c->status = napi_get_value_external(env, formatExt, (void**) &c->format);
+  REJECT_RETURN;
+  c->status = napi_get_named_property(env, formatJS, "_adaptor", &adaptorExt);
+  REJECT_RETURN;
+  c->status = napi_get_value_external(env, adaptorExt, (void**) &c->adaptor);
   REJECT_RETURN;
 
   c->status = napi_create_string_utf8(env, "WriteTrailer", NAPI_AUTO_LENGTH, &resourceName);

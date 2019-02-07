@@ -33,13 +33,11 @@ https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
 
 console.log(splash);
 
-const { Writable } = require('stream');
+const { Writable, Readable } = require('stream');
 
-function createBeamStream(params, governor) {
+function createBeamWritableStream(params, governor) {
   const beamStream = new Writable({
-    decodeStrings: params.decodeStrings || false,
     highWaterMark: params.highwaterMark || 16384,
-    objectMode: false,
     write: async (chunk, encoding, cb) => {
       await governor.write(chunk);
       cb();
@@ -50,13 +48,40 @@ function createBeamStream(params, governor) {
 
 function demuxerStream(params) {
   const governor = new beamcoder.governor({});
-  const stream = createBeamStream(params, governor);
-  stream.on('close', () => governor.finish());
+  const stream = createBeamWritableStream(params, governor);
+  stream.on('finish', () => governor.finish());
   stream.on('error', console.error);
   stream.demuxer = () => beamcoder.demuxer(governor);
   return stream;
 }
 
+function createBeamReadableStream(params, governor) {
+  const beamStream = new Readable({
+    highWaterMark: params.highwaterMark || 16384,
+    read: async size => {
+      const chunk = await governor.read(size);
+      if (0 === chunk.length)
+        beamStream.push(null);
+      else
+        beamStream.push(chunk);
+    }
+  });
+  return beamStream;
+}
+
+function muxerStream(params) {
+  const governor = new beamcoder.governor({});
+  const stream = createBeamReadableStream(params, governor);
+  stream.on('close', () => governor.finish());
+  stream.on('error', console.error);
+  stream.muxer = options => {
+    options.governor = governor;
+    return beamcoder.muxer(options);
+  };
+  return stream;
+}
+
 beamcoder.demuxerStream = demuxerStream;
+beamcoder.muxerStream = muxerStream;
 
 module.exports = beamcoder;

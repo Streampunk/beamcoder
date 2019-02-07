@@ -25,7 +25,8 @@
 #include "node_api.h"
 #include "beamcoder_util.h"
 #include "codec_par.h"
-#include "packet.h" 
+#include "packet.h"
+#include "adaptor.h"
 
 extern "C" {
   #include <libavformat/avformat.h>
@@ -41,7 +42,7 @@ napi_status fromAVInputFormat(napi_env env,
 napi_status fromAVOutputFormat(napi_env env,
   const AVOutputFormat* iformat, napi_value* result);
 napi_status fromAVFormatContext(napi_env env,
-  AVFormatContext* fmtCtx, napi_value* result, bool isMuxer);
+  AVFormatContext* fmtCtx, Adaptor *adaptor, napi_value* result, bool isMuxer);
 napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result);
 
 void formatContextFinalizer(napi_env env, void* data, void* hint);

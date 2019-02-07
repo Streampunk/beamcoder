@@ -48,7 +48,7 @@ public:
       cv.wait(lk);
     }
     T val = 0;
-    if (mActive) {
+    if (!qu.empty()) {
       val = qu.front();
       qu.pop();
       cv.notify_one();
@@ -63,9 +63,9 @@ public:
 
   void quit() {
     std::lock_guard<std::mutex> lk(m);
+    mActive = false;
     if ((0 == qu.size()) || (qu.size() >= mMaxQueue)) {
       // ensure release of any blocked thread
-      mActive = false;
       cv.notify_all();
     }
   }
@@ -80,7 +80,7 @@ private:
 
 class Chunk {
 public:
-  Chunk(napi_ref bufRef, void *buf, size_t bufLen)
+  Chunk(napi_ref bufRef, const void *buf, size_t bufLen)
     : mBufRef(bufRef), mBuf(buf), mLen(bufLen) {}
   ~Chunk() {}
 
@@ -96,34 +96,38 @@ private:
 
 class Adaptor {
 public:
-  Adaptor(Queue<Chunk *> *queue)
-    : mQueue(queue), mCurPos(0), mCurChunk(nullptr), mChunkPos(0), m() {}
+  Adaptor(uint32_t queueLen)
+    : mQueue(new Queue<Chunk *>(queueLen)), mCurPos(0), mCurChunk(nullptr), mChunkPos(0), m() {}
   ~Adaptor() {
     delete mQueue;
     mDone.clear();
   }
 
-  void write(Chunk *chunk) {
-    mQueue->enqueue(chunk);
+  int write(const uint8_t *buf, int bufSize) {
+    mQueue->enqueue(new Chunk(nullptr, buf, bufSize));
+    return bufSize;
+  }
+
+  void *read(size_t numBytes, size_t *bytesRead) {
+    uint8_t *buf = (uint8_t *)malloc(numBytes);
+    *bytesRead = fillBuf(buf, numBytes);
+    if (numBytes != *bytesRead) {
+      if (0 == *bytesRead) {
+        free(buf);
+        buf = nullptr;
+      }
+      else
+        buf = (uint8_t *)realloc(buf, *bytesRead);
+    }
+    return buf;
+  }
+
+  void write(napi_ref bufRef, void *buf, size_t bufLen) {
+    mQueue->enqueue(new Chunk(bufRef, buf, bufLen));
   }
 
   int read(uint8_t *buf, int bufSize) {
-    int bufOff = 0;
-    while (bufSize) {
-      if (!mCurChunk || (mCurChunk && mCurChunk->len() == mChunkPos))
-        if (!nextChunk())
-          break;
-
-      int curSize = FFMIN(bufSize, mCurChunk->len() - mChunkPos);
-      void *srcBuf = (uint8_t *)mCurChunk->buf() + mChunkPos;
-      memcpy(buf + bufOff, srcBuf, curSize);
-
-      bufOff += curSize;
-      mChunkPos += curSize;
-      bufSize -= curSize;
-    }
-
-    return bufOff;
+    return fillBuf(buf, bufSize);
   }
 
   void finish()  { mQueue->quit(); }
@@ -134,7 +138,8 @@ public:
     while (mDone.size()) {
       Chunk *chunk = mDone.back();
       mDone.pop_back();
-      status = napi_delete_reference(env, chunk->buf_ref());
+      if (chunk->buf_ref())
+        status = napi_delete_reference(env, chunk->buf_ref());
       delete chunk;
       if (napi_ok != status) break;
     }
@@ -148,6 +153,25 @@ private:
   Chunk *mCurChunk;
   size_t mChunkPos;
   mutable std::mutex m;
+
+  int fillBuf(uint8_t *buf, size_t numBytes) {
+    int bufOff = 0;
+    while (numBytes) {
+      if (!mCurChunk || (mCurChunk && mCurChunk->len() == mChunkPos))
+        if (!nextChunk())
+          break;
+
+      int curSize = FFMIN(numBytes, mCurChunk->len() - mChunkPos);
+      void *srcBuf = (uint8_t *)mCurChunk->buf() + mChunkPos;
+      memcpy(buf + bufOff, srcBuf, curSize);
+
+      bufOff += curSize;
+      mChunkPos += curSize;
+      numBytes -= curSize;
+    }
+
+    return bufOff;
+  }
 
   bool nextChunk() {
     if (mCurChunk) {

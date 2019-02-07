@@ -2935,9 +2935,9 @@ napi_value failSetter(napi_env env, napi_callback_info info) {
 }
 
 napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
-    napi_value* result, bool isMuxer) {
+    Adaptor *adaptor, napi_value* result, bool isMuxer) {
   napi_status status;
-  napi_value jsFmtCtx, extFmtCtx, typeName, truth, undef;
+  napi_value jsFmtCtx, extFmtCtx, extAdaptor, typeName, truth, undef;
 
   status = napi_create_object(env, &jsFmtCtx);
   PASS_STATUS;
@@ -2948,7 +2948,9 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
   PASS_STATUS;
   status = napi_get_undefined(env, &undef);
   PASS_STATUS;
-  status = napi_create_external(env, fmtCtx, formatContextFinalizer, nullptr, &extFmtCtx);
+  status = napi_create_external(env, fmtCtx, formatContextFinalizer, adaptor, &extFmtCtx);
+  PASS_STATUS;
+  status = napi_create_external(env, adaptor, nullptr, nullptr, &extAdaptor);
   PASS_STATUS;
 
   napi_property_descriptor desc[] = {
@@ -3125,9 +3127,10 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
     { "newStream", nullptr, newStream, nullptr, nullptr, nullptr,
       napi_enumerable, fmtCtx },
     { "_formatContext", nullptr, nullptr, nullptr, nullptr, extFmtCtx, napi_default, nullptr },
+    { "_adaptor", nullptr, nullptr, nullptr, nullptr, extAdaptor, napi_default, nullptr },
     { "__streams", nullptr, nullptr, nullptr, nullptr, undef, napi_writable, nullptr }
   };
-  status = napi_define_properties(env, jsFmtCtx, 54, desc);
+  status = napi_define_properties(env, jsFmtCtx, 55, desc);
   PASS_STATUS;
 
   *result = jsFmtCtx;
@@ -3136,12 +3139,18 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
 
 void formatContextFinalizer(napi_env env, void* data, void* hint) {
   AVFormatContext* fc = (AVFormatContext*) data;
+  Adaptor *adaptor = (Adaptor *)hint;
   int ret;
   if (fc->pb != nullptr) {
-    ret = avio_closep(&fc->pb);
-    if (ret < 0) {
-      printf("DEBUG: For url '%s', %s", (fc->url != nullptr) ? fc->url : "unknown",
-        avErrorMsg("error closing IO: ", ret));
+    if (adaptor) {
+      adaptor->finish();
+      avio_context_free(&fc->pb);
+    } else {
+      ret = avio_closep(&fc->pb);
+      if (ret < 0) {
+        printf("DEBUG: For url '%s', %s", (fc->url != nullptr) ? fc->url : "unknown",
+          avErrorMsg("error closing IO: ", ret));
+      }
     }
   }
   // FIXME this is segfaulting ... why
