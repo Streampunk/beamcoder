@@ -38,6 +38,7 @@ extern "C" {
 }
 
 #define DECLARE_NAPI_METHOD(name, func) { name, 0, func, 0, 0, 0, napi_default, 0 }
+#define DECLARE_GETTER(name, getter, this) { name, 0, 0, getter, nop, nullptr, napi_enumerable, this }
 
 // Handling NAPI errors - use "napi_status status;" where used
 #define CHECK_STATUS if (checkStatus(env, status, __FILE__, __LINE__ - 1) != napi_ok) return nullptr
@@ -139,6 +140,7 @@ napi_status beam_set_rational(napi_env env, napi_value target, const char* name,
 napi_status beam_get_rational(napi_env env, napi_value target, const char* name, AVRational* value);
 napi_status beam_set_null(napi_env env, napi_value target, const char* name);
 napi_status beam_is_null(napi_env env, napi_value props, const char* name, bool* isNull);
+napi_status beam_delete_named_property(napi_env env, napi_value props, const char* name, bool* deleted);
 
 #define BEAM_ENUM_UNKNOWN -42
 

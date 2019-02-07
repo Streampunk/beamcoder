@@ -211,7 +211,7 @@ Care has been taken to ensure that the reference-counted then garbage collected 
 
 Property value mappings from C to Javascript and vice versa are as follows:
 
-* C `int`, `int64_t` and other integer types map to and from Javascript's `number` type. Try to use integer representations in Javascript wherever possible, e.g. use `|0` when dividing. (Note that the full ranges of C `int64_t` and `uint64_t` are not yet supported by beam coder. This feature is waiting on Javascript `BigInt` to move from experimental support to full support in Node.)
+* C `int`, `int64_t` and other integer types map to and from Javascript's `number` type. Try to use integer representations in Javascript wherever possible, e.g. use `|0` when dividing. (Note that the full ranges of C `int64_t` and `uint64_t` are not yet supported by beam coder. This feature is waiting on Javascript `BigInt` to move from experimental support to full support in Node.) Values set to `AV_NOOPTS_VALUE` in C (available as `beamcoder.AV_NOOPTS_VALUE`) convert to `null` in Javascript.
 * C `float` and `double` types map to and from Javascript's `number` type. Note that as the underlying representation of floating point values is double length in Javascript, causing conversion to and from C `float` to lose precision. It is best practice to test for small value ranges around a value rather than rely on exact values.
 * `AVRational` values map to and from a Javascript array containing two integer `number`s. For example, C value `(AVRational){1,25}` maps to Javascript value `[1,25]`.
 * C `char *` and `const char *` map to and from Javascript's `string` type.

@@ -80,7 +80,12 @@ napi_value getPacketDts(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &p);
   CHECK_STATUS;
 
-  status = napi_create_int64(env, p->packet->dts, &result);
+  if (p->packet->dts == AV_NOPTS_VALUE) {
+    status = napi_get_null(env, &result);
+  } else {
+    status = napi_create_int64(env, p->packet->dts, &result);
+  }
+
   CHECK_STATUS;
   return result;
 }
@@ -101,6 +106,9 @@ napi_value setPacketDts(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_undefined) || (type == napi_null)) {
+    p->packet->dts = AV_NOPTS_VALUE;
+  }
   if (type != napi_number) {
     NAPI_THROW_ERROR("Packet DTS property must be set with a number.");
   }
@@ -173,6 +181,8 @@ napi_value setPacketData(napi_env env, napi_callback_info info) {
   }
   p->packet->buf = av_buffer_create(data, length, packetBufferFree, avr, 0);
   CHECK_STATUS;
+  p->packet->size = length;
+  p->packet->data = data;
 
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
@@ -441,11 +451,14 @@ napi_value setPacketPos(napi_env env, napi_callback_info info) {
 
 napi_value makePacket(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result, global, jsObject, assign;
+  napi_value result, global, jsObject, assign, jsJSON, jsParse;
   napi_valuetype type;
-  bool isArray;
+  bool isArray, deleted;
   packetData* p = new packetData;
   p->packet = av_packet_alloc();
+
+  status = napi_get_global(env, &global);
+  CHECK_STATUS;
 
   size_t argc = 1;
   napi_value args[1];
@@ -458,6 +471,23 @@ napi_value makePacket(napi_env env, napi_callback_info info) {
   if (argc == 1) {
     status = napi_typeof(env, args[0], &type);
     CHECK_STATUS;
+    if (type == napi_string) {
+      status = napi_get_named_property(env, global, "JSON", &jsJSON);
+      CHECK_STATUS;
+      status =  napi_get_named_property(env, jsJSON, "parse", &jsParse);
+      CHECK_STATUS;
+      const napi_value pargs[] = { args[0] };
+      status = napi_call_function(env, args[0], jsParse, 1, pargs, &args[0]);
+      CHECK_STATUS;
+      status = napi_typeof(env, args[0], &type);
+      CHECK_STATUS;
+      if (type == napi_object) {
+        status = beam_delete_named_property(env, args[0], "type", &deleted);
+        CHECK_STATUS;
+        status = beam_delete_named_property(env, args[0], "size", &deleted);
+        CHECK_STATUS;
+      }
+    }
     status = napi_is_array(env, args[0], &isArray);
     CHECK_STATUS;
     if (isArray || (type != napi_object)) {
@@ -469,8 +499,6 @@ napi_value makePacket(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   if (argc == 1) {
-    status = napi_get_global(env, &global);
-    CHECK_STATUS;
     status = napi_get_named_property(env, global, "Object", &jsObject);
     CHECK_STATUS;
     status = napi_get_named_property(env, jsObject, "assign", &assign);
@@ -479,6 +507,45 @@ napi_value makePacket(napi_env env, napi_callback_info info) {
     status = napi_call_function(env, result, assign, 2, fargs, &result);
     CHECK_STATUS;
   }
+
+  return result;
+}
+
+napi_value getPacketTypeName(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+
+  status =  napi_create_string_utf8(env, "Packet", NAPI_AUTO_LENGTH, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
+napi_value packetToJSON(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  packetData* p;
+
+  size_t argc = 0;
+  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &p);
+  CHECK_STATUS;
+
+  status = napi_create_object(env, &result);
+  CHECK_STATUS;
+
+  napi_property_descriptor desc[] {
+    DECLARE_GETTER("type", getPacketTypeName, p),
+    DECLARE_GETTER("pts", p->packet->pts != AV_NOPTS_VALUE ? getPacketPts : nullptr, p),
+    DECLARE_GETTER("dts", p->packet->dts != AV_NOPTS_VALUE ? getPacketDts : nullptr, p),
+    DECLARE_GETTER("size", p->packet->size > 0 ? getPacketSize : nullptr, p),
+    DECLARE_GETTER("stream_index", getPacketStreamIndex, p),
+    DECLARE_GETTER("flags", p->packet->flags > 0 ? getPacketFlags : nullptr, p),
+    DECLARE_GETTER("side_data", p->packet->side_data != nullptr ? getPacketSideData : nullptr, p),
+    DECLARE_GETTER("duration", p->packet->duration > 0 ? getPacketDuration : nullptr, p),
+    DECLARE_GETTER("pos", p->packet->pos > 0 ? getPacketPos : nullptr, p)
+  };
+  status = napi_define_properties(env, result, 9, desc);
+  CHECK_STATUS;
 
   return result;
 }
@@ -496,7 +563,8 @@ napi_status fromAVPacket(napi_env env, packetData* p, napi_value* result) {
   PASS_STATUS;
 
   napi_property_descriptor desc[] = {
-    { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
+    { "type", nullptr, nullptr, getPacketTypeName, nop, nullptr,
+      (napi_property_attributes) (napi_writable | napi_enumerable), nullptr },
     { "pts", nullptr, nullptr, getPacketPts, setPacketPts, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), p },
     { "dts", nullptr, nullptr, getPacketDts, setPacketDts, nullptr,
@@ -516,9 +584,10 @@ napi_status fromAVPacket(napi_env env, packetData* p, napi_value* result) {
     // 10
     { "pos", nullptr, nullptr, getPacketPos, setPacketPos, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), p },
+    { "toJSON", nullptr, packetToJSON, nullptr, nullptr, nullptr, napi_default, p },
     { "_packet", nullptr, nullptr, nullptr, nullptr, extPacket, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsPacket, 11, desc);
+  status = napi_define_properties(env, jsPacket, 12, desc);
   PASS_STATUS;
 
   if (p->packet->buf != nullptr) {

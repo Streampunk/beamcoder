@@ -22,8 +22,90 @@
 const test = require('tape');
 const beamcoder = require('../index.js');
 
-test('Creaet a packet', t => {
+test('Create a packet', t => {
   let pkt = beamcoder.packet();
   t.ok(pkt, 'is truthy.');
+  t.equal(typeof pkt._packet, 'object', 'external value present.');
+  t.deepEqual(pkt, { type: 'Packet',
+    pts: null,
+    dts: null,
+    data: null,
+    size: 0,
+    stream_index: 0,
+    flags:
+     { KEY: false,
+       CORRUPT: false,
+       DISCARD: false,
+       TRUSTED: false,
+       DISPOSABLE: false },
+    side_data: null,
+    duration: 0,
+    pos: -1 }, 'has expected minimal value.');
+  t.end();
+});
+
+test('Minimal JSON serialization', t => {
+  let pkt = beamcoder.packet();
+  t.equal(typeof pkt.toJSON, 'function', 'has hidden toJSON function.');
+  let ps = JSON.stringify(pkt);
+  t.equal(typeof ps, 'string', 'stringify created a string.');
+  let pps = JSON.parse(ps);
+  t.deepEqual(pps, { type: 'Packet', stream_index: 0 }, 'made minimal value.');
+  let rpkt = beamcoder.packet(ps);
+  t.ok(rpkt, 'roundtrip packet is truthy.');
+  t.deepEqual(rpkt, { type: 'Packet',
+    pts: null,
+    dts: null,
+    data: null,
+    size: 0,
+    stream_index: 0,
+    flags:
+     { KEY: false,
+       CORRUPT: false,
+       DISCARD: false,
+       TRUSTED: false,
+       DISPOSABLE: false },
+    side_data: null,
+    duration: 0,
+    pos: -1 }, 'has expected minimal value.');
+  t.end();
+});
+
+test('Maximal JSON serialization', t => {
+  let pkt = beamcoder.packet({ type: 'Packet',
+    pts: 42,
+    dts: 43,
+    data: Buffer.from('wibble'),
+    stream_index: 7,
+    flags:
+     { KEY: true,
+       CORRUPT: false,
+       DISCARD: false,
+       TRUSTED: true,
+       DISPOSABLE: false },
+    side_data: { replaygain: Buffer.from('wobble') },
+    duration: 44,
+    pos: 45 });
+  let ps = JSON.stringify(pkt);
+  t.equal(typeof ps, 'string', 'stringify created a string.');
+  let rpkt = beamcoder.packet(ps);
+  t.ok(rpkt, 'roundtrip packet is truthy.');
+  t.deepEqual(rpkt, { type: 'Packet',
+    pts: 42,
+    dts: 43,
+    data: null,
+    size: 0,
+    stream_index: 7,
+    flags:
+     { KEY: true,
+       CORRUPT: false,
+       DISCARD: false,
+       TRUSTED: true,
+       DISPOSABLE: false },
+    side_data:
+     { type: 'PacketSideData',
+       replaygain: Buffer.from([0x77, 0x6f, 0x62, 0x62, 0x6c, 0x65]) },
+    duration: 44,
+    pos: 45 }, 'roundtrips expected values.');
   t.end();
 });

@@ -374,6 +374,18 @@ napi_status beam_is_null(napi_env env, napi_value props, const char* name, bool*
   return napi_ok;
 };
 
+napi_status beam_delete_named_property(napi_env env, napi_value props, const char* name, bool* deleted) {
+  napi_status status;
+  napi_value jsName;
+  status = napi_create_string_utf8(env, name, NAPI_AUTO_LENGTH, &jsName);
+  PASS_STATUS;
+  status = napi_delete_property(env, props, jsName, deleted);
+  PASS_STATUS;
+
+  return napi_ok;
+}
+
+
 const char* beam_lookup_name(std::unordered_map<int, std::string> m, int value) {
   auto search = m.find(value);
   if (search != m.end()) {
@@ -627,16 +639,23 @@ napi_status fromAVPacketSideDataArray(napi_env env, AVPacketSideData* data,
 napi_status toAVPacketSideDataArray(napi_env env, napi_value sided,
     AVPacketSideData** data, int* dataSize) {
   napi_status status;
-  napi_value names, name, element;
+  napi_value names, name, element, arrayData, global, jsBuffer, jsBufferFrom;
   napi_valuetype type;
   bool isArray, isBuffer;
-  uint32_t sdCount;
+  uint32_t sdCount = 0, arrayCount = 0;
   AVPacketSideData* psd;
   int psdt;
   char* typeName;
   size_t strLen;
   void* rawdata;
   size_t rawdataSize;
+
+  status = napi_get_global(env, &global);
+  PASS_STATUS;
+  status = napi_get_named_property(env, global, "Buffer", &jsBuffer);
+  PASS_STATUS;
+  status = napi_get_named_property(env, jsBuffer, "from", &jsBufferFrom);
+  PASS_STATUS;
 
   status = napi_typeof(env, sided, &type);
   PASS_STATUS;
@@ -661,8 +680,18 @@ napi_status toAVPacketSideDataArray(napi_env env, napi_value sided,
     status = napi_is_buffer(env, element, &isBuffer);
     PASS_STATUS;
     if (!isBuffer) {
-      sdCount--;
-      continue;
+      status = napi_get_named_property(env, element, "data", &arrayData);
+      PASS_STATUS;
+      // TODO more checks that this is a buffer from JSON?
+      status = napi_is_array(env, arrayData, &isArray);
+      PASS_STATUS;
+      if (isArray) {
+        const napi_value fargs[] = { arrayData };
+        status = napi_call_function(env, element, jsBufferFrom, 1, fargs, &element);
+        PASS_STATUS;
+      } else {
+        continue;
+      }
     }
     status = napi_get_value_string_utf8(env, name, nullptr, 0, &strLen);
     PASS_STATUS;
@@ -672,15 +701,14 @@ napi_status toAVPacketSideDataArray(napi_env env, napi_value sided,
 
     psdt = beam_lookup_enum(beam_packet_side_data_type->inverse, typeName);
     if (psdt == BEAM_ENUM_UNKNOWN) {
-      sdCount--;
       continue;
     } else {
       status = napi_get_buffer_info(env, element, &rawdata, &rawdataSize);
       PASS_STATUS;
-      psd[x].data = (uint8_t*) av_malloc(rawdataSize + AV_INPUT_BUFFER_PADDING_SIZE);
-      psd[x].size = rawdataSize;
-      psd[x].type = (AVPacketSideDataType) psdt;
-      memcpy(psd[x].data, rawdata, rawdataSize);
+      psd[arrayCount].data = (uint8_t*) av_malloc(rawdataSize + AV_INPUT_BUFFER_PADDING_SIZE);
+      psd[arrayCount].size = rawdataSize;
+      psd[arrayCount].type = (AVPacketSideDataType) psdt;
+      memcpy(psd[arrayCount++].data, rawdata, rawdataSize);
     }
   }
 
@@ -692,7 +720,7 @@ napi_status toAVPacketSideDataArray(napi_env env, napi_value sided,
     *dataSize = 0;
   }
 
-  *dataSize = sdCount;
+  *dataSize = arrayCount;
   *data = psd;
   return napi_ok;
 }
