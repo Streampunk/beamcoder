@@ -368,7 +368,7 @@ napi_value getFramePictType(napi_env env, napi_callback_info info) {
   }
 
   if (name == nullptr) {
-    status = napi_get_undefined(env, &result);
+    status = napi_get_null(env, &result);
   } else {
     status = napi_create_string_utf8(env, name, NAPI_AUTO_LENGTH, &result);
   }
@@ -518,8 +518,14 @@ napi_value getFramePTS(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &f);
   CHECK_STATUS;
 
-  status = napi_create_int64(env, f->frame->pts, &result);
-  CHECK_STATUS;
+  if (f->frame->pts == AV_NOPTS_VALUE) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_int64(env, f->frame->pts, &result);
+    CHECK_STATUS;
+  }
+
   return result;
 }
 
@@ -539,12 +545,17 @@ napi_value setFramePTS(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    f->frame->pts = AV_NOPTS_VALUE;
+    goto done;
+  }
   if (type != napi_number) {
     NAPI_THROW_ERROR("Frame PTS property must be set with a number.");
   }
   status = napi_get_value_int64(env, args[0], &f->frame->pts);
   CHECK_STATUS;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -558,8 +569,14 @@ napi_value getFramePktDTS(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &f);
   CHECK_STATUS;
 
-  status = napi_create_int64(env, f->frame->pkt_dts, &result);
-  CHECK_STATUS;
+  if (f->frame->pkt_dts == AV_NOPTS_VALUE) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_int64(env, f->frame->pkt_dts, &result);
+    CHECK_STATUS;
+  }
+
   return result;
 }
 
@@ -579,18 +596,23 @@ napi_value setFramePktDTS(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    f->frame->pkt_dts = AV_NOPTS_VALUE;
+    goto done;
+  }
   if (type != napi_number) {
     NAPI_THROW_ERROR("Frame pkt_dts property must be set with a number.");
   }
   status = napi_get_value_int64(env, args[0], &f->frame->pkt_dts);
   CHECK_STATUS;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
 }
 
-napi_value getFrameCodecPicNum(napi_env env, napi_callback_info info) {
+napi_value getFrameCodedPicNum(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
   frameData* f;
@@ -603,7 +625,7 @@ napi_value getFrameCodecPicNum(napi_env env, napi_callback_info info) {
   return result;
 }
 
-napi_value setFrameCodecPicNum(napi_env env, napi_callback_info info) {
+napi_value setFrameCodedPicNum(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
   napi_valuetype type;
@@ -990,6 +1012,10 @@ napi_value setFrameChanLayout(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    f->frame->channel_layout = 0;
+    goto done;
+  }
   if (type != napi_string) {
     NAPI_THROW_ERROR("Frame channel_layout property must be set with a string.");
   }
@@ -1002,6 +1028,7 @@ napi_value setFrameChanLayout(napi_env env, napi_callback_info info) {
   f->frame->channel_layout = av_get_channel_layout(name);
   free(name);
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -1208,6 +1235,10 @@ napi_value setFrameColorRange(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    f->frame->color_range = AVCOL_RANGE_UNSPECIFIED;
+    goto done;
+  }
   if (type != napi_string) {
     NAPI_THROW_ERROR("Frame color_range property must be set with a string.");
   }
@@ -1224,6 +1255,7 @@ napi_value setFrameColorRange(napi_env env, napi_callback_info info) {
   }
   f->frame->color_range = (AVColorRange) ret;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -1265,6 +1297,10 @@ napi_value setFrameColorPrimaries(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    f->frame->color_primaries = AVCOL_PRI_UNSPECIFIED;
+    goto done;
+  }
   if (type != napi_string) {
     NAPI_THROW_ERROR("Frame color_primaries property must be set with a string.");
   }
@@ -1281,6 +1317,7 @@ napi_value setFrameColorPrimaries(napi_env env, napi_callback_info info) {
   }
   f->frame->color_primaries = (AVColorPrimaries) ret;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -1322,6 +1359,10 @@ napi_value setFrameColorTrc(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    f->frame->color_trc = AVCOL_TRC_UNSPECIFIED;
+    goto done;
+  }
   if (type != napi_string) {
     NAPI_THROW_ERROR("Frame color_trc property must be set with a string.");
   }
@@ -1338,6 +1379,7 @@ napi_value setFrameColorTrc(napi_env env, napi_callback_info info) {
   }
   f->frame->color_trc = (AVColorTransferCharacteristic) ret;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -1379,6 +1421,10 @@ napi_value setFrameColorspace(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    f->frame->colorspace = AVCOL_SPC_UNSPECIFIED;
+    goto done;
+  }
   if (type != napi_string) {
     NAPI_THROW_ERROR("Frame colorspace property must be set with a string.");
   }
@@ -1395,6 +1441,7 @@ napi_value setFrameColorspace(napi_env env, napi_callback_info info) {
   }
   f->frame->colorspace = (AVColorSpace) ret;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -1436,6 +1483,10 @@ napi_value setFrameChromaLoc(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    f->frame->chroma_location = AVCHROMA_LOC_UNSPECIFIED;
+    goto done;
+  }
   if (type != napi_string) {
     NAPI_THROW_ERROR("Frame chroma_location property must be set with a string.");
   }
@@ -1452,6 +1503,7 @@ napi_value setFrameChromaLoc(napi_env env, napi_callback_info info) {
   }
   f->frame->chroma_location = (AVChromaLocation) ret;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -1465,8 +1517,14 @@ napi_value getFrameBestEffortTS(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &f);
   CHECK_STATUS;
 
-  status = napi_create_int64(env, f->frame->best_effort_timestamp, &result);
-  CHECK_STATUS;
+  if (f->frame->best_effort_timestamp == AV_NOPTS_VALUE) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_int64(env, f->frame->best_effort_timestamp, &result);
+    CHECK_STATUS;
+  }
+
   return result;
 }
 
@@ -1486,12 +1544,17 @@ napi_value setFrameBestEffortTS(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    f->frame->best_effort_timestamp = AV_NOPTS_VALUE;
+    goto done;
+  }
   if (type != napi_number) {
     NAPI_THROW_ERROR("Frame best_effort_timestamp property must be set with a number.");
   }
   status = napi_get_value_int64(env, args[0], &f->frame->best_effort_timestamp);
   CHECK_STATUS;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -1935,12 +1998,15 @@ napi_value setFrameCropRight(napi_env env, napi_callback_info info) {
 
 napi_value makeFrame(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result, global, jsObject, assign;
+  napi_value result, global, jsObject, assign, jsJSON, jsParse;
   napi_valuetype type;
-  bool isArray;
+  bool isArray, deleted;
   frameData* f = new frameData;
   f->frame = av_frame_alloc();
   int align = 32; // av_cpu_max_align();
+
+  status = napi_get_global(env, &global);
+  CHECK_STATUS;
 
   size_t argc = 1;
   napi_value args[1];
@@ -1953,6 +2019,23 @@ napi_value makeFrame(napi_env env, napi_callback_info info) {
   if (argc == 1) {
     status = napi_typeof(env, args[0], &type);
     CHECK_STATUS;
+    if (type == napi_string) {
+      status = napi_get_named_property(env, global, "JSON", &jsJSON);
+      CHECK_STATUS;
+      status =  napi_get_named_property(env, jsJSON, "parse", &jsParse);
+      CHECK_STATUS;
+      const napi_value pargs[] = { args[0] };
+      status = napi_call_function(env, args[0], jsParse, 1, pargs, &args[0]);
+      CHECK_STATUS;
+      status = napi_typeof(env, args[0], &type);
+      CHECK_STATUS;
+      if (type == napi_object) {
+        status = beam_delete_named_property(env, args[0], "type", &deleted);
+        CHECK_STATUS;
+        status = beam_delete_named_property(env, args[0], "buf_sizes", &deleted);
+        CHECK_STATUS;
+      }
+    }
     status = napi_is_array(env, args[0], &isArray);
     CHECK_STATUS;
     if (isArray || (type != napi_object)) {
@@ -1964,8 +2047,6 @@ napi_value makeFrame(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   if (argc == 1) {
-    status = napi_get_global(env, &global);
-    CHECK_STATUS;
     status = napi_get_named_property(env, global, "Object", &jsObject);
     CHECK_STATUS;
     status = napi_get_named_property(env, jsObject, "assign", &assign);
@@ -2084,22 +2165,130 @@ napi_value alloc(napi_env env, napi_callback_info info) {
   return result;
 }
 
+napi_value getFrameTypeName(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+
+  status = napi_create_string_utf8(env, "Frame", NAPI_AUTO_LENGTH, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
+napi_value getFrameBufSizes(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value array, element;
+  frameData* f;
+  uint32_t bufLengths;
+
+  status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &f);
+  CHECK_STATUS;
+
+  if (f->frame->buf == nullptr) {
+    status = napi_get_undefined(env, &array);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_array(env, &array);
+    CHECK_STATUS;
+    for ( int x = 0 ; x < AV_NUM_DATA_POINTERS ; x++ ) {
+    //  printf("Buffer %i is %p\n", x, f->frame->buf[x]);
+      if (f->frame->buf[x] == nullptr) continue;
+      status = napi_create_int32(env, f->frame->buf[x]->size, &element);
+      CHECK_STATUS;
+      status = napi_set_element(env, array, x, element);
+      CHECK_STATUS;
+    }
+    status = napi_get_array_length(env, array, &bufLengths);
+    CHECK_STATUS;
+    if (bufLengths == 0) {
+      status = napi_get_undefined(env, &array);
+      CHECK_STATUS;
+    }
+  }
+
+  CHECK_STATUS;
+  return array;
+}
+
+napi_value frameToJSON(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  frameData* f;
+
+  size_t argc = 0;
+  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &f);
+  CHECK_STATUS;
+
+  status = napi_create_object(env, &result);
+  CHECK_STATUS;
+
+  napi_property_descriptor desc[] = {
+    DECLARE_GETTER("type", getFrameTypeName, f),
+    DECLARE_GETTER("linesize", getFrameLinesize, f),
+    DECLARE_GETTER("width", f->frame->width > 0 ? getFrameWidth : nullptr, f),
+    DECLARE_GETTER("height", f->frame->height > 0 ? getFrameHeight : nullptr, f),
+    DECLARE_GETTER("nb_samples", f->frame->nb_samples > 0 ? getFrameNbSamples : nullptr, f),
+    DECLARE_GETTER("format", f->frame->format > 0 ? getFrameFormat : nullptr, f),
+    DECLARE_GETTER("key_frame", f->frame->key_frame != 1 ? getFrameKeyFrame : nullptr, f),
+    DECLARE_GETTER("pict_type", f->frame->pict_type != AV_PICTURE_TYPE_NONE ? getFramePictType : nullptr, f),
+    DECLARE_GETTER("sample_aspect_ratio",
+      (f->frame->sample_aspect_ratio.num == 0) && (f->frame->sample_aspect_ratio.den == 1) ?
+        nullptr : getFrameSampleAR, f),
+    // 10
+    DECLARE_GETTER("pts", f->frame->pts != AV_NOPTS_VALUE ? getFramePTS : nullptr, f),
+    DECLARE_GETTER("pkt_dts", f->frame->pkt_dts != AV_NOPTS_VALUE ? getFramePktDTS : nullptr, f),
+    DECLARE_GETTER("coded_picture_number", f->frame->coded_picture_number > 0 ? getFrameCodedPicNum : nullptr, f),
+    DECLARE_GETTER("display_picture_number", f->frame->display_picture_number > 0 ? getFrameDispPicNum : nullptr, f),
+    DECLARE_GETTER("quality", f->frame->quality > 0 ? getFrameQuality : nullptr, f),
+    DECLARE_GETTER("repeat_pict", f->frame->repeat_pict > 0 ? getFrameRepeatPict : nullptr, f),
+    DECLARE_GETTER("interlaced_frame", f->frame->interlaced_frame != 0 ? getFrameInterlaced : nullptr, f),
+    DECLARE_GETTER("top_frame_first", f->frame->top_field_first != 0 ? getFrameTopFieldFirst : nullptr, f),
+    DECLARE_GETTER("palette_has_changed", f->frame->palette_has_changed != 0 ? getFramePalHasChanged : nullptr, f),
+    DECLARE_GETTER("reordered_opaque", f->frame->reordered_opaque != 0 ? getFrameReorderOpq : nullptr, f),
+    // 20
+    DECLARE_GETTER("sample_rate", f->frame->sample_rate > 0 ? getFrameSampleRate : nullptr, f),
+    DECLARE_GETTER("channel_layout", f->frame->channel_layout != 0 ? getFrameChanLayout : nullptr, f),
+    DECLARE_GETTER("buf_sizes", getFrameBufSizes, f),
+    DECLARE_GETTER("flags", f->frame->flags > 0 ? getFrameFlags : nullptr, f),
+    DECLARE_GETTER("color_range", f->frame->color_range != AVCOL_RANGE_UNSPECIFIED ? getFrameColorRange : nullptr, f),
+    DECLARE_GETTER("color_primaries", f->frame->color_primaries != AVCOL_PRI_UNSPECIFIED ? getFrameColorPrimaries : nullptr, f),
+    DECLARE_GETTER("color_trc", f->frame->color_trc != AVCOL_TRC_UNSPECIFIED ? getFrameColorTrc : nullptr, f),
+    DECLARE_GETTER("colorspace", f->frame->colorspace != AVCOL_SPC_UNSPECIFIED ? getFrameColorspace : nullptr, f),
+    DECLARE_GETTER("chroma_location", f->frame->chroma_location != AVCHROMA_LOC_UNSPECIFIED ? getFrameChromaLoc : nullptr, f),
+    DECLARE_GETTER("best_effort_timestamp", f->frame->best_effort_timestamp != AV_NOPTS_VALUE ? getFrameBestEffortTS : nullptr, f),
+    // 30
+    DECLARE_GETTER("pkt_pos", f->frame->pkt_pos >= 0 ? getFramePktPos : nullptr, f),
+    DECLARE_GETTER("pkt_duration", f->frame->pkt_duration > 0 ? getFramePktDuration : nullptr, f),
+    DECLARE_GETTER("metadata", f->frame->metadata != nullptr ? getFrameMetadata : nullptr, f),
+    DECLARE_GETTER("decode_error_flags", f->frame->decode_error_flags > 0 ? getFrameDecodeErrFlags : nullptr, f),
+    DECLARE_GETTER("channels", f->frame->channels > 0 ? getFrameChannels : nullptr, f),
+    DECLARE_GETTER("pkt_size", f->frame->pkt_size >= 0 ? getFramePktSize : nullptr, f),
+    DECLARE_GETTER("crop_top", f->frame->crop_top > 0 ? getFrameCropTop : nullptr, f),
+    DECLARE_GETTER("crop_bottom", f->frame->crop_bottom > 0 ? getFrameCropBottom : nullptr, f),
+    DECLARE_GETTER("crop_left", f->frame->crop_left > 0 ? getFrameCropLeft : nullptr, f),
+    DECLARE_GETTER("crop_right", f->frame->crop_right > 0 ? getFrameCropRight : nullptr, f)
+  };
+  status = napi_define_properties(env, result, 39, desc);
+  CHECK_STATUS;
+
+  return result;
+}
+
 napi_status fromAVFrame(napi_env env, frameData* f, napi_value* result) {
   napi_status status;
-  napi_value jsFrame, extFrame, typeName, undef;
+  napi_value jsFrame, extFrame, undef;
   int64_t externalMemory;
 
   status = napi_create_object(env, &jsFrame);
-  PASS_STATUS;
-  status = napi_create_string_utf8(env, "Frame", NAPI_AUTO_LENGTH, &typeName);
   PASS_STATUS;
   status = napi_get_undefined(env, &undef);
   PASS_STATUS;
   status = napi_create_external(env, f, frameDataFinalizer, nullptr, &extFrame);
   PASS_STATUS;
 
+  // TODO frame side data
   napi_property_descriptor desc[] = {
-    { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
+    { "type", nullptr, nullptr, getFrameTypeName, nop, nullptr, napi_enumerable, nullptr },
     { "linesize", nullptr, nullptr, getFrameLinesize, setFrameLinesize, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
     { "width", nullptr, nullptr, getFrameWidth, setFrameWidth, nullptr,
@@ -2120,7 +2309,7 @@ napi_status fromAVFrame(napi_env env, frameData* f, napi_value* result) {
       (napi_property_attributes) (napi_writable | napi_enumerable), f }, // 10
     { "pkt_dts", nullptr, nullptr, getFramePktDTS, setFramePktDTS, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
-    { "codec_picture_number", nullptr, nullptr, getFrameCodecPicNum, setFrameCodecPicNum, nullptr,
+    { "coded_picture_number", nullptr, nullptr, getFrameCodedPicNum, setFrameCodedPicNum, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
     { "display_picture_number", nullptr, nullptr, getFrameDispPicNum, setFrameDispPicNum, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
@@ -2179,9 +2368,10 @@ napi_status fromAVFrame(napi_env env, frameData* f, napi_value* result) {
     { "stream_index", nullptr, nullptr, nullptr, nullptr, undef, // Set for muxing
       (napi_property_attributes) (napi_writable | napi_enumerable), nullptr}, // 40
     { "alloc", nullptr, alloc, nullptr, nullptr, nullptr, napi_enumerable, nullptr },
+    { "toJSON", nullptr, frameToJSON, nullptr, nullptr, nullptr, napi_default, f },
     { "_frame", nullptr, nullptr, nullptr, nullptr, extFrame, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsFrame, 42, desc);
+  status = napi_define_properties(env, jsFrame, 43, desc);
   PASS_STATUS;
 
   for ( int x = 0 ; x < AV_NUM_DATA_POINTERS ; x++ ) {

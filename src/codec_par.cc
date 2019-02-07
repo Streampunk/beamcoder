@@ -772,6 +772,10 @@ napi_value setCodecParColorSpace(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    c->color_space = AVCOL_SPC_UNSPECIFIED;
+    goto done;
+  }
   if (type != napi_string) {
     NAPI_THROW_ERROR("Codec parameters color_space must be set with a string value.");
   }
@@ -783,10 +787,6 @@ napi_value setCodecParColorSpace(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   enumValue = av_color_space_from_name((const char *) enumString);
-  if ((type == napi_null) || (type == napi_undefined)) {
-    c->color_space = AVCOL_SPC_UNSPECIFIED;
-    goto done;
-  }
   free(enumString);
   if (enumValue < 0) {
     NAPI_THROW_ERROR("Codec parameter color_space is not recognised. Did you mean e.g. 'bt709'?");
