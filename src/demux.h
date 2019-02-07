@@ -35,7 +35,7 @@ extern "C" {
 #include "packet.h"
 #include "format.h"
 #include "node_api.h"
-#include "Adaptor.h"
+#include "adaptor.h"
 
 void demuxerExecute(napi_env env, void* data);
 void demuxerComplete(napi_env env, napi_status asyncStatus, void* data);

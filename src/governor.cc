@@ -20,7 +20,84 @@
 */
 
 #include "governor.h"
-#include "Adaptor.h"
+#include "adaptor.h"
+
+struct readCarrier : carrier {
+  ~readCarrier() { }
+  Adaptor *adaptor;
+  uint32_t readLen;
+  void *readBuf = nullptr;
+};
+
+void readFinaliser(napi_env env, void* data, void* hint) {
+  free(data);
+}
+
+void readExecute(napi_env env, void *data) {
+  readCarrier* c = (readCarrier*) data;
+  size_t bytesRead = 0;
+  c->readBuf = c->adaptor->read(c->readLen, &bytesRead);
+  c->readLen = bytesRead;
+}
+
+void readComplete(napi_env env, napi_status asyncStatus, void *data) {
+  readCarrier* c = (readCarrier*) data;
+  napi_value result;
+  if (asyncStatus != napi_ok) {
+    c->status = asyncStatus;
+    c->errorMsg = "governor read failed to complete.";
+  }
+  REJECT_STATUS;
+
+  c->status = napi_create_external_buffer(env, c->readLen, c->readBuf, readFinaliser, nullptr, &result);
+  REJECT_STATUS;
+
+  napi_status status;
+  status = napi_resolve_deferred(env, c->_deferred, result);
+  FLOATING_STATUS;
+
+  tidyCarrier(env, c);
+}
+
+napi_value read(napi_env env, napi_callback_info info) {
+  napi_value promise;
+  readCarrier* c = new readCarrier;
+
+  c->status = napi_create_promise(env, &c->_deferred, &promise);
+  REJECT_RETURN;
+
+  size_t argc = 1;
+  napi_value args[1];
+  napi_value governorValue;
+  napi_status status = napi_get_cb_info(env, info, &argc, args, &governorValue, nullptr);
+  REJECT_RETURN;
+
+  if (argc < 1) {
+    REJECT_ERROR_RETURN("governor write requires a buffer as its argument.",
+      BEAMCODER_INVALID_ARGS);
+  }
+
+  status = napi_get_value_uint32(env, args[0], &c->readLen);
+  CHECK_STATUS;
+
+  napi_value adaptorValue;
+  status = napi_get_named_property(env, governorValue, "_adaptor", &adaptorValue);
+  CHECK_STATUS;
+
+  status = napi_get_value_external(env, adaptorValue, (void **)&c->adaptor);
+  CHECK_STATUS;
+
+  napi_value resourceName;
+  c->status = napi_create_string_utf8(env, "Read", NAPI_AUTO_LENGTH, &resourceName);
+  REJECT_RETURN;
+  c->status = napi_create_async_work(env, nullptr, resourceName, readExecute,
+    readComplete, c, &c->_request);
+  REJECT_RETURN;
+  c->status = napi_queue_async_work(env, c->_request);
+  REJECT_RETURN;
+
+  return promise;
+}
 
 struct writeCarrier : carrier {
   ~writeCarrier() { }
@@ -32,7 +109,7 @@ struct writeCarrier : carrier {
 
 void writeExecute(napi_env env, void *data) {
   writeCarrier* c = (writeCarrier*) data;
-  c->adaptor->write(new Chunk(c->bufRef, c->buf, c->bufLen));
+  c->adaptor->write(c->bufRef, c->buf, c->bufLen);
 };
 
 void writeComplete(napi_env env, napi_status asyncStatus, void *data) {
@@ -88,14 +165,14 @@ napi_value write(napi_env env, napi_callback_info info) {
   REJECT_RETURN;
 
   napi_value adaptorValue;
-  status = napi_get_named_property(env, governorValue, "adaptor", &adaptorValue);
+  status = napi_get_named_property(env, governorValue, "_adaptor", &adaptorValue);
   CHECK_STATUS;
 
   status = napi_get_value_external(env, adaptorValue, (void **)&c->adaptor);
   CHECK_STATUS;
 
   napi_value resourceName;
-  c->status = napi_create_string_utf8(env, "write", NAPI_AUTO_LENGTH, &resourceName);
+  c->status = napi_create_string_utf8(env, "Write", NAPI_AUTO_LENGTH, &resourceName);
   REJECT_RETURN;
   c->status = napi_create_async_work(env, nullptr, resourceName, writeExecute,
     writeComplete, c, &c->_request);
@@ -113,7 +190,7 @@ napi_value finish(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   napi_value adaptorValue;
-  status = napi_get_named_property(env, governorValue, "adaptor", &adaptorValue);
+  status = napi_get_named_property(env, governorValue, "_adaptor", &adaptorValue);
   CHECK_STATUS;
 
   Adaptor *adaptor = nullptr;
@@ -128,7 +205,6 @@ napi_value finish(napi_env env, napi_callback_info info) {
 }
 
 void finalizeAdaptor(napi_env env, void* data, void* hint) {
-  printf("Adaptor finalizer called.\n");
   Adaptor *adaptor = (Adaptor *)data;
   delete adaptor;
 }
@@ -159,12 +235,18 @@ napi_value governor(napi_env env, napi_callback_info info) {
   status = napi_create_object(env, &governorObj);
   CHECK_STATUS;
 
-  Adaptor *adaptor = new Adaptor(new Queue<Chunk *>(3));
+  Adaptor *adaptor = new Adaptor(3);
 
   napi_value adaptorValue;
   status = napi_create_external(env, adaptor, finalizeAdaptor, nullptr, &adaptorValue);
   CHECK_STATUS;
-  status = napi_set_named_property(env, governorObj, "adaptor", adaptorValue);
+  status = napi_set_named_property(env, governorObj, "_adaptor", adaptorValue);
+  CHECK_STATUS;
+
+  napi_value readValue;
+  status = napi_create_function(env, "read", NAPI_AUTO_LENGTH, read, nullptr, &readValue);
+  CHECK_STATUS;
+  status = napi_set_named_property(env, governorObj, "read", readValue);
   CHECK_STATUS;
 
   napi_value writeValue;

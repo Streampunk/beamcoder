@@ -24,7 +24,11 @@
 int read_packet(void *opaque, uint8_t *buf, int buf_size)
 {
   Adaptor *adaptor = (Adaptor *)opaque;
-  return adaptor->read(buf, buf_size);
+  int numBytes = adaptor->read(buf, buf_size);
+  if (0 == numBytes)
+    return AVERROR_EOF;
+
+  return numBytes;
 }
 
 void demuxerExecute(napi_env env, void* data) {
@@ -38,7 +42,7 @@ void demuxerExecute(napi_env env, void* data) {
     return;
   }
 
-  if (c->adaptor && !c->filename) {
+  if (c->adaptor) {
     AVIOContext* avio_ctx = avio_alloc_context(nullptr, 0, 0, c->adaptor, &read_packet, nullptr, nullptr);
     if (!avio_ctx) {
       c->status = BEAMCODER_ERROR_START;
@@ -82,13 +86,8 @@ void demuxerComplete(napi_env env,  napi_status asyncStatus, void* data) {
       c->format->iformat->name, tag->key);
   }
 
-  c->status = fromAVFormatContext(env, c->format, &result, false);
+  c->status = fromAVFormatContext(env, c->format, c->adaptor, &result, false);
   c->format = nullptr;
-  REJECT_STATUS;
-
-  c->status = napi_create_external(env, c->adaptor, nullptr, nullptr, &prop);
-  REJECT_STATUS;
-  c->status = napi_set_named_property(env, result, "adaptor", prop);
   REJECT_STATUS;
 
   c->status = napi_create_function(env, "readFrame", NAPI_AUTO_LENGTH, readFrame,
@@ -144,7 +143,7 @@ napi_value demuxer(napi_env env, napi_callback_info info) {
     REJECT_RETURN;
   } else if ((isArray == false) && (type == napi_object)) {
     napi_value adaptorValue;
-    c->status = napi_get_named_property(env, args[0], "adaptor", &adaptorValue);
+    c->status = napi_get_named_property(env, args[0], "_adaptor", &adaptorValue);
     REJECT_RETURN;
     c->status = napi_typeof(env, adaptorValue, &type);
     REJECT_RETURN;
@@ -153,7 +152,7 @@ napi_value demuxer(napi_env env, napi_callback_info info) {
       REJECT_RETURN;
     } else if (type != napi_undefined) {
       REJECT_ERROR_RETURN("Adaptor must be of external type when specified.",
-       BEAMCODER_INVALID_ARGS);
+        BEAMCODER_INVALID_ARGS);
     }
 
     c->status = napi_get_named_property(env, args[0], "url", &value);
@@ -265,7 +264,7 @@ napi_value readFrame(napi_env env, napi_callback_info info) {
   c->status = napi_get_value_external(env, formatExt, (void**) &c->format);
   REJECT_RETURN;
 
-  c->status = napi_get_named_property(env, formatJS, "adaptor", &adaptorExt);
+  c->status = napi_get_named_property(env, formatJS, "_adaptor", &adaptorExt);
   REJECT_RETURN;
   c->status = napi_get_value_external(env, adaptorExt, (void**)&c->adaptor);
   REJECT_RETURN;

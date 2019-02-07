@@ -25,14 +25,16 @@ const util = require('util');
 
 async function run() {
   let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
-  fs.createReadStream('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf').pipe(demuxerStream);
-  let demuxer = await demuxerStream.demuxer();
-  // console.log(demuxer.streams[1]);
+  // fs.createReadStream('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf').pipe(demuxerStream);
+  fs.createReadStream('../../media/sound/BBCNewsCountdown.wav').pipe(demuxerStream);
 
-  let decoder = await beamcoder.decoder({ demuxer: demuxer, stream_index : 1 });
+  let demuxer = await demuxerStream.demuxer();
+  console.log(demuxer.streams);
+
+  let decoder = await beamcoder.decoder({ demuxer: demuxer, stream_index : 0 });
   // console.log(decoder);
 
-  const audStream = demuxer.streams[1];
+  const audStream = demuxer.streams[0];
   let filterer = await beamcoder.filterer({
     filterType: 'audio',
     inputParams: [
@@ -40,7 +42,7 @@ async function run() {
         name: '0:a',
         sampleRate: audStream.codecpar.sample_rate,
         sampleFormat: audStream.codecpar.format,
-        channelLayout: 'mono',
+        channelLayout: 'stereo', //audStream.codecpar.channel_layout,
         timeBase: audStream.time_base
       }
     ],
@@ -49,21 +51,22 @@ async function run() {
         name: 'out0:a',
         sampleRate: 8000,
         sampleFormat: 's16',
-        channelLayout: 'mono'
+        channelLayout: 'stereo'
       }
     ],
-    filterSpec: '[0:a] aresample=8000, aformat=sample_fmts=s16:channel_layouts=mono [out0:a]'
+    filterSpec: '[0:a] aresample=8000, aformat=sample_fmts=s16:channel_layouts=stereo [out0:a]'
   });
   // console.log(filterer.graph);
   // console.log(util.inspect(filterer.graph.filters[2], {depth: null}));
   console.log(filterer.graph.dump());
 
   const abuffersink = filterer.graph.filters.find(f => 'abuffersink' === f.filter.name);
-  console.log(util.inspect(abuffersink, {depth: null}));
+  // console.log(util.inspect(abuffersink, {depth: null}));
 
-  for ( let x = 0 ; x < 10 ; x++ ) {
-    let packet = await demuxer.read();
-    if (packet.stream_index == 1) {
+  let packet = {};
+  for ( let x = 0 ; x < 10000 && packet !== null ; x++ ) {
+    packet = await demuxer.read();
+    if (packet && packet.stream_index == 0) {
       // console.log(packet);
       let frames = await decoder.decode(packet);
       // console.log(frames);
@@ -71,11 +74,9 @@ async function run() {
       let filtFrames = await filterer.filter([
         { name: '0:a', frames: frames }
       ]);
-      console.log(filtFrames);
+      // console.log(filtFrames);
     }
   }
-
-  demuxerStream.destroy();
 }
 
 run().catch(console.error);

@@ -26,7 +26,7 @@
 #include "beamcoder_util.h"
 #include "format.h"
 #include "frame.h"
-
+#include "adaptor.h"
 
 extern "C" {
   #include <libavformat/avformat.h>
@@ -97,6 +97,7 @@ struct writeFrameCarrier : carrier {
 
 struct writeTrailerCarrier : carrier {
   AVFormatContext* format;
+  Adaptor *adaptor = nullptr;
   ~writeTrailerCarrier() {
   }
 };
