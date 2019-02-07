@@ -128,7 +128,6 @@ napi_value muxer(napi_env env, napi_callback_info info) {
     }
   }
   ret = avformat_alloc_output_context2(&fmtCtx, oformat, formatName, filename);
-  fmtCtx->pb = avio_ctx;
 
   free(formatName);
   free(filename);
@@ -136,6 +135,8 @@ napi_value muxer(napi_env env, napi_callback_info info) {
   if (ret < 0) {
     NAPI_THROW_ERROR(avErrorMsg("Error allocating muxer context: ", ret));
   }
+
+  fmtCtx->pb = avio_ctx;
 
   status = fromAVFormatContext(env, fmtCtx, adaptor, &result, true);
   CHECK_STATUS;
