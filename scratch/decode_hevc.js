@@ -29,7 +29,7 @@ async function run() {
     let packet = await demuxer.read();
     if (packet.stream_index == 0) {
       // console.log(packet);
-      let frames = await decoder.decode(packet);
+      let frames = await decoder.decode(packet); // eslint-disable-line
     //  console.log(frames);
     }
   }

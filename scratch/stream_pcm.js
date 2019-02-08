@@ -21,7 +21,7 @@
 
 const beamcoder = require('../index.js');
 const fs = require('fs');
-const util = require('util');
+const util = require('util'); // eslint-disable-line
 
 async function run() {
   let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
@@ -60,7 +60,7 @@ async function run() {
   // console.log(util.inspect(filterer.graph.filters[2], {depth: null}));
   console.log(filterer.graph.dump());
 
-  const abuffersink = filterer.graph.filters.find(f => 'abuffersink' === f.filter.name);
+  // const abuffersink = filterer.graph.filters.find(f => 'abuffersink' === f.filter.name);
   // console.log(util.inspect(abuffersink, {depth: null}));
 
   let packet = {};
@@ -71,7 +71,7 @@ async function run() {
       let frames = await decoder.decode(packet);
       // console.log(frames);
 
-      let filtFrames = await filterer.filter([
+      let filtFrames = await filterer.filter([ // eslint-disable-line
         { name: '0:a', frames: frames }
       ]);
       // console.log(filtFrames);

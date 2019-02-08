@@ -29,7 +29,7 @@ async function run() {
   muxerStream.pipe(fs.createWriteStream('test.wav'));
 
   let muxer = muxerStream.muxer({ format_name: 'wav' });
-  let stream = muxer.newStream(demuxer.streams[0]);
+  let stream = muxer.newStream(demuxer.streams[0]); // eslint-disable-line
   // stream.time_base = demuxer.streams[0].time_base;
   // stream.codecpar = demuxer.streams[0].codecpar;
   await muxer.openIO();
