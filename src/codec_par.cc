@@ -241,9 +241,9 @@ napi_value getCodecParExtraData(napi_env env, napi_callback_info info) {
 
 napi_value setCodecParExtraData(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result;
+  napi_value result, global, jsBuffer, jsBufferFrom, arrayData;
   napi_valuetype type;
-  bool isBuffer;
+  bool isBuffer, isArray;
   AVCodecParameters* codecPar;
   uint8_t* data;
   size_t dataLen;
@@ -267,7 +267,24 @@ napi_value setCodecParExtraData(napi_env env, napi_callback_info info) {
   status = napi_is_buffer(env, args[0], &isBuffer);
   CHECK_STATUS;
   if (!isBuffer) {
-    NAPI_THROW_ERROR("A buffer is required to set the extradata property.");
+    status = napi_get_named_property(env, args[0], "data", &arrayData);
+    CHECK_STATUS;
+    // TODO more checks that this is a buffer from JSON?
+    status = napi_is_array(env, arrayData, &isArray);
+    CHECK_STATUS;
+    if (isArray) {
+      status = napi_get_global(env, &global);
+      CHECK_STATUS;
+      status = napi_get_named_property(env, global, "Buffer", &jsBuffer);
+      CHECK_STATUS;
+      status = napi_get_named_property(env, jsBuffer, "from", &jsBufferFrom);
+      CHECK_STATUS;
+      const napi_value fargs[] = { arrayData };
+      status = napi_call_function(env, args[0], jsBufferFrom, 1, fargs, &args[0]);
+      CHECK_STATUS;
+    } else {
+      NAPI_THROW_ERROR("A buffer is required to set the extradata propeprty.");
+    }
   }
 
   status = napi_get_buffer_info(env, args[0], (void**) &data, &dataLen);
@@ -465,7 +482,7 @@ napi_value setCodecParSmpAspectRt(napi_env env, napi_callback_info info) {
   }
   CHECK_STATUS;
 
-  status = napi_get_element(env, args[0], 0, &den);
+  status = napi_get_element(env, args[0], 1, &den);
   CHECK_STATUS;
   status = napi_typeof(env, den, &type);
   CHECK_STATUS;
@@ -1537,12 +1554,25 @@ done:
   return result;
 }
 
+napi_value getCodecParTypeName(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+
+  status = napi_create_string_utf8(env, "CodecParameters", NAPI_AUTO_LENGTH, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
 napi_value makeCodecParameters(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result, global, jsObject, assign;
+  napi_value result, global, jsObject, assign, jsJSON, jsParse;
   napi_valuetype type;
-  bool isArray;
+  bool isArray, deleted;
   AVCodecParameters* c = avcodec_parameters_alloc();
+
+  status = napi_get_global(env, &global);
+  CHECK_STATUS;
 
   size_t argc = 1;
   napi_value args[1];
@@ -1555,6 +1585,23 @@ napi_value makeCodecParameters(napi_env env, napi_callback_info info) {
   if (argc == 1) {
     status = napi_typeof(env, args[0], &type);
     CHECK_STATUS;
+    if (type == napi_string) {
+      status = napi_get_named_property(env, global, "JSON", &jsJSON);
+      CHECK_STATUS;
+      status =  napi_get_named_property(env, jsJSON, "parse", &jsParse);
+      CHECK_STATUS;
+      const napi_value pargs[] = { args[0] };
+      status = napi_call_function(env, args[0], jsParse, 1, pargs, &args[0]);
+      CHECK_STATUS;
+      status = napi_typeof(env, args[0], &type);
+      CHECK_STATUS;
+      if (type == napi_object) {
+        status = beam_delete_named_property(env, args[0], "type", &deleted);
+        CHECK_STATUS;
+        status = beam_delete_named_property(env, args[0], "name", &deleted);
+        CHECK_STATUS;
+      }
+    }
     status = napi_is_array(env, args[0], &isArray);
     CHECK_STATUS;
     if (isArray || (type != napi_object)) {
@@ -1566,8 +1613,6 @@ napi_value makeCodecParameters(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   if (argc == 1) {
-    status = napi_get_global(env, &global);
-    CHECK_STATUS;
     status = napi_get_named_property(env, global, "Object", &jsObject);
     CHECK_STATUS;
     status = napi_get_named_property(env, jsObject, "assign", &assign);
@@ -1580,19 +1625,72 @@ napi_value makeCodecParameters(napi_env env, napi_callback_info info) {
   return result;
 }
 
+napi_value codecParToJSON(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVCodecParameters* c;
+
+  size_t argc = 0;
+  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &c);
+  CHECK_STATUS;
+
+  status = napi_create_object(env, &result);
+  CHECK_STATUS;
+
+  napi_property_descriptor desc[] = {
+    DECLARE_GETTER("type", getCodecParTypeName, c),
+    DECLARE_GETTER("codec_type", getCodecParCodecType, c),
+    DECLARE_GETTER("codec_id", getCodecParCodecID, c),
+    DECLARE_GETTER("name", getCodecParName, c),
+    DECLARE_GETTER("codec_tag", c->codec_tag > 0 ? getCodecParCodecTag : nullptr, c),
+    DECLARE_GETTER("extradata", c->extradata != nullptr ? getCodecParExtraData : nullptr, c),
+    DECLARE_GETTER("format", c->format >= 0 ? getCodecParFormat : nullptr, c),
+    DECLARE_GETTER("bit_rate", c->bit_rate > 0 ? getCodecParBitRate : nullptr, c),
+    DECLARE_GETTER("bits_per_coded_sample", c->bits_per_coded_sample > 0 ? getCodecParBitsPerCodedSmp : nullptr, c),
+    // 10
+    DECLARE_GETTER("bits_per_raw_sample", c->bits_per_raw_sample > 0 ? getCodecParBitsPerRawSmp : nullptr, c),
+    DECLARE_GETTER("profile", c->profile != FF_PROFILE_UNKNOWN ? getCodecParProfile : nullptr, c),
+    DECLARE_GETTER("level", c->level != FF_LEVEL_UNKNOWN ? getCodecParLevel : nullptr, c),
+    DECLARE_GETTER("width", c->width != 0 ? getCodecParWidth : nullptr, c),
+    DECLARE_GETTER("height", c->height != 0 ? getCodecParHeight : nullptr, c),
+    DECLARE_GETTER("sample_aspect_ratio",
+      (c->sample_aspect_ratio.num != 0) || (c->sample_aspect_ratio.den != 1) ?
+        getCodecParSmpAspectRt : nullptr, c),
+    DECLARE_GETTER("field_order", c->field_order != AV_FIELD_UNKNOWN ? getCodecParFieldOrder : nullptr, c),
+    DECLARE_GETTER("color_range", c->color_range != AVCOL_RANGE_UNSPECIFIED ? getCodecParColorRange : nullptr, c),
+    DECLARE_GETTER("color_primaries", c->color_primaries != AVCOL_PRI_UNSPECIFIED ? getCodecParColorPrims : nullptr, c),
+    DECLARE_GETTER("color_trc", c->color_trc != AVCOL_TRC_UNSPECIFIED ? getCodecParColorTrc : nullptr, c),
+    // 20
+    DECLARE_GETTER("color_space", c->color_space != AVCOL_SPC_UNSPECIFIED ? getCodecParColorSpace : nullptr, c),
+    DECLARE_GETTER("chroma_location", c->chroma_location != AVCHROMA_LOC_UNSPECIFIED ? getCodecParChromaLoc : nullptr, c),
+    DECLARE_GETTER("video_delay", c->video_delay != 0 ? getCodecParVideoDelay : nullptr, c),
+    DECLARE_GETTER("channel_layout", c->channel_layout != 0 ? getCodecParChanLayout : nullptr, c),
+    DECLARE_GETTER("channels", c->channels > 0 ? getCodecParChannels : nullptr, c),
+    DECLARE_GETTER("sample_rate", c->sample_rate > 0 ? getCodecParSampleRate : nullptr, c),
+    DECLARE_GETTER("block_align", c->block_align > 0 ? getCodecParBlockAlign : nullptr, c),
+    DECLARE_GETTER("frame_size", c->frame_size > 0 ? getCodecParFrameSize : nullptr, c),
+    DECLARE_GETTER("initial_padding", c->initial_padding > 0 ? getCodecParInitialPad : nullptr, c),
+    DECLARE_GETTER("trailing_padding", c->trailing_padding > 0 ? getCodecParTrailingPad : nullptr, c),
+    // 30
+    DECLARE_GETTER("seek_preroll", c->seek_preroll > 0 ? getCodecParSeekPreroll : nullptr, c)
+  };
+  status = napi_define_properties(env, result, 30, desc);
+  CHECK_STATUS;
+
+  return result;
+}
+
 napi_status fromAVCodecParameters(napi_env env, AVCodecParameters* c, bool ownAlloc, napi_value* result) {
   napi_status status;
-  napi_value jsCodecPar, extCodecPar, typeName;
+  napi_value jsCodecPar, extCodecPar;
 
   status = napi_create_object(env, &jsCodecPar);
-  PASS_STATUS;
-  status = napi_create_string_utf8(env, "CodecParameters", NAPI_AUTO_LENGTH, &typeName);
   PASS_STATUS;
   status = napi_create_external(env, c, ownAlloc?codecParamsFinalizer:nullptr, nullptr, &extCodecPar);
   PASS_STATUS;
 
   napi_property_descriptor desc[] = {
-    { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
+    { "type", nullptr, nullptr, getCodecParTypeName, nop, nullptr, napi_enumerable, nullptr },
     { "codec_type", nullptr, nullptr, getCodecParCodecType, setCodecParCodecType, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), c },
     { "codec_id", nullptr, nullptr, getCodecParCodecID, setCodecParCodecID, nullptr,
@@ -1651,9 +1749,10 @@ napi_status fromAVCodecParameters(napi_env env, AVCodecParameters* c, bool ownAl
       (napi_property_attributes) (napi_writable | napi_enumerable), c },
     { "seek_preroll", nullptr, nullptr, getCodecParSeekPreroll, setCodecParSeekPreroll, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), c }, // 30
+    { "toJSON", nullptr, codecParToJSON, nullptr, nullptr, nullptr, napi_default, c},
     { "_codecPar", nullptr, nullptr, nullptr, nullptr, extCodecPar, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsCodecPar, 31, desc);
+  status = napi_define_properties(env, jsCodecPar, 32, desc);
   PASS_STATUS;
 
   *result = jsCodecPar;

@@ -1180,7 +1180,7 @@ napi_value setFrameSideData(napi_env env, napi_callback_info info) {
   napi_value result, names, name, element, arrayData, global, jsBuffer, jsBufferFrom;
   napi_valuetype type;
   bool isArray, isBuffer;
-  uint32_t sdCount = 0, arrayCount = 0;
+  uint32_t sdCount = 0;
   AVFrameSideData* fsd;
   int fsdt;
   char* typeName;

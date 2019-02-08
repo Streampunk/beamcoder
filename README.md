@@ -95,7 +95,7 @@ On Linux, use the appropriate package manager to install the FFmpeg 4.1 developm
     sudo add-apt-repository ppa:jonathonf/ffmpeg-4
     sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev
 
-An example for Redhat / Fedora / CentOs will follow.
+An example for Debian / Redhat / Fedora / CentOs will follow.
 
 Beam coder is intended to be used as a module/package from other applications. Install beam coder from the root folder of your package as follows:
 
