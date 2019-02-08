@@ -25,7 +25,7 @@ const util = require('util');
 const https = require('https');
 const unzip = require('unzip');
 const cp = require('child_process');
-const [ mkdir, access, rename, execFile ] =
+const [ mkdir, access, rename, execFile ] = // eslint-disable-line
   [ fs.mkdir, fs.access, fs.rename, cp.execFile ].map(util.promisify);
 
 async function get(ws, url, name) {
@@ -38,7 +38,7 @@ async function get(ws, url, name) {
         totalLength = +res.headers['content-length'];
       }
       res.on('end', () => {
-        process.stdout.write(`Downloaded 100% of '${name}'. Total length ${received} bytes.\n`)
+        process.stdout.write(`Downloaded 100% of '${name}'. Total length ${received} bytes.\n`);
         comp();
       });
       res.on('error', err);
@@ -63,13 +63,13 @@ async function inflate(rs, folder, name) {
 }
 
 async function win32() {
-  console.log("Installing FFmpeg dependencies for Beam Coder on Windows.");
+  console.log('Installing FFmpeg dependencies for Beam Coder on Windows.');
 
   await mkdir('ffmpeg').catch(e => {
     if (e.code === 'EEXIST') return;
     else throw e;
   });
-  await access('ffmpeg/ffmpeg-4.1-win64-shared', fs.constants.R_OK).catch(async e => {
+  await access('ffmpeg/ffmpeg-4.1-win64-shared', fs.constants.R_OK).catch(async () => {
     let ws_shared = fs.createWriteStream('ffmpeg/ffmpeg-4.1-win64-shared.zip');
     await get(ws_shared,
       'https://ffmpeg.zeranoe.com/builds/win64/shared/ffmpeg-4.1-win64-shared.zip',
@@ -77,7 +77,7 @@ async function win32() {
     let rs_shared = fs.createReadStream('ffmpeg/ffmpeg-4.1-win64-shared.zip');
     await inflate(rs_shared, 'ffmpeg', 'ffmpeg-4.1-win64-shared.zip');
   });
-  await access('ffmpeg/ffmpeg-4.1-win64-dev', fs.constants.R_OK).catch(async e => {
+  await access('ffmpeg/ffmpeg-4.1-win64-dev', fs.constants.R_OK).catch(async () => {
     let ws_dev = fs.createWriteStream('ffmpeg/ffmpeg-4.1-win64-dev.zip');
     await get(ws_dev,
       'https://ffmpeg.zeranoe.com/builds/win64/dev/ffmpeg-4.1-win64-dev.zip',
@@ -88,12 +88,12 @@ async function win32() {
 }
 
 async function linux() {
-  console.log("Checking FFmpeg dependencies for Beam Coder on Linux.");
+  console.log('Checking FFmpeg dependencies for Beam Coder on Linux.');
   const { stdout } = await execFile('ldconfig', ['-p']);
   let result = 0;
 
   if (stdout.indexOf('libavcodec.so.58') < 0) {
-    console.error("libavcodec.so.58 is not installed.");
+    console.error('libavcodec.so.58 is not installed.');
     result = 1;
   }
   if (stdout.indexOf('libavformat.so.58') < 0) {
@@ -135,24 +135,24 @@ sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-
 }
 
 switch (os.platform()) {
-  case 'win32':
-    if (os.arch() != 'x64') {
-      console.error("Only 64-bit platforms are supported.");
-      process.exit(1);
-    } else {
-      win32();
-    }
-    break;
-  case 'linux':
-    if (os.arch() != 'x64') {
-      console.error("Only 64-bit platforms are supported.");
-      process.exit(1);
-    } else {
-      linux();
-    }
-    break;
-  case 'mac':
-  default:
-    console.error(`Platfrom ${os.platform()} is not supported.`);
-    break;
+case 'win32':
+  if (os.arch() != 'x64') {
+    console.error('Only 64-bit platforms are supported.');
+    process.exit(1);
+  } else {
+    win32();
+  }
+  break;
+case 'linux':
+  if (os.arch() != 'x64') {
+    console.error('Only 64-bit platforms are supported.');
+    process.exit(1);
+  } else {
+    linux();
+  }
+  break;
+case 'mac':
+default:
+  console.error(`Platfrom ${os.platform()} is not supported.`);
+  break;
 }

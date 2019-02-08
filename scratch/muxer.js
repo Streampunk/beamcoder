@@ -22,7 +22,6 @@
 // Work in progress
 
 const beamcoder = require('../index.js');
-const fs = require('fs');
 
 const STREAM_FRAME_RATE = 25;
 
@@ -36,7 +35,7 @@ function allocAudioFrame(sampleFormat, channelLayout, sampleRate, nbSamples) {
   }).alloc();
 }
 
-function allocPicture(pixelFmt, width, height) {
+function allocPicture(pixelFmt, width, height) { // eslint-disable-line
 
   return beamcoder.frame({
     format: pixelFmt,
@@ -45,7 +44,7 @@ function allocPicture(pixelFmt, width, height) {
   }).alloc();
 }
 
-async function addStream(stream, muxer, codecID) {
+async function addStream(stream, muxer, codecID) { // eslint-disable-line
   let codec = await beamcoder.encoder({ codec_id: codecID });
 
   stream.st = muxer.newStream();
