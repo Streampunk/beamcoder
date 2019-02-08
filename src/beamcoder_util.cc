@@ -600,131 +600,6 @@ napi_status makeAVDictionary(napi_env env, napi_value options, AVDictionary** me
   return napi_ok;
 }
 
-/* Reading the methods to add and remove packet side data in FFmpeg, only one of
-   each type of stream is allowed. This has a similar semtantic to the properties
-   of a JSObject, where each property has a unique name. Therefore, an
-   AVPacketSideData* array in C maps to a JSObject of packet side data type named
-   properties with Buffer values. Data is copied to avoid lifecycle issues.
-
-   e.g. { afd: Buffer.from([7]), a53_cc: Buffer.from('subtitle bytes') }
-*/
-
-napi_status fromAVPacketSideDataArray(napi_env env, AVPacketSideData* data,
-    int dataSize, napi_value* result) {
-  napi_status status;
-  napi_value value, element;
-  void* resultData;
-
-  if (dataSize <= 0) {
-    status = napi_get_null(env, &value);
-    PASS_STATUS;
-    *result = value;
-    return napi_ok;
-  }
-  status = napi_create_object(env, &value);
-  PASS_STATUS;
-  status = beam_set_string_utf8(env, value, "type", "PacketSideData");
-  for ( int x = 0 ; x < dataSize ; x++ ) {
-    status = napi_create_buffer_copy(env, data[x].size, data[x].data, &resultData, &element);
-    PASS_STATUS;
-    status = napi_set_named_property(env, value,
-      beam_lookup_name(beam_packet_side_data_type->forward, data[x].type), element);
-    PASS_STATUS;
-  }
-
-  *result = value;
-  return napi_ok;
-}
-
-napi_status toAVPacketSideDataArray(napi_env env, napi_value sided,
-    AVPacketSideData** data, int* dataSize) {
-  napi_status status;
-  napi_value names, name, element, arrayData, global, jsBuffer, jsBufferFrom;
-  napi_valuetype type;
-  bool isArray, isBuffer;
-  uint32_t sdCount = 0, arrayCount = 0;
-  AVPacketSideData* psd;
-  int psdt;
-  char* typeName;
-  size_t strLen;
-  void* rawdata;
-  size_t rawdataSize;
-
-  status = napi_get_global(env, &global);
-  PASS_STATUS;
-  status = napi_get_named_property(env, global, "Buffer", &jsBuffer);
-  PASS_STATUS;
-  status = napi_get_named_property(env, jsBuffer, "from", &jsBufferFrom);
-  PASS_STATUS;
-
-  status = napi_typeof(env, sided, &type);
-  PASS_STATUS;
-  status = napi_is_array(env, sided, &isArray);
-  PASS_STATUS;
-  if (isArray || (type != napi_object)) {
-    av_freep(data);
-    *dataSize = 0;
-    return napi_ok;
-  }
-  status = napi_get_property_names(env, sided, &names);
-  PASS_STATUS;
-  status = napi_get_array_length(env, names, &sdCount);
-  PASS_STATUS;
-
-  psd = (AVPacketSideData*) av_mallocz(sizeof(AVPacketSideData) * sdCount);
-  for ( uint32_t x = 0 ; x < sdCount ; x++ ) {
-    status = napi_get_element(env, names, x, &name);
-    PASS_STATUS;
-    status = napi_get_property(env, sided, name, &element);
-    PASS_STATUS;
-    status = napi_is_buffer(env, element, &isBuffer);
-    PASS_STATUS;
-    if (!isBuffer) {
-      status = napi_get_named_property(env, element, "data", &arrayData);
-      PASS_STATUS;
-      // TODO more checks that this is a buffer from JSON?
-      status = napi_is_array(env, arrayData, &isArray);
-      PASS_STATUS;
-      if (isArray) {
-        const napi_value fargs[] = { arrayData };
-        status = napi_call_function(env, element, jsBufferFrom, 1, fargs, &element);
-        PASS_STATUS;
-      } else {
-        continue;
-      }
-    }
-    status = napi_get_value_string_utf8(env, name, nullptr, 0, &strLen);
-    PASS_STATUS;
-    typeName = (char*) malloc(sizeof(char) * (strLen + 1));
-    status = napi_get_value_string_utf8(env, name, typeName, strLen + 1, &strLen);
-    PASS_STATUS;
-
-    psdt = beam_lookup_enum(beam_packet_side_data_type->inverse, typeName);
-    if (psdt == BEAM_ENUM_UNKNOWN) {
-      continue;
-    } else {
-      status = napi_get_buffer_info(env, element, &rawdata, &rawdataSize);
-      PASS_STATUS;
-      psd[arrayCount].data = (uint8_t*) av_malloc(rawdataSize + AV_INPUT_BUFFER_PADDING_SIZE);
-      psd[arrayCount].size = rawdataSize;
-      psd[arrayCount].type = (AVPacketSideDataType) psdt;
-      memcpy(psd[arrayCount++].data, rawdata, rawdataSize);
-    }
-  }
-
-  if ((*dataSize > 0) && (*data != nullptr)) {
-    for ( int x = 0 ; x < *dataSize ; x++ ) {
-      av_free((*data)[x].data);
-    }
-    av_freep(data);
-    *dataSize = 0;
-  }
-
-  *dataSize = arrayCount;
-  *data = psd;
-  return napi_ok;
-}
-
 napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result) {
   napi_status status;
   napi_value optionsVal, bufferVal;
@@ -1197,7 +1072,7 @@ std::unordered_map<int, std::string> beam_packet_side_data_type_fmap = {
   { AV_PKT_DATA_H263_MB_INFO, "h263_mb_info" },
   { AV_PKT_DATA_REPLAYGAIN, "replaygain" },
   { AV_PKT_DATA_DISPLAYMATRIX, "displaymatrix" },
-  { AV_PKT_DATA_STEREO3D, "stero3d" },
+  { AV_PKT_DATA_STEREO3D, "stereo3d" },
   { AV_PKT_DATA_AUDIO_SERVICE_TYPE, "audio_service_type" },
   { AV_PKT_DATA_QUALITY_STATS, "quality_stats" },
   { AV_PKT_DATA_FALLBACK_TRACK, "fallback_track" },
@@ -1220,3 +1095,26 @@ std::unordered_map<int, std::string> beam_packet_side_data_type_fmap = {
   { AV_PKT_DATA_AFD, "afd" }
 };
 const beamEnum* beam_packet_side_data_type = new beamEnum(beam_packet_side_data_type_fmap);
+
+std::unordered_map<int, std::string> beam_frame_side_data_type_fmap = {
+  { AV_FRAME_DATA_PANSCAN, "panscan" },
+  { AV_FRAME_DATA_A53_CC, "a53_cc" },
+  { AV_FRAME_DATA_STEREO3D, "stereo3d" },
+  { AV_FRAME_DATA_MATRIXENCODING, "matrixencoding" },
+  { AV_FRAME_DATA_DOWNMIX_INFO, "downmix_info" },
+  { AV_FRAME_DATA_REPLAYGAIN, "replaygain" },
+  { AV_FRAME_DATA_DISPLAYMATRIX, "displaymatrix" },
+  { AV_FRAME_DATA_AFD, "afd" },
+  { AV_FRAME_DATA_MOTION_VECTORS, "motion_vectors" },
+  { AV_FRAME_DATA_SKIP_SAMPLES, "skip_samples" },
+  { AV_FRAME_DATA_AUDIO_SERVICE_TYPE, "audio_service_type" },
+  { AV_FRAME_DATA_MASTERING_DISPLAY_METADATA, "mastering_display_metadata" },
+  { AV_FRAME_DATA_GOP_TIMECODE, "gop_timecode" },
+  { AV_FRAME_DATA_SPHERICAL, "spherical" },
+  { AV_FRAME_DATA_CONTENT_LIGHT_LEVEL, "light_level" },
+  { AV_FRAME_DATA_ICC_PROFILE, "icc_profile" },
+  { AV_FRAME_DATA_QP_TABLE_PROPERTIES, "qp_table_properties" },
+  { AV_FRAME_DATA_QP_TABLE_DATA, "qp_table_data" },
+  { AV_FRAME_DATA_S12M_TIMECODE, "s12m_timecode" }
+};
+const beamEnum* beam_frame_side_data_type = new beamEnum(beam_frame_side_data_type_fmap);

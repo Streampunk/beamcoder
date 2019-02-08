@@ -30,7 +30,7 @@ test('Create a frame', t => {
 });
 
 test('Minimal JSON serialization', t => {
-  let fr = beamcoder.frame();
+  let fr = beamcoder.frame({});
   let fp = JSON.stringify(fr);
   t.ok(fp, 'JSON serialization is truthy.');
   let pfp = JSON.parse(fp);
@@ -41,4 +41,91 @@ test('Minimal JSON serialization', t => {
   t.end();
 });
 
-// TODO JSON maximal test
+test('Maximal JSON serialization', t => {
+  let fr = beamcoder.frame({ type: 'Frame',
+    linesize: [42],
+    width: 43,
+    height: 44,
+    nb_samples: 45,
+    format: 'fltp',
+    key_frame: false,
+    pict_type: 'I',
+    sample_aspect_ratio: [ 16, 9 ],
+    pts: 46,
+    pkt_dts: 47,
+    coded_picture_number: 48,
+    display_picture_number: 49,
+    quality: 50,
+    repeat_pict: 51,
+    interlaced_frame: true,
+    top_field_first: true,
+    palette_has_changed: true,
+    reordered_opaque: 52,
+    sample_rate: 48000,
+    channel_layout: 'stereo',
+    data: [ Buffer.from('wibble wobble wibble wobble jelly on a place at least 42 chars and some more')],
+    side_data: { replaygain: Buffer.from('wibble') },
+    flags: { CORRUPT: true, DISCARD: false },
+    color_range: 'tv',
+    color_primaries: 'bt709',
+    color_trc: 'bt709',
+    colorspace: 'bt709',
+    chroma_location: 'top',
+    best_effort_timestamp: 53,
+    pkt_pos: 54,
+    pkt_duration: 55,
+    metadata: { fred: 'ginger' },
+    decode_error_flags: { INVALID_BITSTREAM: true, MISSING_REFERENCE: false },
+    channels: 2,
+    pkt_size: 56,
+    crop_top: 57,
+    crop_bottom: 58,
+    crop_left: 59,
+    crop_right: 60 });
+  t.ok(fr, 'frame is truthy.');
+  let fs = JSON.stringify(fr);
+  t.equal(typeof fs, 'string', 'stringify created a string.');
+  let rfr = beamcoder.frame(fs);
+  t.ok(rfr, 'roundtrip packet is truthy.');
+  t.deepEqual(util.inspect(rfr), util.inspect(beamcoder.frame({
+    linesize: [42],
+    width: 43,
+    height: 44,
+    nb_samples: 45,
+    format: 'fltp',
+    key_frame: false,
+    pict_type: 'I',
+    sample_aspect_ratio: [ 16, 9 ],
+    pts: 46,
+    pkt_dts: 47,
+    coded_picture_number: 48,
+    display_picture_number: 49,
+    quality: 50,
+    repeat_pict: 51,
+    interlaced_frame: true,
+    top_field_first: true,
+    palette_has_changed: true,
+    reordered_opaque: 52,
+    sample_rate: 48000,
+    channel_layout: 'stereo',
+    data: [], // Data does not roundtrip
+    side_data: { replaygain: Buffer.from('wibble') },
+    flags: { CORRUPT: true, DISCARD: false },
+    color_range: 'tv',
+    color_primaries: 'bt709',
+    color_trc: 'bt709',
+    colorspace: 'bt709',
+    chroma_location: 'top',
+    best_effort_timestamp: 53,
+    pkt_pos: 54,
+    pkt_duration: 55,
+    metadata: { fred: 'ginger' },
+    decode_error_flags: { INVALID_BITSTREAM: true, MISSING_REFERENCE: false },
+    channels: 2,
+    pkt_size: 56,
+    crop_top: 57,
+    crop_bottom: 58,
+    crop_left: 59,
+    crop_right: 60 })), 'roundtrips expected value.');
+  t.end();
+});

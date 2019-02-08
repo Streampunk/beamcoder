@@ -187,6 +187,7 @@ extern const beamEnum* beam_option_type;
 extern const beamEnum* beam_avoid_neg_ts;
 extern const beamEnum* beam_avfmt_duration2;
 extern const beamEnum* beam_packet_side_data_type;
+extern const beamEnum* beam_frame_side_data_type;
 
 napi_value makeFrame(napi_env env, napi_callback_info info);
 
@@ -198,10 +199,6 @@ struct avBufRef {
 
 napi_status fromAVClass(napi_env env, const AVClass* cls, napi_value* result);
 napi_status makeAVDictionary(napi_env env, napi_value options, AVDictionary** dict);
-napi_status fromAVPacketSideDataArray(napi_env env, AVPacketSideData* data,
-    int dataSize, napi_value* result);
-napi_status toAVPacketSideDataArray(napi_env env, napi_value sided,
-  AVPacketSideData** data, int* dataSize);
 
 napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result);
 napi_status toContextPrivData(napi_env env, napi_value params, void* priv_data);

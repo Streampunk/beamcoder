@@ -6377,16 +6377,31 @@ napi_value getCodecCtxProps(napi_env env, napi_callback_info info) {
 
 napi_value getCodecCtxCodedSideData(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result;
+  napi_value result, element;
   AVCodecContext* codec;
+  void* resultData;
 
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
   CHECK_STATUS;
 
-  status = fromAVPacketSideDataArray(env, codec->coded_side_data,
-    codec->nb_coded_side_data, &result);
-  CHECK_STATUS;
+  if (codec->nb_coded_side_data <= 0) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_object(env, &result);
+    CHECK_STATUS;
+    status = beam_set_string_utf8(env, result, "type", "PacketSideData");
+    for ( int x = 0 ; x < codec->nb_coded_side_data ; x++ ) {
+      status = napi_create_buffer_copy(env, codec->coded_side_data[x].size,
+        codec->coded_side_data[x].data, &resultData, &element);
+      CHECK_STATUS;
+      status = napi_set_named_property(env, result,
+        beam_lookup_name(beam_packet_side_data_type->forward,
+          codec->coded_side_data[x].type), element);
+      CHECK_STATUS;
+    }
+  }
 
   return result;
 }

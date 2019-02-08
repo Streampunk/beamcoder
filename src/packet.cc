@@ -335,23 +335,46 @@ napi_value setPacketFlags(napi_env env, napi_callback_info info) {
 
 napi_value getPacketSideData(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result;
+  napi_value result, element;
   packetData* p;
+  void* resultData;
 
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &p);
   CHECK_STATUS;
 
-  status = fromAVPacketSideDataArray(env, p->packet->side_data,
-    p->packet->side_data_elems, &result);
-  CHECK_STATUS;
+  if (p->packet->side_data_elems <= 0) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_object(env, &result);
+    CHECK_STATUS;
+    status = beam_set_string_utf8(env, result, "type", "PacketSideData");
+    for ( int x = 0 ; x < p->packet->side_data_elems ; x++ ) {
+      status = napi_create_buffer_copy(env, p->packet->side_data[x].size,
+        p->packet->side_data[x].data, &resultData, &element);
+      CHECK_STATUS;
+      status = napi_set_named_property(env, result,
+        beam_lookup_name(beam_packet_side_data_type->forward,
+          p->packet->side_data[x].type), element);
+      CHECK_STATUS;
+    }
+  }
 
   return result;
 }
 
 napi_value setPacketSideData(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result;
+  napi_value result, global, jsBuffer, jsBufferFrom, name, names, element, arrayData;
+  napi_valuetype type;
+  bool isArray, isBuffer;
+  uint32_t sdCount;
   packetData* p;
+  char* typeName;
+  size_t strLen;
+  int psdt;
+  void* rawdata;
+  size_t rawdataSize;
 
   size_t argc = 1;
   napi_value args[1];
@@ -360,10 +383,78 @@ napi_value setPacketSideData(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set side_data property.");
   }
-  status = toAVPacketSideDataArray(env, args[0], &p->packet->side_data,
-    &p->packet->side_data_elems);
+
+  status = napi_get_global(env, &global);
+  CHECK_STATUS;
+  status = napi_get_named_property(env, global, "Buffer", &jsBuffer);
+  CHECK_STATUS;
+  status = napi_get_named_property(env, jsBuffer, "from", &jsBufferFrom);
   CHECK_STATUS;
 
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
+  status = napi_is_array(env, args[0], &isArray);
+  CHECK_STATUS;
+
+  switch (type) {
+    case napi_object:
+    case napi_null:
+    case napi_undefined:
+      av_packet_free_side_data(p->packet);
+      if (type != napi_object) { goto done; };
+      break;
+    default:
+      NAPI_THROW_ERROR("Packet side_data property requires an object with Buffer-valued properties.");
+  }
+
+  status = napi_get_property_names(env, args[0], &names);
+  CHECK_STATUS;
+  status = napi_get_array_length(env, names, &sdCount);
+  CHECK_STATUS;
+
+  for ( uint32_t x = 0 ; x < sdCount ; x++ ) {
+    status = napi_get_element(env, names, x, &name);
+    CHECK_STATUS;
+    status = napi_get_property(env, args[0], name, &element);
+    CHECK_STATUS;
+    status = napi_is_buffer(env, element, &isBuffer);
+    CHECK_STATUS;
+    if (!isBuffer) {
+      status = napi_get_named_property(env, element, "data", &arrayData);
+      CHECK_STATUS;
+      // TODO more checks that this is a buffer from JSON?
+      status = napi_is_array(env, arrayData, &isArray);
+      CHECK_STATUS;
+      if (isArray) {
+        const napi_value fargs[] = { arrayData };
+        status = napi_call_function(env, element, jsBufferFrom, 1, fargs, &element);
+        CHECK_STATUS;
+      } else {
+        continue;
+      }
+    }
+    status = napi_get_value_string_utf8(env, name, nullptr, 0, &strLen);
+    CHECK_STATUS;
+    typeName = (char*) malloc(sizeof(char) * (strLen + 1));
+    status = napi_get_value_string_utf8(env, name, typeName, strLen + 1, &strLen);
+    CHECK_STATUS;
+
+    psdt = beam_lookup_enum(beam_packet_side_data_type->inverse, typeName);
+    free(typeName);
+    if (psdt == BEAM_ENUM_UNKNOWN) {
+      continue;
+    } else {
+      status = napi_get_buffer_info(env, element, &rawdata, &rawdataSize);
+      CHECK_STATUS;
+      uint8_t* pktdata = av_packet_new_side_data(p->packet,
+        (AVPacketSideDataType) psdt, rawdataSize);
+      if (pktdata != nullptr) {
+        memcpy(pktdata, rawdata, rawdataSize);
+      }
+    }
+  }
+
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;

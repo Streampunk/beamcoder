@@ -4181,9 +4181,13 @@ napi_value getStreamSideData(napi_env env, napi_callback_info info) {
 
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &stream);
   CHECK_STATUS;
-  status = fromAVPacketSideDataArray(env, stream->side_data,
-    stream->nb_side_data, &result);
+
+  status = napi_get_null(env, &result);
   CHECK_STATUS;
+  // TODO add this back in
+  // status = fromAVPacketSideDataArray(env, stream->side_data,
+  //   stream->nb_side_data, &result);
+  // CHECK_STATUS;
 
   return result;
 }
@@ -4202,9 +4206,10 @@ napi_value setStreamSideData(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set a stream's side_data property.");
   }
-  status = toAVPacketSideDataArray(env, args[0], &stream->side_data,
-    &stream->nb_side_data);
-  CHECK_STATUS;
+  // TODO add this back in
+  // status = toAVPacketSideDataArray(env, args[0], &stream->side_data,
+  //   &stream->nb_side_data);
+  // CHECK_STATUS;
 
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
