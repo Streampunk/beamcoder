@@ -1,3 +1,6 @@
+[![CircleCI](https://circleci.com/gh/Streampunk/beamcoder.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/Streampunk/beamcoder)
+[![npm version](https://badge.fury.io/js/beamcoder.svg)](https://badge.fury.io/js/beamcoder)
+[![License](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](https://opensource.org/licenses/GPL-3.0)
 # Aerostat Beam Coder
 
 <img align="right" src="images/beamcoder_small.jpg">[Node.js](https://nodejs.org/) native bindings to [FFmpeg](https://www.ffmpeg.org/) with support for asynchronous processing via streams and promises.
@@ -59,6 +62,8 @@ Beam coder will be a cross-platform module for Windows, Mac and Linux. In this e
 Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wikipedia.org/wiki/Aerostat) open-source product set, whereby a conceptual fleet of media-oriented _aerostats_ (_blimps_, _air ships_, _zeppelins_ etc.) are launched into the clouds. Media content is beamed between the fleet as if light beams, and beamed to and from locations on the planet surface as required. See also the [_Aerostat Beam Engine_](https://www.npmjs.com/package/beamengine).
 
 ## Installation
+
+[![NPM](https://nodei.co/npm/beamcoder.png?downloads=true)](https://www.npmjs.com/package/beamcoder)
 
 ### Pre-requisites
 
