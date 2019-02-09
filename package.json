@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "preinstall": "node install_ffmpeg.js",
+    "install": "node-gyp rebuild",
     "test": "tape test/*.js",
     "lint": "eslint **/*.js",
     "lint-html": "eslint **/*.js -f html -o ./reports/lint-results.html",
