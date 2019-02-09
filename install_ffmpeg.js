@@ -89,7 +89,7 @@ async function win32() {
 
 async function linux() {
   console.log('Checking FFmpeg dependencies for Beam Coder on Linux.');
-  const { stdout } = await execFile('ldconfig', ['-p']);
+  const { stdout } = await execFile('ldconfig', ['-p']).catch(console.error);
   let result = 0;
 
   if (stdout.indexOf('libavcodec.so.58') < 0) {
@@ -109,7 +109,7 @@ async function linux() {
     result = 1;
   }
   if (stdout.indexOf('libavutil.so.56') < 0) {
-    console.error('libavutil.so.5 is not installed.');
+    console.error('libavutil.so.56 is not installed.');
     result = 1;
   }
   if (stdout.indexOf('libpostproc.so.55') < 0) {
@@ -126,7 +126,7 @@ async function linux() {
   }
 
   if (result === 1) {
-    console.log(`Try runninng the following (Ubuntu/Debian):
+    console.log(`Try running the following (Ubuntu/Debian):
 sudo add-apt-repository ppa:jonathonf/ffmpeg-4
 sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev`);
     process.exit(1);

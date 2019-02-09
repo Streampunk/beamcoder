@@ -22,7 +22,7 @@ jobs:
         # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
         - v1-dep-
     - run: npm install tap-xunit
-    - run: npm install
+    - run: npm install --unsafe-perm
     - save_cache:
         key: v1-dep-{{ .Branch }}-{{ epoch }}
         paths:

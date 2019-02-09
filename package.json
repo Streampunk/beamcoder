@@ -4,8 +4,7 @@
   "description": "Node.js native bindings to FFmpeg.",
   "main": "index.js",
   "scripts": {
-    "install": "node install_ffmpeg.js",
-    "postinstall": "node-gyp rebuild",
+    "preinstall": "node install_ffmpeg.js",
     "test": "tape test/*.js",
     "lint": "eslint **/*.js",
     "lint-html": "eslint **/*.js -f html -o ./reports/lint-results.html",
