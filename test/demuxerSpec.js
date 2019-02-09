@@ -25,5 +25,17 @@ const beamcoder = require('../index.js');
 test('Creating a demuxer', async t => {
   let dm = await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
   t.ok(dm, 'is truthy.');
+  t.equal(dm.type, 'demuxer', 'type name says demuxer.');
+  t.equal(typeof dm.oformat, 'undefined', 'output format is undefined.');
+  t.ok(dm.iformat, 'has an input format.');
+  t.equal(dm.iformat.name, 'mpegts', 'input format is mpegts.');
+  t.equal(dm.streams.length, 2, 'has 2 streams.');
+  try {
+    await beamcoder.demuxer('file:jaberwocky.junk');
+    t.fail('Did not throw when opening non-existant file.');
+  } catch(e) {
+    console.log(e.message);
+    t.ok(e.message.match(/Problem opening/), 'throws opening non-existant file.');
+  }
   t.end();
 });

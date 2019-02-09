@@ -25,6 +25,10 @@ const beamcoder = require('../index.js');
 test('Creating a muxer', t => {
   let mx = beamcoder.muxer({ name: 'mpegts' });
   t.ok(mx, 'is truthy.');
+  t.equal(typeof mx.iformat, 'undefined', 'input format is undefined.');
+  t.ok(mx.oformat, 'has output format.');
+  t.equal(mx.oformat.name, 'mpegts', 'output format is mpegts.');
+  t.equal(mx.type, 'muxer', 'type name is set to muxer.');
   t.throws(() => beamcoder.muxer({ name: 'wibble' }), 'throws when unknown name.');
   t.end();
 });
