@@ -42,10 +42,12 @@ napi_status fromAVInputFormat(napi_env env,
 napi_status fromAVOutputFormat(napi_env env,
   const AVOutputFormat* iformat, napi_value* result);
 napi_status fromAVFormatContext(napi_env env,
-  AVFormatContext* fmtCtx, Adaptor *adaptor, napi_value* result, bool isMuxer);
+  AVFormatContext* fmtCtx, Adaptor *adaptor, napi_value* result);
 napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result);
 
 void formatContextFinalizer(napi_env env, void* data, void* hint);
+
+napi_value makeFormat(napi_env env, napi_callback_info info);
 
 /* Notes
 

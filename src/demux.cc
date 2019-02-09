@@ -86,7 +86,7 @@ void demuxerComplete(napi_env env,  napi_status asyncStatus, void* data) {
       c->format->iformat->name, tag->key);
   }
 
-  c->status = fromAVFormatContext(env, c->format, c->adaptor, &result, false);
+  c->status = fromAVFormatContext(env, c->format, c->adaptor, &result);
   c->format = nullptr;
   REJECT_STATUS;
 

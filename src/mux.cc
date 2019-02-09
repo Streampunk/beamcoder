@@ -137,7 +137,7 @@ napi_value muxer(napi_env env, napi_callback_info info) {
 
   fmtCtx->pb = avio_ctx;
 
-  status = fromAVFormatContext(env, fmtCtx, adaptor, &result, true);
+  status = fromAVFormatContext(env, fmtCtx, adaptor, &result);
   CHECK_STATUS;
 
   status = napi_create_function(env, "openIO", NAPI_AUTO_LENGTH,
