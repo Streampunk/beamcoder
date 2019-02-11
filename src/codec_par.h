@@ -34,4 +34,6 @@ void codecParamsFinalizer(napi_env env, void* data, void* hint);
 napi_value makeCodecParameters(napi_env env, napi_callback_info info);
 napi_status fromAVCodecParameters(napi_env env, AVCodecParameters* c, bool ownAlloc, napi_value* result);
 
+napi_value codecParToJSON(napi_env env, napi_callback_info info);
+
 #endif // CODEC_PAR_H
