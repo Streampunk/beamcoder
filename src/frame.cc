@@ -906,8 +906,13 @@ napi_value getFrameReorderOpq(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &f);
   CHECK_STATUS;
 
-  status = napi_create_int64(env, f->frame->reordered_opaque, &result);
-  CHECK_STATUS;
+  if (f->frame->reordered_opaque == AV_NOPTS_VALUE) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_int64(env, f->frame->reordered_opaque, &result);
+    CHECK_STATUS;
+  }
   return result;
 }
 
@@ -927,12 +932,18 @@ napi_value setFrameReorderOpq(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    f->frame->reordered_opaque = AV_NOPTS_VALUE;
+    goto done;
+  }
+
   if (type != napi_number) {
     NAPI_THROW_ERROR("Frame reordered_opaque property must be set with a number.");
   }
   status = napi_get_value_int64(env, args[0], &f->frame->reordered_opaque);
   CHECK_STATUS;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -2377,7 +2388,7 @@ napi_value frameToJSON(napi_env env, napi_callback_info info) {
     DECLARE_GETTER("interlaced_frame", f->frame->interlaced_frame != 0 ? getFrameInterlaced : nullptr, f),
     DECLARE_GETTER("top_field_first", f->frame->top_field_first != 0 ? getFrameTopFieldFirst : nullptr, f),
     DECLARE_GETTER("palette_has_changed", f->frame->palette_has_changed != 0 ? getFramePalHasChanged : nullptr, f),
-    DECLARE_GETTER("reordered_opaque", f->frame->reordered_opaque != 0 ? getFrameReorderOpq : nullptr, f),
+    DECLARE_GETTER("reordered_opaque", f->frame->reordered_opaque != AV_NOPTS_VALUE ? getFrameReorderOpq : nullptr, f),
     // 20
     DECLARE_GETTER("sample_rate", f->frame->sample_rate > 0 ? getFrameSampleRate : nullptr, f),
     DECLARE_GETTER("channel_layout", f->frame->channel_layout != 0 ? getFrameChanLayout : nullptr, f),
