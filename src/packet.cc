@@ -108,6 +108,7 @@ napi_value setPacketDts(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
   if ((type == napi_undefined) || (type == napi_null)) {
     p->packet->dts = AV_NOPTS_VALUE;
+    goto done;
   }
   if (type != napi_number) {
     NAPI_THROW_ERROR("Packet DTS property must be set with a number.");
@@ -115,6 +116,7 @@ napi_value setPacketDts(napi_env env, napi_callback_info info) {
   status = napi_get_value_int64(env, args[0], &p->packet->dts);
   CHECK_STATUS;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
