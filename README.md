@@ -390,9 +390,9 @@ The seek operation has two additional flags that can be specified. The `backward
 
     await demuxer.seek({ frame: 31, stream_index: 0, backward: true, any: true});
 
-#### Node.js streams
+#### Demuxer stream
 
-Beam coder offers a [Node.js Writable stream](https://nodejs.org/docs/latest-v10.x/api/stream.html#stream_writable_streams) interface to a demuxer, allowing source data to be streamed to the demuxer from a file or other stream source.
+Beam coder offers a [Node.js Writable stream](https://nodejs.org/docs/latest-v10.x/api/stream.html#stream_writable_streams) interface to a demuxer, allowing source data to be streamed to the demuxer from a file or other stream source such as a network connection.
 
 To create a Writable stream interface with for example a 64kbyte threshold, use:
 
@@ -967,9 +967,23 @@ On success, the promise resolves to an `undefined` value. Do not try to write ot
 
 To abandon the muxing process and forcibly close a file or stream without completing it, call the synchronous `forceClose()` method of the muxer. This assumes that any result of the muxing process is to be left in an incomplete and invalid state.
 
-#### Node.js writable streams
+#### Muxer stream
 
-To follow.
+Beam coder offers a [Node.js Readable stream](https://nodejs.org/docs/latest-v10.x/api/stream.html#stream_readable_streams) interface to a muxer, allowing muxed data to be streamed out to a file or other stream destination such as a network connection.
+
+To create a Readable stream interface with for example a 64kbyte threshold, use:
+
+    let muxerStream = beamcoder.muxerStream({ highwaterMark: 65536 });
+
+This stream can then have data read or piped from it:
+
+    muxerStream.pipe(fs.createWriteStream('test.wav'));
+
+Once the stream is initialised, the muxer can be created and used as above:
+
+    let muxer = muxerStream.muxer({ format_name: 'wav' });
+
+The muxer async methods such as writeFrame return a promise that will resolve when the Readable stream has bufferred the packet. If the Readable stream is not flowing or the buffer is full the promise will wait indefinitely.
 
 ### Codec parameters
 
