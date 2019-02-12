@@ -30,6 +30,7 @@
 
 extern "C" {
   #include <libavformat/avformat.h>
+  #include <libavutil/avstring.h>
 }
 
 napi_value muxers(napi_env env, napi_callback_info info);
@@ -48,6 +49,8 @@ napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result);
 void formatContextFinalizer(napi_env env, void* data, void* hint);
 
 napi_value makeFormat(napi_env env, napi_callback_info info);
+napi_value streamToJSON(napi_env env, napi_callback_info info);
+napi_value formatToJSON(napi_env env, napi_callback_info info);
 
 /* Notes
 

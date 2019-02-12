@@ -25,12 +25,12 @@ async function run() {
   let demuxer = await beamcoder.demuxer({ url: '../media/bbb_1080p_c.ts'});
   let decoder = beamcoder.decoder({ name: 'aac' });
   let packet = {};
-  for ( let x = 0 ; packet !== null && x < 3 ; x++ ) {
+  for ( let x = 0 ; packet !== null && x < 100 ; x++ ) {
     packet = await demuxer.read();
     if (packet.stream_index == 1) {
-      console.log(packet);
+      console.log(JSON.stringify(packet, null, 2));
       let frames = await decoder.decode(packet);
-      console.log(frames);
+      console.log(JSON.stringify(frames.frames[0], null, 2));
     }
   }
 }

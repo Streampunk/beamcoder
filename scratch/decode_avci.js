@@ -25,12 +25,12 @@ async function run() {
   let demuxer = await beamcoder.demuxer('../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
   console.log(demuxer.streams);
   let decoder = beamcoder.decoder({ name: 'h264' });
-  console.log(decoder);
+  // console.log(decoder);
   let packet = {};
   for ( let x = 0 ; x < 100 && packet != null; x++ ) {
     let packet = await demuxer.read();
     if (packet.stream_index === 0) {
-      //console.log(packet);
+      console.log(JSON.stringify(packet, null, 2));
       let frames = await decoder.decode(packet);
       //console.log(frames.frames[0]);
       console.log(x, frames.total_time);
