@@ -567,6 +567,11 @@ napi_value setFmtCtxOFormat(napi_env env, napi_callback_info info) {
   napi_valuetype type;
   bool isArray;
   AVFormatContext* fmtCtx;
+  char* name;
+  size_t strLen;
+  const AVOutputFormat* fmt = nullptr;
+  void* i = nullptr;
+  bool found = false;
 
   size_t argc = 1;
   napi_value args[1];
@@ -580,6 +585,25 @@ napi_value setFmtCtxOFormat(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
   if ((type == napi_null) || (type == napi_undefined)) {
     fmtCtx->oformat = nullptr;
+    if (fmtCtx->iformat == nullptr) {
+      av_freep(&fmtCtx->priv_data);
+    }
+    goto over;
+  }
+  if (type == napi_string) {
+    status = napi_get_value_string_utf8(env, args[0], nullptr, 0, &strLen);
+    CHECK_STATUS;
+    name = (char*) malloc(sizeof(char) * (strLen + 1));
+    status = napi_get_value_string_utf8(env, args[0], name, strLen + 1, &strLen);
+    CHECK_STATUS;
+    while ((fmt = av_muxer_iterate(&i))) {
+      if (av_match_name(name, fmt->name)) {
+        fmtCtx->oformat = (AVOutputFormat*) fmt;
+        found = true;
+        break;
+      }
+    }
+    free(name);
     goto done;
   }
   status = napi_is_array(env, args[0], &isArray);
@@ -597,8 +621,24 @@ napi_value setFmtCtxOFormat(napi_env env, napi_callback_info info) {
   }
   status = napi_get_value_external(env, prop, (void**) &fmtCtx->oformat);
   CHECK_STATUS;
+  found = true;
 
 done:
+  if ((fmtCtx->oformat == nullptr) || (found == false)) {
+    NAPI_THROW_ERROR("Unable to find and/or set output format.");
+  }
+  if (fmtCtx->oformat->priv_data_size > 0) {
+    av_freep(&fmtCtx->priv_data);
+    if (!(fmtCtx->priv_data = av_mallocz(fmtCtx->oformat->priv_data_size))) {
+      NAPI_THROW_ERROR("Failed to allocate memory for private data.");
+    }
+    if (fmtCtx->oformat->priv_class) {
+      *(const AVClass **) fmtCtx->priv_data = fmtCtx->oformat->priv_class;
+      av_opt_set_defaults(fmtCtx->priv_data);
+    }
+  }
+
+over:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -628,6 +668,11 @@ napi_value setFmtCtxIFormat(napi_env env, napi_callback_info info) {
   napi_valuetype type;
   bool isArray;
   AVFormatContext* fmtCtx;
+  char* name;
+  size_t strLen;
+  const AVInputFormat* fmt = nullptr;
+  void* i = nullptr;
+  bool found = false;
 
   size_t argc = 1;
   napi_value args[1];
@@ -641,6 +686,25 @@ napi_value setFmtCtxIFormat(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
   if ((type == napi_null) || (type == napi_undefined)) {
     fmtCtx->iformat = nullptr;
+    if (fmtCtx->oformat == nullptr) {
+      av_freep(&fmtCtx->priv_data);
+    }
+    goto over;
+  }
+  if (type == napi_string) {
+    status = napi_get_value_string_utf8(env, args[0], nullptr, 0, &strLen);
+    CHECK_STATUS;
+    name = (char*) malloc(sizeof(char) * (strLen + 1));
+    status = napi_get_value_string_utf8(env, args[0], name, strLen + 1, &strLen);
+    CHECK_STATUS;
+    while ((fmt = av_demuxer_iterate(&i))) {
+      if (av_match_name(name, fmt->name)) {
+        fmtCtx->iformat = (AVInputFormat*) fmt;
+        found = true;
+        break;
+      }
+    }
+    free(name);
     goto done;
   }
   status = napi_is_array(env, args[0], &isArray);
@@ -658,8 +722,24 @@ napi_value setFmtCtxIFormat(napi_env env, napi_callback_info info) {
   }
   status = napi_get_value_external(env, prop, (void**) &fmtCtx->iformat);
   CHECK_STATUS;
+  found = true;
 
 done:
+  if ((fmtCtx->iformat == nullptr) || (found == false)) {
+    NAPI_THROW_ERROR("Unable to find and/or set input format.");
+  }
+  if (fmtCtx->iformat->priv_data_size > 0) {
+    av_freep(&fmtCtx->priv_data);
+    if (!(fmtCtx->priv_data = av_mallocz(fmtCtx->iformat->priv_data_size))) {
+      NAPI_THROW_ERROR("Failed to allocate memory for private data.");
+    }
+    if (fmtCtx->iformat->priv_class) {
+      *(const AVClass **) fmtCtx->priv_data = fmtCtx->iformat->priv_class;
+      av_opt_set_defaults(fmtCtx->priv_data);
+    }
+  }
+
+over:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
@@ -4912,14 +4992,13 @@ napi_value streamToJSON(napi_env env, napi_callback_info info) {
     DECLARE_GETTER("type", getStreamTypeName, s),
     DECLARE_GETTER("index", getStreamIndex, s),
     DECLARE_GETTER("id", getStreamID, s),
-    DECLARE_GETTER("priv_data", s->priv_data != nullptr ? getStreamPrivData : nullptr, s),
     DECLARE_GETTER("time_base", getStreamTimeBase, s),
     DECLARE_GETTER("start_time", s->start_time != AV_NOPTS_VALUE ? getStreamStartTime : nullptr, s),
     DECLARE_GETTER("duration", s->start_time != AV_NOPTS_VALUE ? getStreamDuration : nullptr, s),
     DECLARE_GETTER("nb_frames", s->nb_frames > 0 ? getStreamNbFrames : nullptr, s),
     DECLARE_GETTER("disposition", s->disposition != 0 ? getStreamDisposition : nullptr, s),
-    // 10
     DECLARE_GETTER("discard", s->discard != AVDISCARD_DEFAULT ? getStreamDiscard : nullptr, s),
+    // 10
     DECLARE_GETTER("sample_aspect_ratio",
       (s->sample_aspect_ratio.num != 0) || (s->sample_aspect_ratio.den != 1) ?
         getStreamSmpAspectRt : nullptr, s),
@@ -4931,7 +5010,7 @@ napi_value streamToJSON(napi_env env, napi_callback_info info) {
     DECLARE_GETTER("r_frame_rate", s->r_frame_rate.num != 0 ? getStreamRFrameRate : nullptr, s),
     DECLARE_GETTER("codecpar", codecParToJSON, s->codecpar)
   };
-  status = napi_define_properties(env, result, 17, desc);
+  status = napi_define_properties(env, result, 16, desc);
   CHECK_STATUS;
 
   return result;
@@ -4957,8 +5036,6 @@ napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result) {
     { "index", nullptr, nullptr, getStreamIndex, nop, nullptr, napi_enumerable, stream },
     { "id", nullptr, nullptr, getStreamID, setStreamID, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
-    { "priv_data", nullptr, nullptr, getStreamPrivData, setStreamPrivData, nullptr,
-      (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "time_base", nullptr, nullptr, getStreamTimeBase, setStreamTimeBase, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "start_time", nullptr, nullptr, getStreamStartTime, setStreamStartTime, nullptr,
@@ -4969,9 +5046,9 @@ napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result) {
        (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "disposition", nullptr, nullptr, getStreamDisposition, setStreamDisposition, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
-    // 10
     { "discard", nullptr, nullptr, getStreamDiscard, setStreamDiscard, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
+    // 10
     { "sample_aspect_ratio", nullptr, nullptr, getStreamSmpAspectRt, setStreamSmpAspectRt, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "metadata", nullptr, nullptr, getStreamMetadata, setStreamMetadata, nullptr,
@@ -4989,12 +5066,12 @@ napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result) {
     { "codecpar", nullptr, nullptr, getStreamCodecPar, setStreamCodecPar, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "name", nullptr, nullptr, nullptr, nullptr, nameValue, napi_writable, nullptr },
-    // 20
     { "_stream", nullptr, nullptr, nullptr, nullptr, extStream, napi_default, nullptr },
+    // 20
     { "toJSON", nullptr, streamToJSON, nullptr, nullptr, nullptr, napi_default, stream },
     { "__codecPar", nullptr, nullptr, nullptr, nullptr, undef, napi_writable, nullptr }
   };
-  status = napi_define_properties(env, jsStream, 22, desc);
+  status = napi_define_properties(env, jsStream, 21, desc);
   PASS_STATUS;
 
   *result = jsStream;

@@ -313,3 +313,31 @@ test('Test minimal JSON stream', t => {
     'cannot set streams after construction.');
   t.end();
 });
+
+test('Can set IO formats on construction', t => {
+  let ifmt = beamcoder.format({ iformat: 'wav' });
+  t.ok(ifmt.iformat, 'iformat has become truthy.');
+  t.ok(ifmt.priv_data, 'private data has been created.');
+  t.equal(ifmt.type, 'demuxer', 'has turned into a demuxer.');
+  t.equal(ifmt.iformat.name, 'wav', 'iformat has the expected name.');
+
+  ifmt.iformat = null;
+  t.equal(ifmt.iformat, null, 'can be set back to null.');
+  t.equal(ifmt.type, 'format', 'changing the name back to format.');
+  t.equal(ifmt.priv_data, null, 'resetting the priv_data.');
+
+  let ofmt = beamcoder.format({ oformat: 'hevc' });
+  t.ok(ofmt.oformat, 'oformat has become truthy.');
+  t.equal(ofmt.priv_data, null, 'private data is not set.');
+  t.equal(ofmt.type, 'muxer', 'has turned into a muxer.');
+  t.equal(ofmt.oformat.name, 'hevc', 'oformat has the expected name.');
+
+  ofmt.oformat = 'wav';
+  t.equal(ofmt.oformat.name, 'wav', 'oformat has the expected name.');
+  t.ok(ofmt.priv_data, 'has private data.');
+  t.equal(typeof ofmt.priv_data.write_bext, 'boolean', 'private data appears as expected.');
+
+  t.throws(() => { ifmt.iformat = 'wibble'; }, /Unable/, 'bad iformat name throws.');
+  t.throws(() => { ofmt.oformat = 'wibble'; }, /Unable/, 'bad oformat name throws.');
+  t.end();
+});

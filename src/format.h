@@ -30,6 +30,7 @@
 
 extern "C" {
   #include <libavformat/avformat.h>
+  #include <libavutil/avstring.h>
 }
 
 napi_value muxers(napi_env env, napi_callback_info info);
