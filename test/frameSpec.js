@@ -34,7 +34,7 @@ test('Minimal JSON serialization', t => {
   let fp = JSON.stringify(fr);
   t.ok(fp, 'JSON serialization is truthy.');
   let pfp = JSON.parse(fp);
-  t.deepEqual(pfp, { type: 'Frame', linesize: [] }, 'makes minimal JSON.');
+  t.deepEqual(pfp, { type: 'Frame', linesize: [], reordered_opaque: 0 }, 'makes minimal JSON.');
   let rf = beamcoder.frame(fp);
   t.ok(rf, 'roundtrip is truthy.');
   t.equal(util.inspect(rf), util.inspect(beamcoder.frame()), 'same as a new frame.');
