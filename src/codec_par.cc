@@ -356,6 +356,10 @@ napi_value setCodecParFormat(napi_env env, napi_callback_info info) {
   }
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
+  if ((type == napi_undefined) || (type == napi_null)) {
+    c->format = AV_PIX_FMT_NONE;
+    goto done;
+  }
   if (type != napi_string) {
     NAPI_THROW_ERROR("Codec parameters format must be set with a string value");
   }
@@ -384,6 +388,7 @@ napi_value setCodecParFormat(napi_env env, napi_callback_info info) {
 
   free(formatName);
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
