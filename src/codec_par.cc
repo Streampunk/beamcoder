@@ -1622,6 +1622,10 @@ napi_value makeCodecParameters(napi_env env, napi_callback_info info) {
     CHECK_STATUS;
   }
 
+  if ((c->codec_type == AVMEDIA_TYPE_UNKNOWN) && (c->codec_id != AV_CODEC_ID_NONE)) {
+    c->codec_type = avcodec_get_type(c->codec_id);
+  }
+
   return result;
 }
 
