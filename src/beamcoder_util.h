@@ -39,7 +39,8 @@ extern "C" {
 
 #define DECLARE_NAPI_METHOD(name, func) { name, 0, func, 0, 0, 0, napi_default, 0 }
 #define DECLARE_GETTER(name, getter, this) { name, 0, 0, getter, nop, nullptr, napi_enumerable, this }
-
+#define DECLARE_GETTER2(name, test, getter, this) { name, 0, 0, test ? getter : nullptr, nop, nullptr, test ? napi_enumerable : napi_default, this }
+#define DECLARE_GETTER3(name, test, getter, this) if ( test ) { desc[count++] = { name, 0, 0, getter, nullptr, nullptr, napi_enumerable, this }; };
 // Handling NAPI errors - use "napi_status status;" where used
 #define CHECK_STATUS if (checkStatus(env, status, __FILE__, __LINE__ - 1) != napi_ok) return nullptr
 #define CHECK_BAIL if (checkStatus(env, status, __FILE__, __LINE__ - 1) != napi_ok) goto bail
