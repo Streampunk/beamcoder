@@ -1638,6 +1638,7 @@ napi_value codecParToJSON(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
   AVCodecParameters* c;
+  int count = 0;
 
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &c);
@@ -1646,44 +1647,44 @@ napi_value codecParToJSON(napi_env env, napi_callback_info info) {
   status = napi_create_object(env, &result);
   CHECK_STATUS;
 
-  napi_property_descriptor desc[] = {
-    DECLARE_GETTER("type", getCodecParTypeName, c),
-    DECLARE_GETTER("codec_type", getCodecParCodecType, c),
-    DECLARE_GETTER("codec_id", getCodecParCodecID, c),
-    DECLARE_GETTER("name", getCodecParName, c),
-    DECLARE_GETTER("codec_tag", c->codec_tag > 0 ? getCodecParCodecTag : nullptr, c),
-    DECLARE_GETTER("extradata", c->extradata != nullptr ? getCodecParExtraData : nullptr, c),
-    DECLARE_GETTER("format", c->format >= 0 ? getCodecParFormat : nullptr, c),
-    DECLARE_GETTER("bit_rate", c->bit_rate > 0 ? getCodecParBitRate : nullptr, c),
-    DECLARE_GETTER("bits_per_coded_sample", c->bits_per_coded_sample > 0 ? getCodecParBitsPerCodedSmp : nullptr, c),
+  napi_property_descriptor desc[35];
+  DECLARE_GETTER3("type", true, getCodecParTypeName, c);
+  DECLARE_GETTER3("codec_type", true, getCodecParCodecType, c);
+  DECLARE_GETTER3("codec_id", true, getCodecParCodecID, c);
+  DECLARE_GETTER3("name", true, getCodecParName, c);
+  DECLARE_GETTER3("codec_tag", c->codec_tag > 0, getCodecParCodecTag, c);
+  DECLARE_GETTER3("extradata", c->extradata != nullptr, getCodecParExtraData, c);
+  DECLARE_GETTER3("format", c->format >= 0, getCodecParFormat, c);
+  DECLARE_GETTER3("bit_rate", c->bit_rate > 0, getCodecParBitRate, c);
+  DECLARE_GETTER3("bits_per_coded_sample", c->bits_per_coded_sample > 0, getCodecParBitsPerCodedSmp, c);
     // 10
-    DECLARE_GETTER("bits_per_raw_sample", c->bits_per_raw_sample > 0 ? getCodecParBitsPerRawSmp : nullptr, c),
-    DECLARE_GETTER("profile", c->profile != FF_PROFILE_UNKNOWN ? getCodecParProfile : nullptr, c),
-    DECLARE_GETTER("level", c->level != FF_LEVEL_UNKNOWN ? getCodecParLevel : nullptr, c),
-    DECLARE_GETTER("width", c->width != 0 ? getCodecParWidth : nullptr, c),
-    DECLARE_GETTER("height", c->height != 0 ? getCodecParHeight : nullptr, c),
-    DECLARE_GETTER("sample_aspect_ratio",
-      (c->sample_aspect_ratio.num != 0) || (c->sample_aspect_ratio.den != 1) ?
-        getCodecParSmpAspectRt : nullptr, c),
-    DECLARE_GETTER("field_order", c->field_order != AV_FIELD_UNKNOWN ? getCodecParFieldOrder : nullptr, c),
-    DECLARE_GETTER("color_range", c->color_range != AVCOL_RANGE_UNSPECIFIED ? getCodecParColorRange : nullptr, c),
-    DECLARE_GETTER("color_primaries", c->color_primaries != AVCOL_PRI_UNSPECIFIED ? getCodecParColorPrims : nullptr, c),
-    DECLARE_GETTER("color_trc", c->color_trc != AVCOL_TRC_UNSPECIFIED ? getCodecParColorTrc : nullptr, c),
+  DECLARE_GETTER3("bits_per_raw_sample", c->bits_per_raw_sample > 0, getCodecParBitsPerRawSmp, c);
+  DECLARE_GETTER3("profile", c->profile != FF_PROFILE_UNKNOWN, getCodecParProfile, c);
+  DECLARE_GETTER3("level", c->level != FF_LEVEL_UNKNOWN, getCodecParLevel, c);
+  DECLARE_GETTER3("width", c->width != 0, getCodecParWidth, c);
+  DECLARE_GETTER3("height", c->height != 0, getCodecParHeight, c);
+  DECLARE_GETTER3("sample_aspect_ratio",
+      (c->sample_aspect_ratio.num != 0) || (c->sample_aspect_ratio.den != 1),
+        getCodecParSmpAspectRt, c);
+  DECLARE_GETTER3("field_order", c->field_order != AV_FIELD_UNKNOWN, getCodecParFieldOrder, c);
+  DECLARE_GETTER3("color_range", c->color_range != AVCOL_RANGE_UNSPECIFIED, getCodecParColorRange, c);
+  DECLARE_GETTER3("color_primaries", c->color_primaries != AVCOL_PRI_UNSPECIFIED, getCodecParColorPrims, c);
+  DECLARE_GETTER3("color_trc", c->color_trc != AVCOL_TRC_UNSPECIFIED, getCodecParColorTrc, c);
     // 20
-    DECLARE_GETTER("color_space", c->color_space != AVCOL_SPC_UNSPECIFIED ? getCodecParColorSpace : nullptr, c),
-    DECLARE_GETTER("chroma_location", c->chroma_location != AVCHROMA_LOC_UNSPECIFIED ? getCodecParChromaLoc : nullptr, c),
-    DECLARE_GETTER("video_delay", c->video_delay != 0 ? getCodecParVideoDelay : nullptr, c),
-    DECLARE_GETTER("channel_layout", c->channel_layout != 0 ? getCodecParChanLayout : nullptr, c),
-    DECLARE_GETTER("channels", c->channels > 0 ? getCodecParChannels : nullptr, c),
-    DECLARE_GETTER("sample_rate", c->sample_rate > 0 ? getCodecParSampleRate : nullptr, c),
-    DECLARE_GETTER("block_align", c->block_align > 0 ? getCodecParBlockAlign : nullptr, c),
-    DECLARE_GETTER("frame_size", c->frame_size > 0 ? getCodecParFrameSize : nullptr, c),
-    DECLARE_GETTER("initial_padding", c->initial_padding > 0 ? getCodecParInitialPad : nullptr, c),
-    DECLARE_GETTER("trailing_padding", c->trailing_padding > 0 ? getCodecParTrailingPad : nullptr, c),
+  DECLARE_GETTER3("color_space", c->color_space != AVCOL_SPC_UNSPECIFIED, getCodecParColorSpace, c);
+  DECLARE_GETTER3("chroma_location", c->chroma_location != AVCHROMA_LOC_UNSPECIFIED, getCodecParChromaLoc, c);
+  DECLARE_GETTER3("video_delay", c->video_delay != 0, getCodecParVideoDelay, c);
+  DECLARE_GETTER3("channel_layout", c->channel_layout != 0, getCodecParChanLayout, c);
+  DECLARE_GETTER3("channels", c->channels > 0, getCodecParChannels, c);
+  DECLARE_GETTER3("sample_rate", c->sample_rate > 0, getCodecParSampleRate, c);
+  DECLARE_GETTER3("block_align", c->block_align > 0, getCodecParBlockAlign, c);
+  DECLARE_GETTER3("frame_size", c->frame_size > 0, getCodecParFrameSize, c);
+  DECLARE_GETTER3("initial_padding", c->initial_padding > 0, getCodecParInitialPad, c);
+  DECLARE_GETTER3("trailing_padding", c->trailing_padding > 0, getCodecParTrailingPad, c);
     // 30
-    DECLARE_GETTER("seek_preroll", c->seek_preroll > 0 ? getCodecParSeekPreroll : nullptr, c)
-  };
-  status = napi_define_properties(env, result, 30, desc);
+  DECLARE_GETTER3("seek_preroll", c->seek_preroll > 0, getCodecParSeekPreroll, c);
+  
+  status = napi_define_properties(env, result, count, desc);
   CHECK_STATUS;
 
   return result;

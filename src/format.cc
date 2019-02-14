@@ -808,8 +808,6 @@ napi_value getFmtCtxStreamsJSON(napi_env env, napi_callback_info info) {
   status = napi_is_exception_pending(env, &pending);
   CHECK_STATUS;
 
-  printf("Hello there!\n");
-
   if (pending) {
     status = napi_get_undefined(env, &result);
     CHECK_STATUS;
@@ -3279,6 +3277,7 @@ napi_value formatToJSON(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, jsObject, jsInter;
   AVFormatContext* fmtCtx;
+  int count = 0;
 
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, &jsObject, (void**) &fmtCtx);
@@ -3289,66 +3288,67 @@ napi_value formatToJSON(napi_env env, napi_callback_info info) {
   status = napi_get_named_property(env, jsObject, "interleaved", &jsInter);
   CHECK_STATUS;
 
-  napi_property_descriptor desc[] = {
-    DECLARE_GETTER("type", getFmtCtxTypeName, fmtCtx),
-    DECLARE_GETTER("iformat", fmtCtx->iformat != nullptr ? getFmtCtxIFormatName : nullptr, fmtCtx),
-    DECLARE_GETTER("oformat", fmtCtx->oformat != nullptr ? getFmtCtxOFormatName : nullptr, fmtCtx),
-    DECLARE_GETTER("priv_data", fmtCtx->priv_data != nullptr ? getFmtCtxPrivData : nullptr, fmtCtx),
-    DECLARE_GETTER("ctx_flags", fmtCtx->ctx_flags > 0 ? getFmtCtxCtxFlags : nullptr, fmtCtx),
-    DECLARE_GETTER("streams", getFmtCtxStreamsJSON, fmtCtx),
-    DECLARE_GETTER("url", (fmtCtx->url != nullptr) && (strlen(fmtCtx->url) > 0) ? getFmtCtxURL : nullptr, fmtCtx),
-    DECLARE_GETTER("start_time", fmtCtx->start_time > 0 ? getFmtCtxStartTime : nullptr, fmtCtx),
-    DECLARE_GETTER("duration", fmtCtx->duration > 0 ? getFmtCtxDuration : nullptr, fmtCtx),
+  napi_property_descriptor desc[55];
+
+  DECLARE_GETTER3("type", true, getFmtCtxTypeName, fmtCtx);
+  DECLARE_GETTER3("iformat", fmtCtx->iformat != nullptr, getFmtCtxIFormatName, fmtCtx);
+  DECLARE_GETTER3("oformat", fmtCtx->oformat != nullptr, getFmtCtxOFormatName, fmtCtx);
+  DECLARE_GETTER3("priv_data", fmtCtx->priv_data != nullptr, getFmtCtxPrivData, fmtCtx);
+  DECLARE_GETTER3("ctx_flags", fmtCtx->ctx_flags > 0, getFmtCtxCtxFlags, fmtCtx);
+  DECLARE_GETTER3("streams", true, getFmtCtxStreamsJSON, fmtCtx);
+  DECLARE_GETTER3("url", (fmtCtx->url != nullptr) && (strlen(fmtCtx->url) > 0), getFmtCtxURL, fmtCtx);
+  DECLARE_GETTER3("start_time", fmtCtx->start_time > 0, getFmtCtxStartTime, fmtCtx);
+  DECLARE_GETTER3("duration", fmtCtx->duration > 0, getFmtCtxDuration, fmtCtx);
     // 10
-    DECLARE_GETTER("bit_rate", fmtCtx->bit_rate > 0 ? getFmtCtxBitRate : nullptr, fmtCtx),
-    DECLARE_GETTER("packet_size", fmtCtx->packet_size > 0 ? getFmtCtxPacketSize : nullptr, fmtCtx),
-    DECLARE_GETTER("max_delay", fmtCtx->max_delay >= 0 ? getFmtCtxMaxDelay : nullptr, fmtCtx),
-    DECLARE_GETTER("flags", fmtCtx->flags != AVFMT_FLAG_AUTO_BSF ? getFmtCtxFlags : nullptr, fmtCtx),
-    DECLARE_GETTER("probesize", fmtCtx->probesize != 5000000 ? getFmtCtxProbeSize : nullptr, fmtCtx),
-    DECLARE_GETTER("max_analyze_duration", fmtCtx->max_analyze_duration != 0 ? getFmtCtxMaxAnDur : nullptr, fmtCtx),
-    DECLARE_GETTER("key", fmtCtx->keylen > 0 ? getFmtCtxKey : nullptr, fmtCtx),
-    DECLARE_GETTER("programs", fmtCtx->nb_programs > 0 ? getFmtCtxPrograms : nullptr, fmtCtx),
-    DECLARE_GETTER("max_index_size", fmtCtx->max_index_size != 1<<20 ? getFmtCtxMaxIndexSize : nullptr, fmtCtx),
-    DECLARE_GETTER("max_picture_buffer", fmtCtx->max_picture_buffer != 3041280 ? getFmtCtxMaxPictBuf : nullptr, fmtCtx),
+  DECLARE_GETTER3("bit_rate", fmtCtx->bit_rate > 0, getFmtCtxBitRate, fmtCtx);
+  DECLARE_GETTER3("packet_size", fmtCtx->packet_size > 0, getFmtCtxPacketSize, fmtCtx);
+  DECLARE_GETTER3("max_delay", fmtCtx->max_delay >= 0, getFmtCtxMaxDelay, fmtCtx);
+  DECLARE_GETTER3("flags", fmtCtx->flags != AVFMT_FLAG_AUTO_BSF, getFmtCtxFlags, fmtCtx);
+  DECLARE_GETTER3("probesize", fmtCtx->probesize != 5000000, getFmtCtxProbeSize, fmtCtx);
+  DECLARE_GETTER3("max_analyze_duration", fmtCtx->max_analyze_duration != 0, getFmtCtxMaxAnDur, fmtCtx);
+  DECLARE_GETTER3("key", fmtCtx->keylen > 0, getFmtCtxKey, fmtCtx);
+  DECLARE_GETTER3("programs", fmtCtx->nb_programs > 0, getFmtCtxPrograms, fmtCtx);
+  DECLARE_GETTER3("max_index_size", fmtCtx->max_index_size != 1<<20, getFmtCtxMaxIndexSize, fmtCtx);
+  DECLARE_GETTER3("max_picture_buffer", fmtCtx->max_picture_buffer != 3041280, getFmtCtxMaxPictBuf, fmtCtx);
     // 20
-    DECLARE_GETTER("metadata", fmtCtx->metadata != nullptr ? getFmtCtxMetadata : nullptr, fmtCtx),
-    DECLARE_GETTER("start_time_realtime", fmtCtx->start_time_realtime != AV_NOPTS_VALUE ? getFmtCtxStartTRealT : nullptr, fmtCtx),
-    DECLARE_GETTER("fps_probe_size", fmtCtx->fps_probe_size >= 0 ? getFmtCtxFpsProbeSize : nullptr, fmtCtx),
-    DECLARE_GETTER("error_recognition", fmtCtx->error_recognition != 1 ? getFmtCtxErrRecog : nullptr, fmtCtx),
-    DECLARE_GETTER("debug", fmtCtx->debug > 0 ? getFmtCtxDebug : nullptr, fmtCtx),
-    DECLARE_GETTER("max_interleave_delta", fmtCtx->max_interleave_delta != 10000000 ? getFmtCtxMaxInterleaveD : nullptr, fmtCtx),
-    DECLARE_GETTER("strict_std_compliance", fmtCtx->strict_std_compliance != FF_COMPLIANCE_NORMAL ? getFmtCtxStrictStdComp : nullptr, fmtCtx),
-    DECLARE_GETTER("event_flags", fmtCtx->event_flags > 0 ? getFmtCtxEventFlags : nullptr, fmtCtx),
-    DECLARE_GETTER("max_ts_probe", fmtCtx->max_ts_probe != 50 ? getFmtCtxMaxTsProbe : nullptr, fmtCtx),
-    DECLARE_GETTER("avoid_negative_ts", fmtCtx->avoid_negative_ts != AVFMT_AVOID_NEG_TS_AUTO ? getFmtCtxAvoidNegTs : nullptr, fmtCtx),
+  DECLARE_GETTER3("metadata", fmtCtx->metadata != nullptr, getFmtCtxMetadata, fmtCtx);
+  DECLARE_GETTER3("start_time_realtime", fmtCtx->start_time_realtime != AV_NOPTS_VALUE, getFmtCtxStartTRealT, fmtCtx);
+  DECLARE_GETTER3("fps_probe_size", fmtCtx->fps_probe_size >= 0, getFmtCtxFpsProbeSize, fmtCtx);
+  DECLARE_GETTER3("error_recognition", fmtCtx->error_recognition != 1, getFmtCtxErrRecog, fmtCtx);
+  DECLARE_GETTER3("debug", fmtCtx->debug > 0, getFmtCtxDebug, fmtCtx);
+  DECLARE_GETTER3("max_interleave_delta", fmtCtx->max_interleave_delta != 10000000, getFmtCtxMaxInterleaveD, fmtCtx);
+  DECLARE_GETTER3("strict_std_compliance", fmtCtx->strict_std_compliance != FF_COMPLIANCE_NORMAL, getFmtCtxStrictStdComp, fmtCtx);
+  DECLARE_GETTER3("event_flags", fmtCtx->event_flags > 0, getFmtCtxEventFlags, fmtCtx);
+  DECLARE_GETTER3("max_ts_probe", fmtCtx->max_ts_probe != 50, getFmtCtxMaxTsProbe, fmtCtx);
+  DECLARE_GETTER3("avoid_negative_ts", fmtCtx->avoid_negative_ts != AVFMT_AVOID_NEG_TS_AUTO, getFmtCtxAvoidNegTs, fmtCtx);
     // 30
-    DECLARE_GETTER("audio_preload", fmtCtx->audio_preload > 0 ? getFmtCtxAudioPreload : nullptr, fmtCtx),
-    DECLARE_GETTER("max_chunk_duration", fmtCtx->max_chunk_duration > 0 ? getFmtCtxMaxChunkDur : nullptr, fmtCtx),
-    DECLARE_GETTER("max_chunk_size", fmtCtx->max_chunk_size > 0 ? getFmtCtxMaxChunkSize : nullptr, fmtCtx),
-    DECLARE_GETTER("use_wallclock_as_timestamps", fmtCtx->use_wallclock_as_timestamps != 0 ? getFmtCtxUseWallclock : nullptr, fmtCtx),
-    DECLARE_GETTER("avio_flags", fmtCtx->avio_flags > 0 ? getFmtCtxAvioFlags : nullptr, fmtCtx),
-    DECLARE_GETTER("duration_estimation_method", fmtCtx->duration_estimation_method != AVFMT_DURATION_FROM_PTS ? getFmtCtxDurEstMethod : nullptr, fmtCtx),
-    DECLARE_GETTER("skip_initial_bytes", fmtCtx->skip_initial_bytes > 0 ? getFmtCtxSkipInitBytes : nullptr, fmtCtx),
-    DECLARE_GETTER("correct_ts_overflow", fmtCtx->correct_ts_overflow != 1 ? getFmtCtxCorrectTsOf : nullptr, fmtCtx),
-    DECLARE_GETTER("seek2any", fmtCtx->seek2any != 0 ? getFmtCtxSeek2Any : nullptr, fmtCtx),
-    DECLARE_GETTER("flush_packets", fmtCtx->flush_packets != -1 ? getFmtCtxFlushPackets : nullptr, fmtCtx),
+  DECLARE_GETTER3("audio_preload", fmtCtx->audio_preload > 0, getFmtCtxAudioPreload, fmtCtx);
+  DECLARE_GETTER3("max_chunk_duration", fmtCtx->max_chunk_duration > 0, getFmtCtxMaxChunkDur, fmtCtx);
+  DECLARE_GETTER3("max_chunk_size", fmtCtx->max_chunk_size > 0, getFmtCtxMaxChunkSize, fmtCtx);
+  DECLARE_GETTER3("use_wallclock_as_timestamps", fmtCtx->use_wallclock_as_timestamps != 0, getFmtCtxUseWallclock, fmtCtx);
+  DECLARE_GETTER3("avio_flags", fmtCtx->avio_flags > 0, getFmtCtxAvioFlags, fmtCtx);
+  DECLARE_GETTER3("duration_estimation_method", fmtCtx->duration_estimation_method != AVFMT_DURATION_FROM_PTS, getFmtCtxDurEstMethod, fmtCtx);
+  DECLARE_GETTER3("skip_initial_bytes", fmtCtx->skip_initial_bytes > 0, getFmtCtxSkipInitBytes, fmtCtx);
+  DECLARE_GETTER3("correct_ts_overflow", fmtCtx->correct_ts_overflow != 1, getFmtCtxCorrectTsOf, fmtCtx);
+  DECLARE_GETTER3("seek2any", fmtCtx->seek2any != 0, getFmtCtxSeek2Any, fmtCtx);
+  DECLARE_GETTER3("flush_packets", fmtCtx->flush_packets != -1, getFmtCtxFlushPackets, fmtCtx);
     // 40
-    DECLARE_GETTER("probe_score", fmtCtx->probe_score != 0 ? getFmtCtxProbeScore : nullptr, fmtCtx),
-    DECLARE_GETTER("format_probesize", fmtCtx->format_probesize != 1<<20 ? getFmtCtxFmtProbesize : nullptr, fmtCtx),
-    DECLARE_GETTER("codec_whitelist", fmtCtx->codec_whitelist != nullptr ? getFmtCtxCodecWhitelist : nullptr, fmtCtx),
-    DECLARE_GETTER("format_whitelist", fmtCtx->codec_whitelist != nullptr ? getFmtCtxFmtWhitelist : nullptr, fmtCtx),
-    DECLARE_GETTER("io_repositioned", fmtCtx->io_repositioned != 0 ? getFmtCtxIORepo : nullptr, fmtCtx),
-    DECLARE_GETTER("metadata_header_padding", fmtCtx->metadata_header_padding >= 0 ? getFmtCtxMetadataHdrPad : nullptr, fmtCtx),
-    DECLARE_GETTER("output_ts_offset", fmtCtx->output_ts_offset != 0 ? getFmtCtxOutputTSOffset : nullptr, fmtCtx),
-    DECLARE_GETTER("dump_separator", strcmp(const_cast<char*>((char*) fmtCtx->dump_separator), ", ") != 0 ? getFmtCtxDumpSep : nullptr, fmtCtx),
-    DECLARE_GETTER("protocol_whitelist", fmtCtx->protocol_whitelist != nullptr ? getFmtCtxProtWhitelist : nullptr, fmtCtx),
-    DECLARE_GETTER("protocol_blacklist", fmtCtx->protocol_blacklist != nullptr ? getFmtCtxProtBlacklist : nullptr, fmtCtx),
+  DECLARE_GETTER3("probe_score", fmtCtx->probe_score != 0, getFmtCtxProbeScore, fmtCtx);
+  DECLARE_GETTER3("format_probesize", fmtCtx->format_probesize != 1<<20, getFmtCtxFmtProbesize, fmtCtx);
+  DECLARE_GETTER3("codec_whitelist", fmtCtx->codec_whitelist != nullptr, getFmtCtxCodecWhitelist, fmtCtx);
+  DECLARE_GETTER3("format_whitelist", fmtCtx->codec_whitelist != nullptr, getFmtCtxFmtWhitelist, fmtCtx);
+  DECLARE_GETTER3("io_repositioned", fmtCtx->io_repositioned != 0, getFmtCtxIORepo, fmtCtx);
+  DECLARE_GETTER3("metadata_header_padding", fmtCtx->metadata_header_padding >= 0, getFmtCtxMetadataHdrPad, fmtCtx);
+  DECLARE_GETTER3("output_ts_offset", fmtCtx->output_ts_offset != 0, getFmtCtxOutputTSOffset, fmtCtx);
+  DECLARE_GETTER3("dump_separator", strcmp(const_cast<char*>((char*) fmtCtx->dump_separator), ", ") != 0, getFmtCtxDumpSep, fmtCtx);
+  DECLARE_GETTER3("protocol_whitelist", fmtCtx->protocol_whitelist != nullptr, getFmtCtxProtWhitelist, fmtCtx);
+  DECLARE_GETTER3("protocol_blacklist", fmtCtx->protocol_blacklist != nullptr, getFmtCtxProtBlacklist, fmtCtx);
     // 50
-    DECLARE_GETTER("max_streams", fmtCtx->max_streams != 1000 ? getFmtCtxMaxStreams : nullptr, fmtCtx),
-    DECLARE_GETTER("skip_estimate_duration_from_pts", fmtCtx->skip_estimate_duration_from_pts != 0 ? getFmtCtxSkipEstDurFromPTS : nullptr, fmtCtx),
-    { "interleaved", nullptr, nullptr, nullptr, nullptr, jsInter, napi_enumerable, nullptr }
-  };
-  status = napi_define_properties(env, result, 52, desc);
+  DECLARE_GETTER3("max_streams", fmtCtx->max_streams != 1000, getFmtCtxMaxStreams, fmtCtx);
+  DECLARE_GETTER3("skip_estimate_duration_from_pts", fmtCtx->skip_estimate_duration_from_pts != 0, getFmtCtxSkipEstDurFromPTS, fmtCtx);
+  desc[count++] = { "interleaved", nullptr, nullptr, nullptr, nullptr, jsInter, napi_enumerable, nullptr };
+
+  status = napi_define_properties(env, result, count, desc);
   CHECK_STATUS;
 
   return result;
@@ -4973,6 +4973,7 @@ napi_value streamToJSON(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, thisStream, jsStream;
   AVStream* s;
+  int count = 0;
 
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, &thisStream, (void**) &s);
@@ -4988,29 +4989,30 @@ napi_value streamToJSON(napi_env env, napi_callback_info info) {
   status = napi_create_object(env, &result);
   CHECK_STATUS;
 
-  napi_property_descriptor desc[] = {
-    DECLARE_GETTER("type", getStreamTypeName, s),
-    DECLARE_GETTER("index", getStreamIndex, s),
-    DECLARE_GETTER("id", getStreamID, s),
-    DECLARE_GETTER("time_base", getStreamTimeBase, s),
-    DECLARE_GETTER("start_time", s->start_time != AV_NOPTS_VALUE ? getStreamStartTime : nullptr, s),
-    DECLARE_GETTER("duration", s->start_time != AV_NOPTS_VALUE ? getStreamDuration : nullptr, s),
-    DECLARE_GETTER("nb_frames", s->nb_frames > 0 ? getStreamNbFrames : nullptr, s),
-    DECLARE_GETTER("disposition", s->disposition != 0 ? getStreamDisposition : nullptr, s),
-    DECLARE_GETTER("discard", s->discard != AVDISCARD_DEFAULT ? getStreamDiscard : nullptr, s),
-    // 10
-    DECLARE_GETTER("sample_aspect_ratio",
-      (s->sample_aspect_ratio.num != 0) || (s->sample_aspect_ratio.den != 1) ?
-        getStreamSmpAspectRt : nullptr, s),
-    DECLARE_GETTER("metadata", s->metadata != nullptr ? getStreamMetadata : nullptr, s),
-    DECLARE_GETTER("avg_frame_rate", s->avg_frame_rate.num != 0 ? getStreamAvgFrameRate : nullptr, s),
-    // TODO attached_pic
-    DECLARE_GETTER("side_data", s->nb_side_data > 0 ? getStreamSideData : nullptr, s),
-    DECLARE_GETTER("event_flags", s->event_flags > 0 ? getStreamEventFlags : nullptr, s),
-    DECLARE_GETTER("r_frame_rate", s->r_frame_rate.num != 0 ? getStreamRFrameRate : nullptr, s),
-    DECLARE_GETTER("codecpar", codecParToJSON, s->codecpar)
-  };
-  status = napi_define_properties(env, result, 16, desc);
+  napi_property_descriptor desc[20];
+
+  DECLARE_GETTER3("type", true, getStreamTypeName, s);
+  DECLARE_GETTER3("index", true, getStreamIndex, s);
+  DECLARE_GETTER3("id", true, getStreamID, s);
+  DECLARE_GETTER3("time_base", true, getStreamTimeBase, s);
+  DECLARE_GETTER3("start_time", s->start_time != AV_NOPTS_VALUE, getStreamStartTime, s);
+  DECLARE_GETTER3("duration", s->start_time != AV_NOPTS_VALUE, getStreamDuration, s);
+  DECLARE_GETTER3("nb_frames", s->nb_frames > 0, getStreamNbFrames, s);
+  DECLARE_GETTER3("disposition", s->disposition != 0, getStreamDisposition, s);
+  DECLARE_GETTER3("discard", s->discard != AVDISCARD_DEFAULT, getStreamDiscard, s);
+  // 10
+  DECLARE_GETTER3("sample_aspect_ratio",
+    (s->sample_aspect_ratio.num != 0) || (s->sample_aspect_ratio.den != 1),
+      getStreamSmpAspectRt, s);
+  DECLARE_GETTER3("metadata", s->metadata != nullptr, getStreamMetadata, s);
+  DECLARE_GETTER3("avg_frame_rate", s->avg_frame_rate.num != 0, getStreamAvgFrameRate, s);
+  // TODO attached_pic
+  DECLARE_GETTER3("side_data", s->nb_side_data > 0, getStreamSideData, s);
+  DECLARE_GETTER3("event_flags", s->event_flags > 0, getStreamEventFlags, s);
+  DECLARE_GETTER3("r_frame_rate", s->r_frame_rate.num != 0, getStreamRFrameRate, s);
+  DECLARE_GETTER3("codecpar", true, codecParToJSON, s->codecpar);
+
+  status = napi_define_properties(env, result, count, desc);
   CHECK_STATUS;
 
   return result;
