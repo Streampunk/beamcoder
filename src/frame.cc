@@ -2328,7 +2328,7 @@ napi_value getFrameBufSizes(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &f);
   CHECK_STATUS;
 
-  if (f->frame->buf == nullptr) {
+  if ((f->frame->buf == nullptr) || (f->frame->buf[0] == nullptr)) {
     status = napi_get_undefined(env, &array);
     CHECK_STATUS;
   } else {
@@ -2358,6 +2358,7 @@ napi_value frameToJSON(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
   frameData* f;
+  int count = 0;
 
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &f);
@@ -2366,55 +2367,55 @@ napi_value frameToJSON(napi_env env, napi_callback_info info) {
   status = napi_create_object(env, &result);
   CHECK_STATUS;
 
-  napi_property_descriptor desc[] = {
-    DECLARE_GETTER("type", getFrameTypeName, f),
-    DECLARE_GETTER("linesize", getFrameLinesize, f),
-    DECLARE_GETTER("width", f->frame->width > 0 ? getFrameWidth : nullptr, f),
-    DECLARE_GETTER("height", f->frame->height > 0 ? getFrameHeight : nullptr, f),
-    DECLARE_GETTER("nb_samples", f->frame->nb_samples > 0 ? getFrameNbSamples : nullptr, f),
-    DECLARE_GETTER("format", f->frame->format > 0 ? getFrameFormat : nullptr, f),
-    DECLARE_GETTER("key_frame", f->frame->key_frame != 1 ? getFrameKeyFrame : nullptr, f),
-    DECLARE_GETTER("pict_type", f->frame->pict_type != AV_PICTURE_TYPE_NONE ? getFramePictType : nullptr, f),
-    DECLARE_GETTER("sample_aspect_ratio",
-      (f->frame->sample_aspect_ratio.num == 0) && (f->frame->sample_aspect_ratio.den == 1) ?
-        nullptr : getFrameSampleAR, f),
+  napi_property_descriptor desc[45];
+  DECLARE_GETTER3("type", true, getFrameTypeName, f);
+  DECLARE_GETTER3("linesize", true, getFrameLinesize, f);
+  DECLARE_GETTER3("width", f->frame->width > 0, getFrameWidth, f);
+  DECLARE_GETTER3("height", f->frame->height > 0, getFrameHeight, f);
+  DECLARE_GETTER3("nb_samples", f->frame->nb_samples > 0, getFrameNbSamples, f);
+  DECLARE_GETTER3("format", f->frame->format > 0, getFrameFormat, f);
+  DECLARE_GETTER3("key_frame", f->frame->key_frame != 1, getFrameKeyFrame, f);
+  DECLARE_GETTER3("pict_type", f->frame->pict_type != AV_PICTURE_TYPE_NONE, getFramePictType, f);
+  DECLARE_GETTER3("sample_aspect_ratio",
+      (f->frame->sample_aspect_ratio.num != 0) || (f->frame->sample_aspect_ratio.den != 1),
+      getFrameSampleAR, f);
     // 10
-    DECLARE_GETTER("pts", f->frame->pts != AV_NOPTS_VALUE ? getFramePTS : nullptr, f),
-    DECLARE_GETTER("pkt_dts", f->frame->pkt_dts != AV_NOPTS_VALUE ? getFramePktDTS : nullptr, f),
-    DECLARE_GETTER("coded_picture_number", f->frame->coded_picture_number > 0 ? getFrameCodedPicNum : nullptr, f),
-    DECLARE_GETTER("display_picture_number", f->frame->display_picture_number > 0 ? getFrameDispPicNum : nullptr, f),
-    DECLARE_GETTER("quality", f->frame->quality > 0 ? getFrameQuality : nullptr, f),
-    DECLARE_GETTER("repeat_pict", f->frame->repeat_pict > 0 ? getFrameRepeatPict : nullptr, f),
-    DECLARE_GETTER("interlaced_frame", f->frame->interlaced_frame != 0 ? getFrameInterlaced : nullptr, f),
-    DECLARE_GETTER("top_field_first", f->frame->top_field_first != 0 ? getFrameTopFieldFirst : nullptr, f),
-    DECLARE_GETTER("palette_has_changed", f->frame->palette_has_changed != 0 ? getFramePalHasChanged : nullptr, f),
-    DECLARE_GETTER("reordered_opaque", f->frame->reordered_opaque != AV_NOPTS_VALUE ? getFrameReorderOpq : nullptr, f),
+  DECLARE_GETTER3("pts", f->frame->pts != AV_NOPTS_VALUE, getFramePTS, f);
+  DECLARE_GETTER3("pkt_dts", f->frame->pkt_dts != AV_NOPTS_VALUE, getFramePktDTS, f);
+  DECLARE_GETTER3("coded_picture_number", f->frame->coded_picture_number > 0, getFrameCodedPicNum, f);
+  DECLARE_GETTER3("display_picture_number", f->frame->display_picture_number > 0, getFrameDispPicNum, f);
+  DECLARE_GETTER3("quality", f->frame->quality > 0, getFrameQuality, f);
+  DECLARE_GETTER3("repeat_pict", f->frame->repeat_pict > 0, getFrameRepeatPict, f);
+  DECLARE_GETTER3("interlaced_frame", f->frame->interlaced_frame != 0, getFrameInterlaced, f);
+  DECLARE_GETTER3("top_field_first", f->frame->top_field_first != 0, getFrameTopFieldFirst, f);
+  DECLARE_GETTER3("palette_has_changed", f->frame->palette_has_changed != 0, getFramePalHasChanged, f);
+  DECLARE_GETTER3("reordered_opaque", f->frame->reordered_opaque != AV_NOPTS_VALUE, getFrameReorderOpq, f);
     // 20
-    DECLARE_GETTER("sample_rate", f->frame->sample_rate > 0 ? getFrameSampleRate : nullptr, f),
-    DECLARE_GETTER("channel_layout", f->frame->channel_layout != 0 ? getFrameChanLayout : nullptr, f),
-    DECLARE_GETTER("buf_sizes", getFrameBufSizes, f),
-    DECLARE_GETTER("side_data", f->frame->nb_side_data > 0 ? getFrameSideData : nullptr, f),
-    DECLARE_GETTER("flags", f->frame->flags > 0 ? getFrameFlags : nullptr, f),
-    DECLARE_GETTER("color_range", f->frame->color_range != AVCOL_RANGE_UNSPECIFIED ? getFrameColorRange : nullptr, f),
-    DECLARE_GETTER("color_primaries", f->frame->color_primaries != AVCOL_PRI_UNSPECIFIED ? getFrameColorPrimaries : nullptr, f),
-    DECLARE_GETTER("color_trc", f->frame->color_trc != AVCOL_TRC_UNSPECIFIED ? getFrameColorTrc : nullptr, f),
-    DECLARE_GETTER("colorspace", f->frame->colorspace != AVCOL_SPC_UNSPECIFIED ? getFrameColorspace : nullptr, f),
-    DECLARE_GETTER("chroma_location", f->frame->chroma_location != AVCHROMA_LOC_UNSPECIFIED ? getFrameChromaLoc : nullptr, f),
+  DECLARE_GETTER3("sample_rate", f->frame->sample_rate > 0, getFrameSampleRate, f);
+  DECLARE_GETTER3("channel_layout", f->frame->channel_layout != 0, getFrameChanLayout, f);
+  DECLARE_GETTER3("buf_sizes", (f->frame->buf != nullptr) && (f->frame->buf[0] != nullptr), getFrameBufSizes, f);
+  DECLARE_GETTER3("side_data", f->frame->nb_side_data > 0, getFrameSideData, f);
+  DECLARE_GETTER3("flags", f->frame->flags > 0, getFrameFlags, f);
+  DECLARE_GETTER3("color_range", f->frame->color_range != AVCOL_RANGE_UNSPECIFIED, getFrameColorRange, f);
+  DECLARE_GETTER3("color_primaries", f->frame->color_primaries != AVCOL_PRI_UNSPECIFIED, getFrameColorPrimaries, f);
+  DECLARE_GETTER3("color_trc", f->frame->color_trc != AVCOL_TRC_UNSPECIFIED, getFrameColorTrc, f);
+  DECLARE_GETTER3("colorspace", f->frame->colorspace != AVCOL_SPC_UNSPECIFIED, getFrameColorspace, f);
+  DECLARE_GETTER3("chroma_location", f->frame->chroma_location != AVCHROMA_LOC_UNSPECIFIED, getFrameChromaLoc, f);
     // 30
-    DECLARE_GETTER("best_effort_timestamp", f->frame->best_effort_timestamp != AV_NOPTS_VALUE ? getFrameBestEffortTS : nullptr, f),
-    DECLARE_GETTER("pkt_pos", f->frame->pkt_pos >= 0 ? getFramePktPos : nullptr, f),
-    DECLARE_GETTER("pkt_duration", f->frame->pkt_duration > 0 ? getFramePktDuration : nullptr, f),
-    DECLARE_GETTER("metadata", f->frame->metadata != nullptr ? getFrameMetadata : nullptr, f),
-    DECLARE_GETTER("decode_error_flags", f->frame->decode_error_flags > 0 ? getFrameDecodeErrFlags : nullptr, f),
-    DECLARE_GETTER("channels", f->frame->channels > 0 ? getFrameChannels : nullptr, f),
-    DECLARE_GETTER("pkt_size", f->frame->pkt_size >= 0 ? getFramePktSize : nullptr, f),
-    DECLARE_GETTER("crop_top", f->frame->crop_top > 0 ? getFrameCropTop : nullptr, f),
-    DECLARE_GETTER("crop_bottom", f->frame->crop_bottom > 0 ? getFrameCropBottom : nullptr, f),
-    DECLARE_GETTER("crop_left", f->frame->crop_left > 0 ? getFrameCropLeft : nullptr, f),
+  DECLARE_GETTER3("best_effort_timestamp", f->frame->best_effort_timestamp != AV_NOPTS_VALUE, getFrameBestEffortTS, f);
+  DECLARE_GETTER3("pkt_pos", f->frame->pkt_pos >= 0, getFramePktPos, f);
+  DECLARE_GETTER3("pkt_duration", f->frame->pkt_duration > 0, getFramePktDuration, f);
+  DECLARE_GETTER3("metadata", f->frame->metadata != nullptr, getFrameMetadata, f);
+  DECLARE_GETTER3("decode_error_flags", f->frame->decode_error_flags > 0, getFrameDecodeErrFlags, f);
+  DECLARE_GETTER3("channels", f->frame->channels > 0, getFrameChannels, f);
+  DECLARE_GETTER3("pkt_size", f->frame->pkt_size >= 0, getFramePktSize, f);
+  DECLARE_GETTER3("crop_top", f->frame->crop_top > 0, getFrameCropTop, f);
+  DECLARE_GETTER3("crop_bottom", f->frame->crop_bottom > 0, getFrameCropBottom, f);
+  DECLARE_GETTER3("crop_left", f->frame->crop_left > 0, getFrameCropLeft, f);
     // 40
-    DECLARE_GETTER("crop_right", f->frame->crop_right > 0 ? getFrameCropRight : nullptr, f)
-  };
-  status = napi_define_properties(env, result, 40, desc);
+  DECLARE_GETTER3("crop_right", f->frame->crop_right > 0, getFrameCropRight, f);
+
+  status = napi_define_properties(env, result, count, desc);
   CHECK_STATUS;
 
   return result;

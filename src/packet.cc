@@ -628,15 +628,15 @@ napi_value packetToJSON(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   napi_property_descriptor desc[9];
-  DECLARE_GETTER3("type", true, getPacketTypeName, p)
-  DECLARE_GETTER3("pts", p->packet->pts != AV_NOPTS_VALUE, getPacketPts, p)
-  DECLARE_GETTER3("dts", p->packet->dts != AV_NOPTS_VALUE, getPacketDts, p)
-  DECLARE_GETTER3("size", p->packet->size > 0, getPacketSize, p)
-  DECLARE_GETTER3("stream_index", true, getPacketStreamIndex, p)
-  DECLARE_GETTER3("flags", p->packet->flags > 0, getPacketFlags, p)
-  DECLARE_GETTER3("side_data", p->packet->side_data != nullptr, getPacketSideData, p)
-  DECLARE_GETTER3("duration", p->packet->duration > 0, getPacketDuration, p)
-  DECLARE_GETTER3("pos", p->packet->pos > 0, getPacketPos, p)
+  DECLARE_GETTER3("type", true, getPacketTypeName, p);
+  DECLARE_GETTER3("pts", p->packet->pts != AV_NOPTS_VALUE, getPacketPts, p);
+  DECLARE_GETTER3("dts", p->packet->dts != AV_NOPTS_VALUE, getPacketDts, p);
+  DECLARE_GETTER3("size", p->packet->size > 0, getPacketSize, p);
+  DECLARE_GETTER3("stream_index", true, getPacketStreamIndex, p);
+  DECLARE_GETTER3("flags", p->packet->flags > 0, getPacketFlags, p);
+  DECLARE_GETTER3("side_data", p->packet->side_data != nullptr, getPacketSideData, p);
+  DECLARE_GETTER3("duration", p->packet->duration > 0, getPacketDuration, p);
+  DECLARE_GETTER3("pos", p->packet->pos > 0, getPacketPos, p);
 
   status = napi_define_properties(env, result, count, desc);
   CHECK_STATUS;
