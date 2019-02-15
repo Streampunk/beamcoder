@@ -1312,6 +1312,70 @@ napi_value getFmtCtxKey(napi_env env, napi_callback_info info) {
   return result;
 }
 
+napi_value setFmtCtxKey(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result, global, jsBuffer, jsBufferFrom, arrayData;
+  napi_valuetype type;
+  bool isBuffer, isArray;
+  AVFormatContext* fmtCtx;
+  uint8_t* data;
+  size_t dataLen;
+
+  size_t argc = 1;
+  napi_value args[1];
+  status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &fmtCtx);
+  CHECK_STATUS;
+  if (argc < 1) {
+    NAPI_THROW_ERROR("A value is required to set the key property.");
+  }
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
+  if (type == napi_null) {
+    if (fmtCtx->keylen > 0) { // Tidy up old buffers
+      av_freep(&fmtCtx->key);
+    }
+    fmtCtx->keylen = 0;
+    goto done;
+  }
+  status = napi_is_buffer(env, args[0], &isBuffer);
+  CHECK_STATUS;
+  if (!isBuffer) {
+    status = napi_get_named_property(env, args[0], "data", &arrayData);
+    CHECK_STATUS;
+    // TODO more checks that this is a buffer from JSON?
+    status = napi_is_array(env, arrayData, &isArray);
+    CHECK_STATUS;
+    if (isArray) {
+      status = napi_get_global(env, &global);
+      CHECK_STATUS;
+      status = napi_get_named_property(env, global, "Buffer", &jsBuffer);
+      CHECK_STATUS;
+      status = napi_get_named_property(env, jsBuffer, "from", &jsBufferFrom);
+      CHECK_STATUS;
+      const napi_value fargs[] = { arrayData };
+      status = napi_call_function(env, args[0], jsBufferFrom, 1, fargs, &args[0]);
+      CHECK_STATUS;
+    } else {
+      NAPI_THROW_ERROR("A buffer is required to set the key propeprty.");
+    }
+  }
+
+  status = napi_get_buffer_info(env, args[0], (void**) &data, &dataLen);
+  CHECK_STATUS;
+  if (fmtCtx->keylen > 0) { // Tidy up old buffers
+    av_freep(&fmtCtx->key);
+    fmtCtx->keylen = 0;
+  }
+  fmtCtx->key = (uint8_t*) av_mallocz(dataLen + AV_INPUT_BUFFER_PADDING_SIZE);
+  fmtCtx->keylen = dataLen;
+  memcpy((void*) fmtCtx->key, data, dataLen);
+
+done:
+  status = napi_get_undefined(env, &result);
+  CHECK_STATUS;
+  return result;
+}
+
 napi_value getFmtCtxPrograms(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element, metadata;
@@ -3134,7 +3198,6 @@ napi_value setFmtCtxPrivData(napi_env env, napi_callback_info info) {
     NAPI_THROW_ERROR("An object of private property values must be provided to set priv_data.");
   }
 
-  printf("Well hello!\n");
   status = toContextPrivData(env, args[0], fmtCtx->priv_data);
   CHECK_STATUS;
 
@@ -3413,7 +3476,7 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
         isMuxer ? nullptr : getFmtCtxMaxAnDur,
         isMuxer ? nullptr : setFmtCtxMaxAnDur, nullptr,
         isMuxer ? napi_default : (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
-      { "key", nullptr, nullptr, getFmtCtxKey, failSetter, nullptr,
+      { "key", nullptr, nullptr, getFmtCtxKey, setFmtCtxKey, nullptr,
         napi_enumerable, fmtCtx }, // As const uint8_t value, assume not settable
       { "programs", nullptr, nullptr, getFmtCtxPrograms, failSetter /* setFmtCtxPrograms */, nullptr,
         napi_enumerable, fmtCtx },
@@ -3588,7 +3651,7 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
         (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
       { "max_analyze_duration", nullptr, nullptr, getFmtCtxMaxAnDur, setFmtCtxMaxAnDur, nullptr,
         (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
-      { "key", nullptr, nullptr, getFmtCtxKey, nop, nullptr,
+      { "key", nullptr, nullptr, getFmtCtxKey, setFmtCtxKey, nullptr,
         (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
       { "programs", nullptr, nullptr, getFmtCtxPrograms, nop, nullptr,
         (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },

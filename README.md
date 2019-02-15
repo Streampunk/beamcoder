@@ -192,7 +192,7 @@ Factory methods and their associated introspection methods that allow discovery 
 * `...frame()` - construct frames, normally with a `format` property that is one of the `...pix_fmts()` or `...sample_fmts()`. See [creating frames section](#creating-frames).
 * `...codecParameters` - create codec parameters for one of the `...codecs()`. See [codec parameters section](#codec-parameters) below.
 
-Note some special cases to this rule, such as creating a _demuxer_ from a URL or filename. In this case, a single string URL parameter can be passed to the constructor rather than an options object. See the [demuxer section](#demuxer) for details.
+Note some special cases to this rule, such as creating a _demuxer_ from a URL or filename. In this case, a single string URL parameter can be passed to the constructor rather than an options object. See the [demuxer section](#demuxer) for details. To create a _format_, a generic description of the format indeependent of a container, as processed by a _muxer_ or _demuxer_, use `...format()`.
 
 #### Reading and modifying
 
@@ -208,6 +208,36 @@ q.data = Buffer.from('Text data for this packet.'); // Set packet data
 This is achieved with [getters and setters](https://www.w3schools.com/js/js_object_accessors.asp). Note that not every openly readable (_enumerable_) property is also writable. This may depend on the current context. For example, some properties are set only by _libav*_ and not by the user. Others can only be updated by _libav*_ during encoding, even when a parameter of the same name could be set by the user when decoding.
 
 The processing work to convert a value from C to Javascript is only done when each separate property is requested. Bear this in mind before being too liberal with, say, `console.log()` that enumerates through every property of an object. Encoders and decoders have approximately 130 properties!
+
+#### JSON
+
+The _packet_, _frame_, _codec parameters_, _stream_ and _format_ (container-independent _muxer_/_demuxer_) types have mappings to and from JSON. These only include properties that are not currently set to their default values. This is achieved using a native implementation of the `toJSON()` method, allowing fast creation of JSON representations with `JSON.stringify()`. In reverse, to parse JSON representations, pass JSON strings to the factory method for these types. For example:
+
+```javascript
+let p = beamncoder.packet({ pts: 654321, stream_index: 3,
+  data: Buffer.alloc(65536), duration: 1920});
+console.log(JSON.stringify(p, null, 2));
+/* {                     
+    "type": "Packet",  // Always includes the type name
+    "pts": 654321,     // pts is not the default value
+    "size": 65536,     // Size is carried as if a "Content-Length: " HTTP header
+    "stream_index": 3, // stream_index always included
+    "duration": 1920
+  } */
+console.log(beamcoder.packet(JSON.stringify(p)));
+/* { type: 'Packet',
+     pts: 654321,
+     dts: null,
+     data: null,  // Large binary data has to be carried separately
+     size: 0,
+     stream_index: 3,
+     flags: { KEY: false, CORRUPT: false, DISCARD: false, TRUSTED: false, DISPOSABLE: false },
+     side_data: null, // Side data values are serialized to JSON arrays
+     duration: 1920,
+     pos: -1 } */
+```     
+
+Note that large binary data buffers are not included in the JSON and need to be managed separately.
 
 #### Freeing and deleting
 
