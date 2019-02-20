@@ -1078,6 +1078,7 @@ napi_value getFrameData(napi_env env, napi_callback_info info) {
 napi_value setFrameData(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
+  napi_valuetype type;
   bool isArray, isBuffer;
   frameData* f;
   uint8_t* data;
@@ -1093,6 +1094,22 @@ napi_value setFrameData(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
   if (argc < 1) {
     NAPI_THROW_ERROR("Set packet data must be provided with an array of buffer values.");
+  }
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    for ( auto it = f->dataRefs.cbegin() ; it != f->dataRefs.cend() ; it++ ) {
+      status = napi_delete_reference(env, *it);
+      CHECK_STATUS;
+    }
+    f->dataRefs.clear();
+    for ( uint32_t x = 0 ; x < AV_NUM_DATA_POINTERS ; x++) {
+      if (f->frame->buf[x] != nullptr) {
+        av_buffer_unref(&f->frame->buf[x]);
+      }
+      f->frame->data[x] = nullptr;
+    }
+    goto done;
   }
   status = napi_is_array(env, args[0], &isArray);
   CHECK_STATUS;
@@ -1125,9 +1142,8 @@ napi_value setFrameData(napi_env env, napi_callback_info info) {
   for ( uint32_t x = 0 ; x < AV_NUM_DATA_POINTERS ; x++) {
     if (x >= bufCount) {
       if (f->frame->buf[x] != nullptr) {
-        av_buffer_unref(&f->frame->buf[x]);
+        av_buffer_unref(&f->frame->buf[x]); // sets pointer to null
       }
-      f->frame->buf[x] = nullptr;
       f->frame->data[x] = nullptr;
       continue;
     }
@@ -1151,6 +1167,7 @@ napi_value setFrameData(napi_env env, napi_callback_info info) {
     f->frame->data[x] = f->frame->buf[x]->data;
   }
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;

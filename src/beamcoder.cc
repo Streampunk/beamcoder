@@ -891,7 +891,7 @@ napi_value Init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD("configurations", configurations),
     DECLARE_NAPI_METHOD("licenses", licenses),
     DECLARE_NAPI_METHOD("governor", governor),
-    DECLARE_NAPI_METHOD("format", makeFormat), 
+    DECLARE_NAPI_METHOD("format", makeFormat),
     DECLARE_NAPI_METHOD("decoder", decoder),
     DECLARE_NAPI_METHOD("filterer", filterer),
     DECLARE_NAPI_METHOD("encoder", encoder), // 10
@@ -911,7 +911,7 @@ napi_value Init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD("demuxer", demuxer),
     DECLARE_NAPI_METHOD("muxer", muxer),
     DECLARE_NAPI_METHOD("guessFormat", guessFormat),
-    { "AV_INPUT_BUFFER_MIN_SIZE", nullptr, nullptr, nullptr, nullptr,
+    { "AV_INPUT_BUFFER_PADDING_SIZE", nullptr, nullptr, nullptr, nullptr,
       padSize, napi_enumerable, nullptr },
     { "AV_NOPTS_VALUE", nullptr, nullptr, nullptr, nullptr,
       noopts, napi_enumerable, nullptr }

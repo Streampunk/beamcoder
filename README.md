@@ -820,7 +820,7 @@ To use the linesize numbers to automatically allocate buffers of the correct siz
 
 Note that when creating buffers from Javascript, FFmpeg recommends that a small amount of headroom is added to the minimum length of each buffer. The minimum amount of padding is exposed to Javascript as constant:
 
-    beamcoder.AV_INPUT_BUFFER_MIN_SIZE
+    beamcoder.AV_INPUT_BUFFER_PADDING_SIZE
 
 #### Flush encoder
 

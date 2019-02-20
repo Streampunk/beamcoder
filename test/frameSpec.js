@@ -129,3 +129,17 @@ test('Maximal JSON serialization', t => {
     crop_right: 60 })), 'roundtrips expected value.');
   t.end();
 });
+
+test('Can delete data', t => {
+  let f = beamcoder.frame({ width: 1920, height: 1080, format: 'yuv420p' }).alloc();
+  t.ok(Array.isArray(f.data), 'data is an array ...');
+  t.ok(f.data.every(x => Buffer.isBuffer(x)), '... of buffers.');
+  t.equal(f.data.length, 3, 'data buffer has length 3.');
+  t.deepEqual(f.data.map(x => x.length),
+    f.linesize.map(x => x * f.height + beamcoder.AV_INPUT_BUFFER_PADDING_SIZE),
+    'buffer sizes as expected.');
+  f.data = null;
+  t.ok(Array.isArray(f.data), 'After reset, data is an array ...');
+  t.equal(f.data.length, 0, 'of length zero.');
+  t.end();
+});

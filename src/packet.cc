@@ -147,6 +147,7 @@ napi_value getPacketData(napi_env env, napi_callback_info info) {
 napi_value setPacketData(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
+  napi_valuetype type;
   bool isBuffer;
   packetData* p;
   uint8_t* data;
@@ -161,6 +162,21 @@ napi_value setPacketData(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("Set packet data must be provided with a buffer value.");
   }
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
+  if ((type == napi_null) || (type == napi_undefined)) {
+    if (p->dataRef != nullptr) {
+      status = napi_delete_reference(env, p->dataRef);
+      CHECK_STATUS;
+      p->dataRef = nullptr;
+    }
+    if (p->packet->buf != nullptr) {
+      av_buffer_unref(&p->packet->buf); // sets it to null
+    }
+    p->packet->size = 0;
+    p->packet->data = nullptr;
+    goto done;
+  }
   status = napi_is_buffer(env, args[0], &isBuffer);
   CHECK_STATUS;
   if (!isBuffer) {
@@ -170,6 +186,7 @@ napi_value setPacketData(napi_env env, napi_callback_info info) {
   if (p->dataRef != nullptr) {
     status = napi_delete_reference(env, p->dataRef);
     CHECK_STATUS;
+    p->dataRef = nullptr;
   }
   status = napi_create_reference(env, args[0], 1, &p->dataRef);
   CHECK_STATUS;
@@ -186,6 +203,7 @@ napi_value setPacketData(napi_env env, napi_callback_info info) {
   p->packet->size = length;
   p->packet->data = data;
 
+done:
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
