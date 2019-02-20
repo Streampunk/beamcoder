@@ -821,6 +821,7 @@ napi_status toContextPrivData(napi_env env, napi_value params, void* priv_data) 
       PASS_STATUS;
       option = av_opt_find(priv_data, sValue, nullptr, 0, 0);
       if (option != nullptr) {
+        if (option->flags & AV_OPT_FLAG_READONLY) { continue; }
         status = napi_get_named_property(env, params, sValue, &element);
         PASS_STATUS;
         status = napi_typeof(env, element, &type);
@@ -844,7 +845,8 @@ napi_status toContextPrivData(napi_env env, napi_value params, void* priv_data) 
             status = napi_get_value_int64(env, element, &iValue);
             PASS_STATUS;
             ret = av_opt_set_int(priv_data, sValue, iValue, 0);
-            if (ret < 0) printf("DEBUG: Unable to set %s with an integer value %" PRId64 ".\n", sValue, iValue);
+            if (ret < 0) printf("DEBUG: Unable to set %s with an integer value %" PRId64 ": %s.\n",
+              sValue, iValue, avErrorMsg("", ret));
             break;
           case napi_string:
             status = napi_get_value_string_utf8(env, element, nullptr, 0, &sLen);
