@@ -76,7 +76,9 @@ struct seekFrameCarrier : carrier {
   AVFormatContext* format = nullptr;
   int streamIndex = -1;
   int64_t timestamp = 0;
-  int flags = 0;
+  // weird semantic - actually means 'find nearest key frame before timestamp'
+  // setting as default as more natural
+  int flags = AVSEEK_FLAG_BACKWARD;
   ~seekFrameCarrier() { }
 };
 

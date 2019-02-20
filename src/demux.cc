@@ -482,7 +482,8 @@ flags:
   if (type == napi_boolean) {
     c->status = napi_get_value_bool(env, value, &bValue);
     REJECT_RETURN;
-    c->flags = (bValue) ? c->flags | AVSEEK_FLAG_BACKWARD : c->flags;
+    c->flags = (bValue) ?
+      c->flags | AVSEEK_FLAG_BACKWARD : c->flags & ~AVSEEK_FLAG_BACKWARD;
   }
 
   c->status = napi_create_string_utf8(env, "SeekFrame", NAPI_AUTO_LENGTH, &resourceName);

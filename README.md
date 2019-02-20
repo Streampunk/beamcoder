@@ -416,9 +416,9 @@ The final form of seeking supported is by number of frames into a given stream:
 
 All successful seek calls resolve to a `null` value, or reject if the kind of seek is not supported or an error occurs. To access the seeked-for data, call `read` to get the next frame. Note that if you seek beyond the end of the file or stream, the seek call resolves OK and the next read operation resolves to `null`.
 
-The seek operation has two additional flags that can be specified. The `backward` Boolean-valued property can be used to enable seeking backwards where supported. The `any` Boolean-valued property enables seeking to both key and non-key frames. For example:
+The seek operation has two additional flags that can be specified. The `backward` Boolean-valued property is interpreted as _find the nearest key frame before the timestamp_ when set and _find the nearest keyframe after the timestamp_ when not. By default, it is set to `true`. The `any` Boolean-valued property enables seeking to both key and non-key frames. For example:
 
-    await demuxer.seek({ frame: 31, stream_index: 0, backward: true, any: true});
+    await demuxer.seek({ frame: 31, stream_index: 0, backward: false, any: true});
 
 #### Demuxer stream
 
