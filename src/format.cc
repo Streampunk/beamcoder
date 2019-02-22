@@ -3890,7 +3890,8 @@ napi_value newStream(napi_env env, napi_callback_info info) {
       if (codec == nullptr) {
         codec = avcodec_find_decoder_by_name(codecName);
         if (codec == nullptr) {
-          codecDesc = avcodec_descriptor_get_by_name(codecName);
+          codecDesc = codecName != nullptr ?
+            avcodec_descriptor_get_by_name(codecName) : nullptr;
           if (codecDesc != nullptr) {
             codec = avcodec_find_decoder(codecDesc->id);
           }
@@ -5032,6 +5033,34 @@ napi_value getStreamTypeName(napi_env env, napi_callback_info info) {
   return typeName;
 }
 
+// Used in restful GET of single streams
+napi_value streamSecretSetIndex(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  napi_valuetype type;
+  AVStream* stream;
+
+  size_t argc = 1;
+  napi_value args[1];
+  status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &stream);
+  CHECK_STATUS;
+  if (argc < 1) {
+    goto done; // fail quietly
+  }
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
+  if (type != napi_number) {
+    goto done; // shh
+  }
+  status = napi_get_value_int32(env, args[0], &stream->index);
+  CHECK_STATUS;
+
+done:
+  status = napi_get_undefined(env, &result);
+  CHECK_STATUS;
+  return result;
+}
+
 napi_value streamToJSON(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, thisStream, jsStream;
@@ -5134,9 +5163,10 @@ napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result) {
     { "_stream", nullptr, nullptr, nullptr, nullptr, extStream, napi_default, nullptr },
     // 20
     { "toJSON", nullptr, streamToJSON, nullptr, nullptr, nullptr, napi_default, stream },
-    { "__codecPar", nullptr, nullptr, nullptr, nullptr, undef, napi_writable, nullptr }
+    { "__codecPar", nullptr, nullptr, nullptr, nullptr, undef, napi_writable, nullptr },
+    { "__index", nullptr, streamSecretSetIndex, nullptr, nullptr, nullptr, napi_default, stream }
   };
-  status = napi_define_properties(env, jsStream, 21, desc);
+  status = napi_define_properties(env, jsStream, 22, desc);
   PASS_STATUS;
 
   *result = jsStream;

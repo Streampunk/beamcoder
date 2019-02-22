@@ -1683,7 +1683,7 @@ napi_value codecParToJSON(napi_env env, napi_callback_info info) {
   DECLARE_GETTER3("trailing_padding", c->trailing_padding > 0, getCodecParTrailingPad, c);
     // 30
   DECLARE_GETTER3("seek_preroll", c->seek_preroll > 0, getCodecParSeekPreroll, c);
-  
+
   status = napi_define_properties(env, result, count, desc);
   CHECK_STATUS;
 
@@ -1771,10 +1771,11 @@ napi_status fromAVCodecParameters(napi_env env, AVCodecParameters* c, bool ownAl
 
 void codecParamsFinalizer(napi_env env, void* data, void* hint) {
   AVCodecParameters* c = (AVCodecParameters*) data;
-  if ((c->extradata != nullptr) && (c->extradata_size > 0)) {
-    av_freep(&c->extradata);
-    c->extradata_size = 0;
-  }
-  // printf("About to free %p\n", c);
+  // Not needed ... done in avcodec_parameters_free
+  // if ((c->extradata != nullptr) && (c->extradata_size > 0)) {
+  //   av_freep(&c->extradata);
+  //   c->extradata_size = 0;
+  // }
+  printf("About to free %p\n", c);
   avcodec_parameters_free(&c);
 }
