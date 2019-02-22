@@ -634,18 +634,22 @@ napi_value getPacketTypeName(napi_env env, napi_callback_info info) {
 
 napi_value packetToJSON(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result;
+  napi_value result, base, sizeVal;
   packetData* p;
   int count = 0;
+  bool hasBufSize;
 
   size_t argc = 0;
-  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &p);
+  status = napi_get_cb_info(env, info, &argc, nullptr, &base, (void**) &p);
+  CHECK_STATUS;
+
+  status = napi_has_named_property(env, base, "buf_size", &hasBufSize);
   CHECK_STATUS;
 
   status = napi_create_object(env, &result);
   CHECK_STATUS;
 
-  napi_property_descriptor desc[9];
+  napi_property_descriptor desc[10];
   DECLARE_GETTER3("type", true, getPacketTypeName, p);
   DECLARE_GETTER3("pts", p->packet->pts != AV_NOPTS_VALUE, getPacketPts, p);
   DECLARE_GETTER3("dts", p->packet->dts != AV_NOPTS_VALUE, getPacketDts, p);
@@ -655,6 +659,13 @@ napi_value packetToJSON(napi_env env, napi_callback_info info) {
   DECLARE_GETTER3("side_data", p->packet->side_data != nullptr, getPacketSideData, p);
   DECLARE_GETTER3("duration", p->packet->duration > 0, getPacketDuration, p);
   DECLARE_GETTER3("pos", p->packet->pos > 0, getPacketPos, p);
+
+  if (hasBufSize) {
+    status = napi_get_named_property(env, base, "buf_size", &sizeVal);
+    CHECK_STATUS;
+    desc[count++] = {"buf_size", nullptr, nullptr, nullptr, nullptr, sizeVal,
+      napi_enumerable, nullptr};
+  }
 
   status = napi_define_properties(env, result, count, desc);
   CHECK_STATUS;
