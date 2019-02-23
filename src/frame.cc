@@ -2373,12 +2373,16 @@ napi_value getFrameBufSizes(napi_env env, napi_callback_info info) {
 
 napi_value frameToJSON(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result;
+  napi_value result, base, sizeVal;
   frameData* f;
   int count = 0;
+  bool hasBufSizes;
 
   size_t argc = 0;
-  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &f);
+  status = napi_get_cb_info(env, info, &argc, nullptr, &base, (void**) &f);
+  CHECK_STATUS;
+
+  status = napi_has_named_property(env, base, "buf_sizes", &hasBufSizes);
   CHECK_STATUS;
 
   status = napi_create_object(env, &result);
@@ -2431,6 +2435,13 @@ napi_value frameToJSON(napi_env env, napi_callback_info info) {
   DECLARE_GETTER3("crop_left", f->frame->crop_left > 0, getFrameCropLeft, f);
     // 40
   DECLARE_GETTER3("crop_right", f->frame->crop_right > 0, getFrameCropRight, f);
+
+  if (hasBufSizes) {
+    status = napi_get_named_property(env, base, "buf_sizes", &sizeVal);
+    CHECK_STATUS;
+    desc[count++] = { "buf_sizes", nullptr, nullptr, nullptr, nullptr, sizeVal,
+      napi_enumerable, nullptr};
+  }
 
   status = napi_define_properties(env, result, count, desc);
   CHECK_STATUS;
