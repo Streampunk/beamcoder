@@ -1570,6 +1570,10 @@ napi_value getCodecParTypeName(napi_env env, napi_callback_info info) {
 }
 
 napi_value makeCodecParameters(napi_env env, napi_callback_info info) {
+  return makeCodecParamsInternal(env, info, true);
+}
+
+napi_value makeCodecParamsInternal(napi_env env, napi_callback_info info, bool ownAlloc) {
   napi_status status;
   napi_value result, global, jsObject, assign, jsJSON, jsParse;
   napi_valuetype type;
@@ -1614,7 +1618,7 @@ napi_value makeCodecParameters(napi_env env, napi_callback_info info) {
     }
   }
 
-  status = fromAVCodecParameters(env, c, true, &result);
+  status = fromAVCodecParameters(env, c, ownAlloc, &result);
   CHECK_STATUS;
 
   if (argc == 1) {
@@ -1771,11 +1775,9 @@ napi_status fromAVCodecParameters(napi_env env, AVCodecParameters* c, bool ownAl
 
 void codecParamsFinalizer(napi_env env, void* data, void* hint) {
   AVCodecParameters* c = (AVCodecParameters*) data;
-  // Not needed ... done in avcodec_parameters_free
   // if ((c->extradata != nullptr) && (c->extradata_size > 0)) {
   //   av_freep(&c->extradata);
   //   c->extradata_size = 0;
   // }
-  printf("About to free %p\n", c);
   avcodec_parameters_free(&c);
 }

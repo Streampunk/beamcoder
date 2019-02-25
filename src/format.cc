@@ -4852,7 +4852,7 @@ napi_value setStreamCodecPar(napi_env env, napi_callback_info info) {
   status = napi_typeof(env, extCodecPar, &type);
   CHECK_STATUS;
   if (type != napi_external) {
-    jsCodecPar = makeCodecParameters(env, info); // Try and make some
+    jsCodecPar = makeCodecParamsInternal(env, info, false); // Try and make some
     status = napi_get_named_property(env, jsCodecPar, "_codecPar", &extCodecPar);
     CHECK_STATUS;
   }
