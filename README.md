@@ -214,7 +214,7 @@ The processing work to convert a value from C to Javascript is only done when ea
 The _packet_, _frame_, _codec parameters_, _stream_ and _format_ (container-independent _muxer_/_demuxer_) types have mappings to and from JSON. These only include properties that are not currently set to their default values. This is achieved using a native implementation of the `toJSON()` method, allowing fast creation of JSON representations with `JSON.stringify()`. In reverse, to parse JSON representations, pass JSON strings to the factory method for these types. For example:
 
 ```javascript
-let p = beamncoder.packet({ pts: 654321, stream_index: 3,
+let p = beamcoder.packet({ pts: 654321, stream_index: 3,
   data: Buffer.alloc(65536), duration: 1920});
 console.log(JSON.stringify(p, null, 2));
 /* {                     
