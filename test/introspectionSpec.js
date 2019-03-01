@@ -43,3 +43,11 @@ test('Version information', t => {
     'configurations entry are strings.');
   t.end();
 });
+
+test('Muxer information', t => {
+  let muxers = beamcoder.muxers();
+  t.ok(muxers, 'muxers is truthy.');
+  t.equal(typeof muxers, 'object', 'muxers is an object.');
+  t.ok(JSON.stringify(muxers), 'can be converted to JSON.');
+  t.end();
+});

@@ -454,6 +454,7 @@ napi_status beam_get_enum(napi_env env, napi_value target, const char* name,
 napi_status fromAVClass(napi_env env, const AVClass* cls, napi_value* result) {
   napi_status status;
   napi_value desc, options, units, opt, consts, element, flags;
+  napi_valuetype type;
   const AVOption* option;
   uint32_t constCount;
 
@@ -534,6 +535,14 @@ napi_status fromAVClass(napi_env env, const AVClass* cls, napi_value* result) {
     if (option->type == AV_OPT_TYPE_CONST) {
       status = napi_get_named_property(env, units, option->unit, &opt);
       PASS_STATUS;
+      status = napi_typeof(env, opt, &type);
+      PASS_STATUS;
+      if (type != napi_object) { // Assume badly described constant property
+        // TODO work with bad params like https://github.com/FFmpeg/FFmpeg/blob/a0ac49e38ee1d1011c394d7be67d0f08b2281526/libavformat/chromaprint.c#L167
+        //      parameter fp_format is missing option->unit
+        option = av_opt_next(&cls, option);
+        continue;
+      }
       status = napi_get_named_property(env, opt, "consts", &consts);
       PASS_STATUS;
       status = napi_get_array_length(env, consts, &constCount);
