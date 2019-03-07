@@ -25,8 +25,8 @@ const util = require('util');
 const https = require('https');
 const unzip = require('unzip');
 const cp = require('child_process');
-const [ mkdir, access, rename, execFile ] = // eslint-disable-line
-  [ fs.mkdir, fs.access, fs.rename, cp.execFile ].map(util.promisify);
+const [ mkdir, access, rename, execFile, exec ] = // eslint-disable-line
+  [ fs.mkdir, fs.access, fs.rename, cp.execFile, cp.exec ].map(util.promisify);
 
 async function get(ws, url, name) {
   let received = 0;
@@ -134,6 +134,38 @@ sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-
   return result;
 }
 
+async function darwin() {
+  console.log('Checking for FFmpeg dependencies via HomeBrew.');
+  let output;
+  let returnMessage;
+  
+  try {
+    output = await exec('brew list ffmpeg');
+    returnMessage = 'FFmpeg already present via Homebrew.';
+  } catch (err) {
+    if (err.stderr !== 'Error: No such keg: /usr/local/Cellar/ffmpeg\n') {
+      console.error(err);
+      console.log('Either Homebrew is not installed or something else is wrong.\nExiting');
+      process.exit(1);
+    }
+
+    console.log('FFmpeg not installed. Attempting to install via Homebrew.');
+    try {
+      output = await exec('brew install nasm pkg-config texi2html ffmpeg');
+      returnMessage = 'FFmpeg installed via Homebrew.';
+    } catch (err) {
+      console.log('Failed to install ffmpeg:\n');
+      console.error(err);
+      process.exit(1);
+    }
+  }
+
+  console.log(output.stdout);
+  console.log(returnMessage);
+
+  return 0;
+}
+
 switch (os.platform()) {
 case 'win32':
   if (os.arch() != 'x64') {
@@ -151,7 +183,14 @@ case 'linux':
     linux();
   }
   break;
-case 'mac':
+case 'darwin':
+  if (os.arch() != 'x64') {
+    console.error('Only 64-bit platforms are supported.');
+    process.exit(1);
+  } else {
+    darwin();
+  }
+  break;
 default:
   console.error(`Platfrom ${os.platform()} is not supported.`);
   break;

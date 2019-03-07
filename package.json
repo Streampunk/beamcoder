@@ -4,7 +4,7 @@
   "description": "Node.js native bindings to FFmpeg.",
   "main": "index.js",
   "scripts": {
-    "preinstall": "node install_ffmpeg.js",
+    "preinstall": "npm install unzip && node install_ffmpeg.js",
     "install": "node-gyp rebuild",
     "test": "tape test/*.js",
     "lint": "eslint **/*.js",
