@@ -1054,21 +1054,17 @@ napi_value getFrameData(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &f);
   CHECK_STATUS;
 
-  if (f->frame->buf[0] == nullptr) {
-    status = napi_get_null(env, &array);
-  } else {
-    status = napi_create_array(env, &array);
+  status = napi_create_array(env, &array);
+  CHECK_STATUS;
+  for ( int x = 0 ; x < AV_NUM_DATA_POINTERS ; x++ ) {
+  //  printf("Buffer %i is %p\n", x, f->frame->buf[x]);
+    if (f->frame->buf[x] == nullptr) continue;
+    hintRef = av_buffer_ref(f->frame->buf[x]);
+    status = napi_create_external_buffer(env, hintRef->size, hintRef->data,
+      frameBufferFinalizer, hintRef, &element);
     CHECK_STATUS;
-    for ( int x = 0 ; x < AV_NUM_DATA_POINTERS ; x++ ) {
-    //  printf("Buffer %i is %p\n", x, f->frame->buf[x]);
-      if (f->frame->buf[x] == nullptr) continue;
-      hintRef = av_buffer_ref(f->frame->buf[x]);
-      status = napi_create_external_buffer(env, hintRef->size, hintRef->data,
-        frameBufferFinalizer, hintRef, &element);
-      CHECK_STATUS;
-      status = napi_set_element(env, array, x, element);
-      CHECK_STATUS;
-    }
+    status = napi_set_element(env, array, x, element);
+    CHECK_STATUS;
   }
 
   CHECK_STATUS;
