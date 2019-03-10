@@ -66,6 +66,9 @@ build/
 # FFmpeg install folder
 ffmpeg/
 
-// Test media files
+# Test media files
 *.MP4
 *.mp4
+
+# Editors and IDE's
+*.swp
