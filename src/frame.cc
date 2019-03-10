@@ -1054,7 +1054,7 @@ napi_value getFrameData(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &f);
   CHECK_STATUS;
 
-  if (f->frame->buf == nullptr) {
+  if (f->frame->buf[0] == nullptr) {
     status = napi_get_null(env, &array);
   } else {
     status = napi_create_array(env, &array);
@@ -2345,7 +2345,7 @@ napi_value getFrameBufSizes(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &f);
   CHECK_STATUS;
 
-  if ((f->frame->buf == nullptr) || (f->frame->buf[0] == nullptr)) {
+  if (f->frame->buf[0] == nullptr) {
     status = napi_get_undefined(env, &array);
     CHECK_STATUS;
   } else {
@@ -2414,7 +2414,7 @@ napi_value frameToJSON(napi_env env, napi_callback_info info) {
     // 20
   DECLARE_GETTER3("sample_rate", f->frame->sample_rate > 0, getFrameSampleRate, f);
   DECLARE_GETTER3("channel_layout", f->frame->channel_layout != 0, getFrameChanLayout, f);
-  DECLARE_GETTER3("buf_sizes", (f->frame->buf != nullptr) && (f->frame->buf[0] != nullptr), getFrameBufSizes, f);
+  DECLARE_GETTER3("buf_sizes", f->frame->buf[0] != nullptr, getFrameBufSizes, f);
   DECLARE_GETTER3("side_data", f->frame->nb_side_data > 0, getFrameSideData, f);
   DECLARE_GETTER3("flags", f->frame->flags > 0, getFrameFlags, f);
   DECLARE_GETTER3("color_range", f->frame->color_range != AVCOL_RANGE_UNSPECIFIED, getFrameColorRange, f);
