@@ -1,6 +1,6 @@
 {
   "name": "beamcoder",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Node.js native bindings to FFmpeg.",
   "main": "index.js",
   "scripts": {
@@ -32,14 +32,14 @@
   },
   "homepage": "https://github.com/Streampunk/beamcoder#readme",
   "dependencies": {
-    "bindings": "^1.4.0",
+    "bindings": "^1.5.0",
     "koa": "^2.7.0",
     "segfault-handler": "^1.0.1",
     "unzip": "^0.1.11"
   },
   "devDependencies": {
-    "eslint": "^5.13.0",
-    "tape": "^4.9.2"
+    "eslint": "^5.15.1",
+    "tape": "^4.10.1"
   },
   "gypfile": true
 }
