@@ -634,7 +634,7 @@ napi_status fromContextPrivData(napi_env env, void *privData, napi_value* result
     switch (option->type) {
       case AV_OPT_TYPE_FLAGS:
         printf("fromPrivOptions: flags option %s: %s\n", option->name, "unmapped");
-        status = beam_set_string_utf8(env, *result, option->name, "unmapped type: flags");
+        status = beam_set_string_utf8(env, optionsVal, option->name, "unmapped type: flags");
         PASS_STATUS;
         break;
       case AV_OPT_TYPE_INT:
