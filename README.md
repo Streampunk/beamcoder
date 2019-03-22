@@ -192,7 +192,7 @@ Factory methods and their associated introspection methods that allow discovery 
 * `...frame()` - construct frames, normally with a `format` property that is one of the `...pix_fmts()` or `...sample_fmts()`. See [creating frames section](#creating-frames).
 * `...codecParameters` - create codec parameters for one of the `...codecs()`. See [codec parameters section](#codec-parameters) below.
 
-Note some special cases to this rule, such as creating a _demuxer_ from a URL or filename. In this case, a single string URL parameter can be passed to the constructor rather than an options object. See the [demuxer section](#demuxer) for details. To create a _format_, a generic description of the format indeependent of a container, as processed by a _muxer_ or _demuxer_, use `...format()`.
+Note some special cases to this rule, such as creating a _demuxer_ from a URL or filename. In this case, a single string URL parameter can be passed to the constructor rather than an options object. See the [demuxer section](#demuxer) for details. To create a _format_, a generic description of the format independent of a container, as processed by a _muxer_ or _demuxer_, use `...format()`.
 
 #### Reading and modifying
 
