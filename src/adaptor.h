@@ -97,7 +97,7 @@ private:
 class Adaptor {
 public:
   Adaptor(uint32_t queueLen)
-    : mQueue(new Queue<Chunk *>(queueLen)), mCurPos(0), mCurChunk(nullptr), mChunkPos(0), m(), mBuf(4096) {}
+    : mQueue(new Queue<Chunk *>(queueLen)), mCurChunk(nullptr), mChunkPos(0), m(), mBuf(4096) {}
   ~Adaptor() {
     delete mQueue;
     std::unique_lock<std::mutex> lk(m);
@@ -160,7 +160,6 @@ public:
 private:
   Queue<Chunk *> *mQueue;
   std::vector<Chunk *> mDone;
-  size_t mCurPos;
   Chunk *mCurChunk;
   size_t mChunkPos;
   mutable std::mutex m;

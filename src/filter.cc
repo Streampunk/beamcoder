@@ -953,7 +953,7 @@ void filtererExecute(napi_env env, void* data) {
 end:
   avfilter_inout_free(inputs);
   avfilter_inout_free(outputs);
-  delete outputs;
+  delete[] outputs;
 }
 
 void filtererComplete(napi_env env, napi_status asyncStatus, void* data) {

@@ -72,6 +72,10 @@ Native packages require a build stage that needs some setup. This includes Pytho
 1. Install the LTS version of [Node.js](https://nodejs.org/en/) for your platform, currently the latest v10.
 2. Enable [node-gyp - the Node.js native addon build tool](https://github.com/nodejs/node-gyp) for your platform by following the [installation instructions](https://github.com/nodejs/node-gyp#installation).
 
+Note: For MacOSX _Mojave_, install the following package after `xcode-select --install`:
+
+    /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
+
 This release of Beam coder targets 64-bit (`x86_64`) architectures.
 
 ### Installing
@@ -91,7 +95,7 @@ Note that if you want to use a local version of FFmpeg then, before the install,
 
 To ensure that sufficient threads are available to process several requests in parallel, set the `UV_THREADPOOL_SIZE` environment variable, e.g.:
 
-    set UV_THREADPOOL_SIZE 32
+    set UV_THREADPOOL_SIZE=32
 
 #### Linux
 
@@ -115,11 +119,15 @@ To ensure that sufficient threads are available to process several requests in p
 
 #### Mac
 
-To follow.
+Beam coder is intended to be used as a module/package from other applications. Install beam coder from the root folder of your package as follows:
 
-Note: For MacOSX _Mojave_, install the following package after `xcode-select --install`:
+    npm install beamcoder
 
-    /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
+This will install all the necessary dependencies, check and if necessary install FFmpeg and its dependencies via homebrew and then compile the native extensions.
+
+To ensure that sufficient threads are available to process several requests in parallel, set the `UV_THREADPOOL_SIZE` environment variable, e.g.:
+
+    export UV_THREADPOOL_SIZE=32
 
 ## Usage
 
