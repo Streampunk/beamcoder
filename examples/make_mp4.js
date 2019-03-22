@@ -52,13 +52,14 @@ async function run() {
   const mux = beamcoder.muxer({ format_name: 'mp4' });
   let vstr = mux.newStream({
     name: 'h264',
-    time_base: [1, 25],
-    interleaved: false }); // Set to false for manual interleaving, true for automatic
+    time_base: [1, 90000],
+    interleaved: true }); // Set to false for manual interleaving, true for automatic
   Object.assign(vstr.codecpar, {
     width: 1920,
     height: 1080,
     format: 'yuv420p'
   });
+  console.log(vstr);
   await mux.openIO({
     url: 'file:test.mp4'
   });
@@ -95,7 +96,8 @@ async function run() {
     for (const pkt of packets.packets) {
       pkt.duration = 1;
       pkt.stream_index = vstr.index;
-      // console.log(pkt);
+      pkt.pts = pkt.pts * 90000/25;
+      pkt.dts = pkt.dts * 90000/25;
       await mux.writeFrame(pkt);
       outFile.write(pkt.data);
     }
@@ -106,13 +108,14 @@ async function run() {
   for (const pkt of p2.packets) {
     pkt.duration = 1;
     pkt.stream_index = vstr.index;
-    // console.log(pkt);
+    pkt.pts = pkt.pts * 90000/25;
+    pkt.dts = pkt.dts * 90000/25;
     await mux.writeFrame(pkt);
     outFile.write(pkt.data);
   }
   await mux.writeTrailer();
   outFile.end(endcode);
-  
+
   console.log('Total time ', process.hrtime(start));
 }
 
