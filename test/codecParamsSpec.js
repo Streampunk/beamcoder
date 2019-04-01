@@ -26,16 +26,14 @@ test('Creating codec parameters', t => {
   let cps = beamcoder.codecParameters();
   t.ok(cps, 'is truthy.');
   t.equal(cps.name, 'none', 'has no name.');
-  t.equal(cps.codec_type, 'unknown', 'has unknown type.');
+  t.equal(cps.codec_type, 'data', 'has data type.');
   t.equal(cps.codec_id, 0, 'zero coded id.');
   cps = beamcoder.codecParameters({ name: 'aac' });
   t.equal(cps.name, 'aac', 'has expected name aac.');
   t.equal(cps.codec_type, 'audio', 'has expected type.');
   t.equal(cps.codec_id, 86018, 'zero coded id.');
-  t.throws(() => beamcoder.codecParameters({ name: 'wibble' }), /Codec parameter/,
-    'throws for an unknown codec name.');
   cps = beamcoder.codecParameters({ name: 'h264', width: 1920 });
-  t.equal(cps.width, 1920, 'contrcutor parameter set ok.');
+  t.equal(cps.width, 1920, 'constructor parameter set ok.');
   t.end();
 });
 
@@ -44,15 +42,15 @@ test('Minimal JSON serialization', t => {
   let cps = JSON.stringify(cp);
   t.equal(typeof cps, 'string', 'stringify creates a string.');
   let cpj = JSON.parse(cps);
-  t.deepEqual(cpj, { type: 'CodecParameters', codec_type: 'unknown',
+  t.deepEqual(cpj, { type: 'CodecParameters', codec_type: 'data',
     codec_id: 0, name: 'none'}, 'is minimal.');
   let rcp = beamcoder.codecParameters(cps);
   t.ok(rcp, 'roundtrip parameters are truthy.');
   t.deepEqual(rcp, { type: 'CodecParameters',
-    codec_type: 'unknown',
+    codec_type: 'data',
     codec_id: 0,
     name: 'none',
-    codec_tag: '[0][0][0][0]',
+    codec_tag: 0,
     extradata: null,
     format: null,
     bit_rate: 0,
@@ -85,6 +83,7 @@ test('Maximal JSON serialization', t=> {
   let cp = beamcoder.codecParameters({
     codec_type: 'video',
     codec_id: 27,
+    codec_tag: 'avc1',
     name: 'h264',
     extradata: Buffer.from('wibble'),
     format: 'yuv422p',
@@ -118,7 +117,7 @@ test('Maximal JSON serialization', t=> {
   t.deepEqual(rcp, { type: 'CodecParameters',
     codec_type: 'video',
     codec_id: 27,
-    codec_tag: '[0][0][0][0]',
+    codec_tag: 'avc1',
     name: 'h264',
     extradata: Buffer.from('wibble'),
     format: 'yuv422p',

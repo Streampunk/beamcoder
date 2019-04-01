@@ -137,6 +137,78 @@ napi_value getOFormatExtensions(napi_env env, napi_callback_info info) {
   return result;
 }
 
+napi_status getIOFormatCodecTag(napi_env env, AVInputFormat* format, napi_value* result) {
+  napi_status status;
+  napi_value value;
+  char fourcc[AV_FOURCC_MAX_STRING_SIZE];
+
+  // from libavformat/internal.h:
+  // typedef struct AVCodecTag {
+  //   enum AVCodecID id;
+  //   unsigned int tag;
+  // } AVCodecTag;
+  status = napi_create_array(env, &value);
+  PASS_STATUS;
+
+  if (0 != format->codec_tag) {
+    uint32_t *tag = (uint32_t *)(*format->codec_tag);
+    uint32_t i = 0;
+    while (true) {
+      if (0 == tag[0])
+        break;
+      napi_value tagObj;
+      status = napi_create_object(env, &tagObj);
+      PASS_STATUS;
+      status = beam_set_uint32(env, tagObj, "id", tag[0]);
+      PASS_STATUS;
+      av_fourcc_make_string(fourcc, tag[1]);
+      if (strchr(fourcc, '[')) { // not a recognised tag
+        status = beam_set_uint32(env, tagObj, "tag", tag[1]);
+        PASS_STATUS;
+      } else {
+        status = beam_set_string_utf8(env, tagObj, "tag", fourcc);
+        PASS_STATUS;
+      }
+      status = napi_set_element(env, value, i++, tagObj);
+      PASS_STATUS;
+      tag += 2;      
+    }
+  }
+
+  *result = value;
+  return napi_ok;
+}
+
+napi_value getOFormatCodecTag(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVInputFormat* oformat;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &oformat);
+  CHECK_STATUS;
+
+  // oformat codec_tag doesn't seem to correspond to the documentation - it isn't a valid pointer
+  // status = getIOFormatCodecTag(env, oformat, &result);
+  status = napi_create_array(env, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
+napi_value getIFormatCodecTag(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVInputFormat* iformat;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &iformat);
+  CHECK_STATUS;
+
+  status = getIOFormatCodecTag(env, iformat, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
 napi_status getIOFormatFlags(napi_env env, int flags, napi_value* result, bool isInput) {
   napi_status status;
   napi_value value;
@@ -471,7 +543,6 @@ napi_status fromAVOutputFormat(napi_env env,
   status = napi_create_external(env, (void*) oformat, nullptr, nullptr, &extOFormat);
   PASS_STATUS;
 
-  // TODO - codec_tag is a bit hard
   napi_property_descriptor desc[] = {
     { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
     { "name", nullptr, nullptr, getOFormatName, nullptr,
@@ -482,21 +553,23 @@ napi_status fromAVOutputFormat(napi_env env,
       nullptr, napi_enumerable, (void*) oformat },
     { "extensions", nullptr, nullptr, getOFormatExtensions, nullptr,
       nullptr, napi_enumerable, (void*) oformat },
-    { "flags", nullptr, nullptr, getOFormatFlags, nullptr,
-      nullptr, napi_enumerable, (void*) oformat },
-    { "priv_data_size", nullptr, nullptr, getOFormatPrivDataSize, nullptr,
-      nullptr, napi_enumerable, (void*) oformat },
-    { "priv_class", nullptr, nullptr, getOFormatPrivClass, nullptr,
-      nullptr, napi_enumerable, (void*) oformat },
     { "audio_codec", nullptr, nullptr, getOFormatAudioCodec, nullptr,
       nullptr, napi_enumerable, (void*) oformat },
     { "video_codec", nullptr, nullptr, getOFormatVideoCodec, nullptr,
-      nullptr, napi_enumerable, (void*) oformat }, // 10
+      nullptr, napi_enumerable, (void*) oformat },
     { "subtitle_codec", nullptr, nullptr, getOFormatSubtitleCodec, nullptr,
+      nullptr, napi_enumerable, (void*) oformat },
+    { "flags", nullptr, nullptr, getOFormatFlags, nullptr,
+      nullptr, napi_enumerable, (void*) oformat },
+    { "codec_tag", nullptr, nullptr, getOFormatCodecTag, nullptr,
+      nullptr, napi_enumerable, (void*) oformat }, // 10
+    { "priv_class", nullptr, nullptr, getOFormatPrivClass, nullptr,
+      nullptr, napi_enumerable, (void*) oformat },
+    { "priv_data_size", nullptr, nullptr, getOFormatPrivDataSize, nullptr,
       nullptr, napi_enumerable, (void*) oformat },
     { "_oformat", nullptr, nullptr, nullptr, nullptr, extOFormat, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsOFormat, 12, desc);
+  status = napi_define_properties(env, jsOFormat, 13, desc);
   PASS_STATUS;
 
   *result = jsOFormat;
@@ -515,28 +588,29 @@ napi_status fromAVInputFormat(napi_env env,
   status = napi_create_external(env, (void*) iformat, nullptr, nullptr, &extIFormat);
   PASS_STATUS;
 
-  // TODO - codec_tag is a bit hard
   napi_property_descriptor desc[] = {
     { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
     { "name", nullptr, nullptr, getIFormatName, nullptr,
       nullptr, napi_enumerable, (void*) iformat },
     { "long_name", nullptr, nullptr, getIFormatLongName, nullptr,
       nullptr, napi_enumerable, (void*) iformat },
-    { "mime_type", nullptr, nullptr, getIFormatMimeType, nullptr,
+    { "flags", nullptr, nullptr, getIFormatFlags, nullptr,
       nullptr, napi_enumerable, (void*) iformat },
     { "extensions", nullptr, nullptr, getIFormatExtensions, nullptr,
       nullptr, napi_enumerable, (void*) iformat },
-    { "flags", nullptr, nullptr, getIFormatFlags, nullptr,
+    { "codec_tag", nullptr, nullptr, getIFormatCodecTag, nullptr,
+      nullptr, napi_enumerable, (void*) iformat },
+    { "priv_class", nullptr, nullptr, getIFormatPrivClass, nullptr,
+      nullptr, napi_enumerable, (void*) iformat },
+    { "mime_type", nullptr, nullptr, getIFormatMimeType, nullptr,
       nullptr, napi_enumerable, (void*) iformat },
     { "raw_codec_id", nullptr, nullptr, getIFormatRawCodecID, nullptr,
       nullptr, napi_enumerable, (void*) iformat },
     { "priv_data_size", nullptr, nullptr, getIFormatPrivDataSize, nullptr,
-      nullptr, napi_enumerable, (void*) iformat },
-    { "priv_class", nullptr, nullptr, getOFormatPrivClass, nullptr,
-      nullptr, napi_enumerable, (void*) iformat },
-    { "_iformat", nullptr, nullptr, nullptr, nullptr, extIFormat, napi_default, nullptr } // 10
+      nullptr, napi_enumerable, (void*) iformat }, // 10
+    { "_iformat", nullptr, nullptr, nullptr, nullptr, extIFormat, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsIFormat, 10, desc);
+  status = napi_define_properties(env, jsIFormat, 11, desc);
   PASS_STATUS;
 
   *result = jsIFormat;
@@ -718,7 +792,7 @@ napi_value setFmtCtxIFormat(napi_env env, napi_callback_info info) {
   status = napi_typeof(env, prop, &type);
   CHECK_STATUS;
   if (type != napi_external) {
-    NAPI_THROW_ERROR("Object provided to set muxer output does not embed an AVOutputFormat.");
+    NAPI_THROW_ERROR("Object provided to set demuxer output does not embed an AVInputFormat.");
   }
   status = napi_get_value_external(env, prop, (void**) &fmtCtx->iformat);
   CHECK_STATUS;
@@ -3443,7 +3517,7 @@ napi_status fromAVFormatContext(napi_env env, AVFormatContext* fmtCtx,
       { isMuxer ? "oformat" : "iformat", nullptr, nullptr,
         isMuxer ? getFmtCtxOFormat : getFmtCtxIFormat,
         isMuxer ? setFmtCtxOFormat : nullptr, nullptr,
-        (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
+        isMuxer ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, fmtCtx },
       { "priv_data", nullptr, nullptr, getFmtCtxPrivData, setFmtCtxPrivData, nullptr,
         (napi_property_attributes) (napi_writable | napi_enumerable), fmtCtx },
       { "ctx_flags", nullptr, nullptr, getFmtCtxCtxFlags, nullptr, nullptr,

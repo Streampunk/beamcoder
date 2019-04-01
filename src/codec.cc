@@ -73,8 +73,13 @@ napi_value getCodecCtxCodecTag(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
   CHECK_STATUS;
   av_fourcc_make_string(codecTag, codec->codec_tag);
-  status = napi_create_string_utf8(env, codecTag, NAPI_AUTO_LENGTH, &result);
-  CHECK_STATUS;
+  if (strchr(codecTag, '[')) { // not a recognised tag
+    status = napi_create_uint32(env, codec->codec_tag, &result);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_string_utf8(env, codecTag, NAPI_AUTO_LENGTH, &result);
+    CHECK_STATUS;
+  }
 
   return result;
 }
