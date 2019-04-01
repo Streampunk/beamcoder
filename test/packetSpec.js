@@ -111,12 +111,12 @@ test('Maximal JSON serialization', t => {
 });
 
 test('Reset packet data', t => {
-  let p = beamcoder.packet({ pts: 42, data: Buffer.alloc(4321) });
+  let p = beamcoder.packet({ pts: 42, size: 4321, data: Buffer.alloc(4321 + beamcoder.AV_INPUT_BUFFER_PADDING_SIZE) });
   t.ok(Buffer.isBuffer(p.data), 'data is a buffer.');
-  t.equal(p.data.length, p.size, 'data length is the size.');
-  t.equal(p.data.length, 4321, 'length is as expected.');
+  t.notEqual(p.data.length, p.size, 'data length is greater than the packet size.');
+  t.equal(p.data.length, 4321 + beamcoder.AV_INPUT_BUFFER_PADDING_SIZE, 'length is as expected.');
   p.data = null;
   t.equal(p.data, null, 'after reset, packet data is set to null.');
-  t.equal(p.size, 0, 'size is set to zero.');
+  t.equal(p.size, 4321, 'after reset, size remains at original value.');
   t.end();
 });

@@ -173,7 +173,6 @@ napi_value setPacketData(napi_env env, napi_callback_info info) {
     if (p->packet->buf != nullptr) {
       av_buffer_unref(&p->packet->buf); // sets it to null
     }
-    p->packet->size = 0;
     p->packet->data = nullptr;
     goto done;
   }
@@ -200,7 +199,6 @@ napi_value setPacketData(napi_env env, napi_callback_info info) {
   }
   p->packet->buf = av_buffer_create(data, length, packetBufferFree, avr, 0);
   CHECK_STATUS;
-  p->packet->size = length;
   p->packet->data = data;
 
 done:
@@ -227,15 +225,38 @@ napi_value getPacketSize(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &p);
   CHECK_STATUS;
 
-  status = napi_create_int32(env,
-    (p->packet->buf == nullptr) ? 0 : p->packet->buf->size, &result);
+  status = napi_create_int32(env, p->packet->size, &result);
   CHECK_STATUS;
 
   return result;
 }
 
 napi_value setPacketSize(napi_env env, napi_callback_info info) {
-  NAPI_THROW_ERROR("Cannot set packet size. It is automatically calculated.");
+  napi_status status;
+  napi_value result;
+  napi_valuetype type;
+  packetData* p;
+
+  size_t argc = 1;
+  napi_value args[1];
+
+  status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &p);
+  CHECK_STATUS;
+  if (argc < 1) {
+    NAPI_THROW_ERROR("Set packet size must be provided with a value.");
+  }
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
+  if (type != napi_number) {
+    NAPI_THROW_ERROR("Packet size property must be set with a number.");
+  }
+  status = napi_get_value_int32(env, args[0], &p->packet->size);
+  CHECK_STATUS;
+
+  status = napi_get_undefined(env, &result);
+  CHECK_STATUS;
+
+  return result;
 }
 
 napi_value getPacketStreamIndex(napi_env env, napi_callback_info info) {
@@ -595,8 +616,6 @@ napi_value makePacket(napi_env env, napi_callback_info info) {
       if (type == napi_object) {
         status = beam_delete_named_property(env, args[0], "type", &deleted);
         CHECK_STATUS;
-        status = beam_delete_named_property(env, args[0], "size", &deleted);
-        CHECK_STATUS;
       }
     }
     status = napi_is_array(env, args[0], &isArray);
@@ -634,16 +653,12 @@ napi_value getPacketTypeName(napi_env env, napi_callback_info info) {
 
 napi_value packetToJSON(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result, base, sizeVal;
+  napi_value result, base;
   packetData* p;
   int count = 0;
-  bool hasBufSize;
 
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, &base, (void**) &p);
-  CHECK_STATUS;
-
-  status = napi_has_named_property(env, base, "buf_size", &hasBufSize);
   CHECK_STATUS;
 
   status = napi_create_object(env, &result);
@@ -659,13 +674,6 @@ napi_value packetToJSON(napi_env env, napi_callback_info info) {
   DECLARE_GETTER3("side_data", p->packet->side_data != nullptr, getPacketSideData, p);
   DECLARE_GETTER3("duration", p->packet->duration > 0, getPacketDuration, p);
   DECLARE_GETTER3("pos", p->packet->pos > 0, getPacketPos, p);
-
-  if (hasBufSize) {
-    status = napi_get_named_property(env, base, "buf_size", &sizeVal);
-    CHECK_STATUS;
-    desc[count++] = {"buf_size", nullptr, nullptr, nullptr, nullptr, sizeVal,
-      napi_enumerable, nullptr};
-  }
 
   status = napi_define_properties(env, result, count, desc);
   CHECK_STATUS;
