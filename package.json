@@ -23,7 +23,8 @@
     "sound",
     "encode",
     "decode",
-    "transcode"
+    "transcode",
+    "N-API"
   ],
   "author": "Streampunk Media Ltd",
   "license": "GPL-3.0-or-later",
