@@ -998,7 +998,8 @@ napi_value getFrameChanLayout(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   char channelLayoutName[64];
-  av_get_channel_layout_string(channelLayoutName, 64, -1, f->frame->channel_layout);
+  av_get_channel_layout_string(channelLayoutName, 64, 0, 
+    f->frame->channel_layout ? f->frame->channel_layout : av_get_default_channel_layout(f->frame->channels));
 
   status = napi_create_string_utf8(env, channelLayoutName, NAPI_AUTO_LENGTH, &result);
   CHECK_STATUS;

@@ -924,8 +924,8 @@ napi_value getCodecParChanLayout(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &c);
   CHECK_STATUS;
 
-  av_get_channel_layout_string(enumName, 64, c->channels,
-    c->channel_layout);
+  av_get_channel_layout_string(enumName, 64, 0,
+    c->channel_layout ? c->channel_layout : av_get_default_channel_layout(c->channels));
   status = napi_create_string_utf8(env, enumName, NAPI_AUTO_LENGTH, &result);
   CHECK_STATUS;
 
