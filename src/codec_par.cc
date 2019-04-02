@@ -32,7 +32,7 @@ napi_value getCodecParCodecType(napi_env env, napi_callback_info info) {
 
   enumName = av_get_media_type_string(c->codec_type);
   status = napi_create_string_utf8(env,
-    (enumName != nullptr) ? (char*) enumName : "unknown",
+    (enumName != nullptr) ? (char*) enumName : "data",
     NAPI_AUTO_LENGTH, &result);
   CHECK_STATUS;
 
@@ -165,10 +165,12 @@ napi_value setCodecParName(napi_env env, napi_callback_info info) {
   codecDesc = avcodec_descriptor_get_by_name((const char *) codecName);
   CHECK_STATUS;
   if (codecDesc == nullptr) {
-    NAPI_THROW_ERROR("Codec parameter codec_name does not match a known codec.");
+    c->codec_id = AV_CODEC_ID_NONE;
+    c->codec_type = AVMEDIA_TYPE_DATA;
+  } else {
+    c->codec_id = codecDesc->id;
+    c->codec_type = codecDesc->type;
   }
-  c->codec_id = codecDesc->id;
-  c->codec_type = codecDesc->type;
 
   free(codecName);
 
@@ -181,26 +183,28 @@ napi_value getCodecParCodecTag(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
   AVCodecParameters* c;
-  char* fourcc = (char*) malloc(sizeof(char) * AV_FOURCC_MAX_STRING_SIZE);
+  char fourcc[AV_FOURCC_MAX_STRING_SIZE];
 
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &c);
   CHECK_STATUS;
 
-  fourcc = av_fourcc_make_string(fourcc, c->codec_tag);
-  status = napi_create_string_utf8(env, fourcc, NAPI_AUTO_LENGTH, &result);
-  free(fourcc);
-  CHECK_STATUS;
+  av_fourcc_make_string(fourcc, c->codec_tag);
+  if (strchr(fourcc, '[')) { // not a recognised tag
+    status = napi_create_uint32(env, c->codec_tag, &result);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_string_utf8(env, fourcc, NAPI_AUTO_LENGTH, &result);
+    CHECK_STATUS;
+  }
 
   return result;
 }
 
-// Not setable - derived from codec id
-/* napi_value setCodecParCodecTag(napi_env env, napi_callback_info info) {
+napi_value setCodecParCodecTag(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
   napi_valuetype type;
   AVCodecParameters* c;
-
   size_t argc = 1;
   napi_value args[1];
 
@@ -212,11 +216,37 @@ napi_value getCodecParCodecTag(napi_env env, napi_callback_info info) {
   status = napi_typeof(env, args[0], &type);
   CHECK_STATUS;
 
-//SET_BODY codec_tag uint32_t CodecTag
+  if (type == napi_string) {
+    char* tag;
+    size_t tagLen;
+    status = napi_get_value_string_utf8(env, args[0], nullptr, 0, &tagLen);
+    CHECK_STATUS;
+    tag = (char*) malloc(sizeof(char) * (tagLen + 1));
+    status = napi_get_value_string_utf8(env, args[0], tag, tagLen + 1, &tagLen);
+    CHECK_STATUS;
+    c->codec_tag = MKTAG(tag[0], tag[1], tag[2], tag[3]);
+    printf("setCodecParCodecTag set codec_tag from string %s: 0x%08x\n", tag, c->codec_tag);
+  } else if (type == napi_number) {
+    status = napi_get_value_uint32(env, args[0], &c->codec_tag);
+    printf("setCodecParCodecTag %08x\n", c->codec_tag);
+    CHECK_STATUS;
+  } else {
+    printf("setCodecParCodecTag expects a string or a number - attempting to set from codec_id\n");
+    if ((AVMEDIA_TYPE_VIDEO == c->codec_type) || (AVMEDIA_TYPE_AUDIO == c->codec_type)) {
+      const struct AVCodecTag *table[] = { 
+        (AVMEDIA_TYPE_VIDEO == c->codec_type) ? avformat_get_riff_video_tags() : avformat_get_riff_audio_tags(), 0
+      };
+      if (0 == av_codec_get_tag2(table, c->codec_id, &c->codec_tag))
+        NAPI_THROW_ERROR("Codec parameters codec_tag could not be set.");
+      printf("setCodecParCodecTag set codec_tag to 0x%08x\n", c->codec_tag);
+    } else
+      NAPI_THROW_ERROR("Codec parameters codec_tag expects a string or number value.");
+  }
+
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
-} */
+}
 
 napi_value getCodecParExtraData(napi_env env, napi_callback_info info) {
   napi_status status;
@@ -1711,8 +1741,8 @@ napi_status fromAVCodecParameters(napi_env env, AVCodecParameters* c, bool ownAl
       (napi_property_attributes) (napi_writable | napi_enumerable), c },
     { "name", nullptr, nullptr, getCodecParName, setCodecParName, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), c },
-    { "codec_tag", nullptr, nullptr, getCodecParCodecTag, nullptr, nullptr,
-      napi_enumerable, c },
+    { "codec_tag", nullptr, nullptr, getCodecParCodecTag, setCodecParCodecTag, nullptr,
+      (napi_property_attributes) (napi_writable | napi_enumerable), c },
     { "extradata", nullptr, nullptr, getCodecParExtraData, setCodecParExtraData, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), c },
     { "format", nullptr, nullptr, getCodecParFormat, setCodecParFormat, nullptr,
