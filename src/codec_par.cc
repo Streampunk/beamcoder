@@ -225,20 +225,18 @@ napi_value setCodecParCodecTag(napi_env env, napi_callback_info info) {
     status = napi_get_value_string_utf8(env, args[0], tag, tagLen + 1, &tagLen);
     CHECK_STATUS;
     c->codec_tag = MKTAG(tag[0], tag[1], tag[2], tag[3]);
-    printf("setCodecParCodecTag set codec_tag from string %s: 0x%08x\n", tag, c->codec_tag);
   } else if (type == napi_number) {
     status = napi_get_value_uint32(env, args[0], &c->codec_tag);
-    printf("setCodecParCodecTag %08x\n", c->codec_tag);
     CHECK_STATUS;
   } else {
-    printf("setCodecParCodecTag expects a string or a number - attempting to set from codec_id\n");
+    printf("Setting codec parameters codec_tag expects a string or a number - attempting to set from codec_id\n");
     if ((AVMEDIA_TYPE_VIDEO == c->codec_type) || (AVMEDIA_TYPE_AUDIO == c->codec_type)) {
       const struct AVCodecTag *table[] = { 
         (AVMEDIA_TYPE_VIDEO == c->codec_type) ? avformat_get_riff_video_tags() : avformat_get_riff_audio_tags(), 0
       };
       if (0 == av_codec_get_tag2(table, c->codec_id, &c->codec_tag))
         NAPI_THROW_ERROR("Codec parameters codec_tag could not be set.");
-      printf("setCodecParCodecTag set codec_tag to 0x%08x\n", c->codec_tag);
+      printf("Setting codec parameters codec_tag to 0x%08x\n", c->codec_tag);
     } else
       NAPI_THROW_ERROR("Codec parameters codec_tag expects a string or number value.");
   }
