@@ -136,7 +136,7 @@ test('Can delete data', t => {
   t.ok(f.data.every(x => Buffer.isBuffer(x)), '... of buffers.');
   t.equal(f.data.length, 3, 'data buffer has length 3.');
   t.deepEqual(f.data.map(x => x.length),
-    f.linesize.map(x => x * f.height + beamcoder.AV_INPUT_BUFFER_PADDING_SIZE),
+    f.linesize.map(x => x * f.height),
     'buffer sizes as expected.');
   f.data = null;
   t.ok(Array.isArray(f.data), 'After reset, data is an array ...');
