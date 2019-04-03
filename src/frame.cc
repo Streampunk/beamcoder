@@ -998,7 +998,8 @@ napi_value getFrameChanLayout(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   char channelLayoutName[64];
-  av_get_channel_layout_string(channelLayoutName, 64, -1, f->frame->channel_layout);
+  av_get_channel_layout_string(channelLayoutName, 64, 0, 
+    f->frame->channel_layout ? f->frame->channel_layout : av_get_default_channel_layout(f->frame->channels));
 
   status = napi_create_string_utf8(env, channelLayoutName, NAPI_AUTO_LENGTH, &result);
   CHECK_STATUS;
@@ -2251,9 +2252,9 @@ napi_value makeFrame(napi_env env, napi_callback_info info) {
 
       // TODO: is this needed? CHECK_CHANNELS_CONSISTENCY(f->frame);
       if (!f->frame->linesize[0]) {
-        ret = av_samples_get_buffer_size(&f->frame->linesize[0], channels,
+        ret = av_samples_get_buffer_size(f->frame->linesize, channels,
                                          f->frame->nb_samples, (AVSampleFormat) f->frame->format,
-                                         align);
+                                         0);
         if (ret < 0)
           NAPI_THROW_ERROR("Unable to determine frame line size.");
       }
@@ -2280,7 +2281,7 @@ napi_value alloc(napi_env env, napi_callback_info info) {
     if (f->frame->width > 0 && f->frame->height > 0) {
       for ( int x = 0 ; x < AV_NUM_DATA_POINTERS ; x++ ) {
         if (f->frame->linesize[x] > 0) {
-          int bufSize = f->frame->linesize[x] * f->frame->height + AV_INPUT_BUFFER_PADDING_SIZE;
+          int bufSize = f->frame->linesize[x] * f->frame->height;
           f->frame->buf[x] = av_buffer_alloc(
             (bufSize > AV_INPUT_BUFFER_MIN_SIZE) ? bufSize : AV_INPUT_BUFFER_MIN_SIZE);
           f->frame->data[x] = f->frame->buf[x]->data;
@@ -2542,13 +2543,11 @@ napi_status fromAVFrame(napi_env env, frameData* f, napi_value* result) {
     // 40
     { "crop_right", nullptr, nullptr, getFrameCropRight, setFrameCropRight, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
-    { "stream_index", nullptr, nullptr, nullptr, nullptr, undef, // Set for muxing
-      (napi_property_attributes) (napi_writable | napi_enumerable), nullptr},
     { "alloc", nullptr, alloc, nullptr, nullptr, nullptr, napi_enumerable, nullptr },
     { "toJSON", nullptr, frameToJSON, nullptr, nullptr, nullptr, napi_default, f },
     { "_frame", nullptr, nullptr, nullptr, nullptr, extFrame, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsFrame, 44, desc);
+  status = napi_define_properties(env, jsFrame, 43, desc);
   PASS_STATUS;
 
   for ( int x = 0 ; x < AV_NUM_DATA_POINTERS ; x++ ) {

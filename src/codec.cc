@@ -3596,8 +3596,8 @@ napi_value getCodecCtxChanLayout(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
   CHECK_STATUS;
 
-  av_get_channel_layout_string(channelLayoutName, 64, codec->channels,
-    codec->channel_layout);
+  av_get_channel_layout_string(channelLayoutName, 64, 0,
+    codec->channel_layout ? codec->channel_layout : av_get_default_channel_layout(codec->channels));
   status = napi_create_string_utf8(env, channelLayoutName, NAPI_AUTO_LENGTH, &result);
   CHECK_STATUS;
 
@@ -3659,10 +3659,14 @@ napi_value getCodecCtxReqChanLayout(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
   CHECK_STATUS;
 
-  av_get_channel_layout_string(channelLayoutName, 64, codec->channels,
-    codec->request_channel_layout);
-  status = napi_create_string_utf8(env, channelLayoutName, NAPI_AUTO_LENGTH, &result);
-  CHECK_STATUS;
+  if (codec->request_channel_layout) {
+    av_get_channel_layout_string(channelLayoutName, 64, 0, codec->request_channel_layout);
+    status = napi_create_string_utf8(env, channelLayoutName, NAPI_AUTO_LENGTH, &result);
+    CHECK_STATUS;
+  } else {
+    status = napi_create_string_utf8(env, "default", NAPI_AUTO_LENGTH, &result);
+    CHECK_STATUS;
+  }
 
   return result;
 }
