@@ -299,8 +299,8 @@ napi_value encode(napi_env env, napi_callback_info info) {
       c->status = napi_get_element(env, args[0], x, &value);
       REJECT_RETURN;
       c->status = isFrame(env,value);
-      if (c->status == napi_ok) {
-        REJECT_ERROR_RETURN("Add passed values is an array must by of type frame.",
+      if (c->status != napi_ok) {
+        REJECT_ERROR_RETURN("Add passed values is an array whose elements must be of type frame.",
           BEAMCODER_INVALID_ARGS);
       }
     }
