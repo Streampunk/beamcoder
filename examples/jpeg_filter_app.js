@@ -39,6 +39,40 @@ app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
   let decResult = await dec.decode(packet); // Decode the frame
   if (decResult.frames.length === 0) // Frame may be buffered, so flush it out
     decResult = await dec.flush();
+
+  // audio test
+  const aindex = 2;
+  const audStr = dm.streams[aindex];
+  // console.log(audStr);
+  let adec = beamcoder.decoder({ demuxer: dm, stream_index: aindex }); // Create a decoder
+  // console.log(adec);
+  let apkt = await dm.read();
+  let afrm = await adec.decode(apkt);
+  console.log(afrm.frames);
+  const audEnc = beamcoder.encoder({
+    name: 'aac',
+    sample_fmt: 'fltp',
+    sample_rate: 48000,
+    channels: 1,
+    channel_layout: 'mono', });
+
+  const audFilt = await beamcoder.filterer({ // Create a filterer for audio
+    filterType: 'audio',
+    inputParams: [{
+      sampleRate: audStr.codecpar.sample_rate,
+      sampleFormat: adec.sample_fmt,
+      channelLayout: audStr.codecpar.channel_layout,
+      timeBase: audStr.time_base }],
+    outputParams: [{
+      sampleRate: 1024,
+      sampleFormat: 'fltp',
+      channelLayout: 'mono' }],
+    filterSpec: 'aresample=1024' });
+
+  const audFiltPkt = await audFilt.filter([{ frames: afrm }]);
+  const encPkt = await audEnc.encode(audFiltPkt[0].frames[0]);
+  console.log(encPkt);
+
   let vstr = dm.streams[0]; // Select the video stream (assumes stream 0)
   let filt = await beamcoder.filterer({ // Create a filterer for video
     filterType: 'video',

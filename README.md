@@ -727,11 +727,7 @@ scaleFilter.priv = { width: 1000 }; // only the included properties are changed,
 
 #### Filter
 
-To filter uncompressed frames and create uncompressed result frames (which may each be frames-worth of audio), use the _filter_ method of a filterer, passing an array of _frame_ objects, for example from the output of a decoder:
-
-    let filtFrames = await filterer.filter([{ frames: frames }]);
-
-The result is an array containing objects with a frames property which is an array of _frame_ objects. Multiple inputs are supported with name parameters that must match the input parameters and the filter string used in the filterer setup:
+To filter uncompressed frames and create uncompressed result frames (which may each be frames-worth of audio), use the _filter_ method of a filterer, passing arrays of objects, one per filter input, each with a `name` string property and a `frames` property that contains an array of `frame` objects, for example from the output of a decoder:
 
 ```javascript
 let filtFrames = await filterer.filter([
@@ -739,8 +735,17 @@ let filtFrames = await filterer.filter([
   { name: 'in1:v', frames: frames1 },
 ]);
 ```
+The name parameters must match the input parameters in the `filterSpec` string used in the filterer setup.
 
-Multiple output objects appear in the output array with each object having a name property that matches the output name property defined in the filter string. For single input and single output filters the name property is optional, though if the filter string has defined a name the same name must be used.
+If the filter has only one input then a simplification is available that takes the array of `frame` objects directly and will apply a default name for the filter input. This name will match a filter specification that doesn't name its inputs:
+
+```javascript
+let filtFrames = await filterer.filter(frames);
+```
+
+The result is an array containing objects with a `frames` property which is an array of `frame` objects.
+
+Multiple output objects appear in the output array with each object having a name property that matches the output name property defined in the `filterSpec` string. For single input and single output filters the name property is optional, though if the filter string has defined a name the same name must be used.
 
 The output array objects also contain a `total_time` property which logs the time the operation took to complete.
 
