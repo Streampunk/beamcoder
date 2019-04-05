@@ -1329,6 +1329,7 @@ struct filterCarrier : carrier {
   filtContexts *sinkCtxs = nullptr;
   std::map<std::string, std::deque<AVFrame *> > srcFrames;
   std::map<std::string, std::vector<AVFrame *> > dstFrames;
+  std::vector<napi_ref> frameRefs;
   ~filterCarrier() {}
 };
 
@@ -1431,6 +1432,11 @@ void filterComplete(napi_env env, napi_status asyncStatus, void* data) {
   filterCarrier* c = (filterCarrier*) data;
   napi_value result, dstFrame, nameVal, frames, frame, prop;
 
+  for (auto it = c->frameRefs.cbegin(); it != c->frameRefs.cend(); it++) {
+    c->status = napi_delete_reference(env, *it);
+    REJECT_STATUS;
+  }
+
   if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "Filter failed to complete.";
@@ -1483,8 +1489,9 @@ void filterComplete(napi_env env, napi_status asyncStatus, void* data) {
 };
 
 napi_value filter(napi_env env, napi_callback_info info) {
-  napi_value resourceName, promise, filtererJS;
+  napi_value resourceName, promise, filtererJS, value;
   filterCarrier* c = new filterCarrier;
+  napi_ref frameRef;
 
   c->status = napi_create_promise(env, &c->_deferred, &promise);
   REJECT_RETURN;
@@ -1518,69 +1525,106 @@ napi_value filter(napi_env env, napi_callback_info info) {
     REJECT_ERROR_RETURN("Expected an array of source frame objects.",
       BEAMCODER_INVALID_ARGS);
 
-  uint32_t srcsLen;
-  c->status = napi_get_array_length(env, args[0], &srcsLen);
+  napi_value item;
+  c->status = napi_get_element(env, args[0], 0, &item);
   REJECT_RETURN;
-  for (uint32_t i = 0; i < srcsLen; ++i) {
-    napi_value item;
-    c->status = napi_get_element(env, args[0], i, &item);
-    REJECT_RETURN;
-
-    std::string name;
-    bool hasName;
-    c->status = napi_has_named_property(env, item, "name", &hasName);
-    REJECT_RETURN;
-    if (hasName) {
-      napi_value nameVal;
-      c->status = napi_get_named_property(env, item, "name", &nameVal);
-      REJECT_RETURN;
-      size_t nameLen;
-      c->status = napi_get_value_string_utf8(env, nameVal, nullptr, 0, &nameLen);
-      REJECT_RETURN;
-      name.resize(nameLen);
-      c->status = napi_get_value_string_utf8(env, nameVal, (char *)name.data(), nameLen+1, nullptr);
-      REJECT_RETURN;
-    } else if (0 == i) {
-      name = "in";
-    } else {
-      REJECT_ERROR_RETURN("Source frame object requires a name.",
-        BEAMCODER_INVALID_ARGS);
-    }
-
-    napi_value framesVal;
-    c->status = napi_get_named_property(env, item, "frames", &framesVal);
-    REJECT_RETURN;
-
-    napi_value framesArrVal;
-    c->status = napi_get_named_property(env, framesVal, "frames", &framesArrVal);
-    REJECT_RETURN;
-
-    bool isArray;
-    c->status = napi_is_array(env, framesArrVal, &isArray);
-    REJECT_RETURN;
-    if (!isArray)
-      REJECT_ERROR_RETURN("Expected an array of frame objects.",
-        BEAMCODER_INVALID_ARGS);
-
+  if (napi_ok == isFrame(env, item)) {
+    // Simplest case of an array of frame objects
     uint32_t framesLen;
-    c->status = napi_get_array_length(env, framesArrVal, &framesLen);
+    c->status = napi_get_array_length(env, args[0], &framesLen);
     REJECT_RETURN;
-    std::deque<AVFrame *> frames;
     for (uint32_t f = 0; f < framesLen; ++f) {
-      napi_value item;
-      c->status = napi_get_element(env, framesArrVal, f, &item);
+      c->status = napi_get_element(env, args[0], f, &value);
       REJECT_RETURN;
-      c->status = isFrame(env, item);
+      c->status = isFrame(env, value);
       if (c->status != napi_ok) {
-        REJECT_ERROR_RETURN("Values in array must by of type frame.",
+        REJECT_ERROR_RETURN("Expected an array whose elements must be of type frame.",
           BEAMCODER_INVALID_ARGS);
       }
-      frames.push_back(getFrame(env, item));
     }
-    auto result = c->srcFrames.emplace(name, frames);
+    std::deque<AVFrame *> frames;
+    for (uint32_t f = 0; f < framesLen; ++f) {
+      c->status = napi_get_element(env, args[0], f, &value);
+      REJECT_RETURN;
+      c->status = napi_create_reference(env, value, 1, &frameRef);
+      REJECT_RETURN;
+
+      c->frameRefs.push_back(frameRef);
+      frames.push_back(getFrame(env, value));
+    }
+    auto result = c->srcFrames.emplace("in", frames);
     if (!result.second) {
       REJECT_ERROR_RETURN("Frame names must be unique.",
         BEAMCODER_INVALID_ARGS);
+    }
+  } else {
+    // Argument is an array of filter objects with name and frames members
+    uint32_t srcsLen;
+    c->status = napi_get_array_length(env, args[0], &srcsLen);
+    REJECT_RETURN;
+    for (uint32_t i = 0; i < srcsLen; ++i) {
+      napi_value item;
+      c->status = napi_get_element(env, args[0], i, &item);
+      REJECT_RETURN;
+      std::string name;
+      bool hasName;
+      c->status = napi_has_named_property(env, item, "name", &hasName);
+      REJECT_RETURN;
+      if (hasName) {
+        napi_value nameVal;
+        c->status = napi_get_named_property(env, item, "name", &nameVal);
+        REJECT_RETURN;
+        size_t nameLen;
+        c->status = napi_get_value_string_utf8(env, nameVal, nullptr, 0, &nameLen);
+        REJECT_RETURN;
+        name.resize(nameLen);
+        c->status = napi_get_value_string_utf8(env, nameVal, (char *)name.data(), nameLen+1, nullptr);
+        REJECT_RETURN;
+      } else if (0 == i) {
+        name = "in";
+      } else {
+        REJECT_ERROR_RETURN("Source frame object requires a name.",
+          BEAMCODER_INVALID_ARGS);
+      }
+
+      napi_value framesArrVal;
+      c->status = napi_get_named_property(env, item, "frames", &framesArrVal);
+      REJECT_RETURN;
+
+      bool isArray;
+      c->status = napi_is_array(env, framesArrVal, &isArray);
+      REJECT_RETURN;
+      if (!isArray)
+        REJECT_ERROR_RETURN("Expected an array of frame objects.",
+          BEAMCODER_INVALID_ARGS);
+
+      uint32_t framesLen;
+      c->status = napi_get_array_length(env, framesArrVal, &framesLen);
+      REJECT_RETURN;
+      std::deque<AVFrame *> frames;
+      for (uint32_t f = 0; f < framesLen; ++f) {
+        c->status = napi_get_element(env, framesArrVal, f, &value);
+        REJECT_RETURN;
+        c->status = isFrame(env, value);
+        if (c->status != napi_ok) {
+          REJECT_ERROR_RETURN("Values in array must by of type frame.",
+            BEAMCODER_INVALID_ARGS);
+        }
+      }
+      for (uint32_t f = 0; f < framesLen; ++f) {
+        c->status = napi_get_element(env, framesArrVal, f, &value);
+        REJECT_RETURN;
+        c->status = napi_create_reference(env, value, 1, &frameRef);
+        REJECT_RETURN;
+
+        c->frameRefs.push_back(frameRef);
+        frames.push_back(getFrame(env, value));
+      }
+      auto result = c->srcFrames.emplace(name, frames);
+      if (!result.second) {
+        REJECT_ERROR_RETURN("Frame names must be unique.",
+          BEAMCODER_INVALID_ARGS);
+      }
     }
   }
 
