@@ -803,7 +803,7 @@ while (frame != nullptr) {
 As with decoding, it is possible to encode more than one frame at a time. Pass in an array of frames or a sequence of frames as arguments to the method:
 
     enc_result = await encoder.encode([ frame_1, frame_2, ...  ]);
-    enc_result = await encoder.encoder(frame_1, frame_2, ... );
+    enc_result = await encoder.encode(frame_1, frame_2, ... );
 
 #### Creating frames
 
