@@ -4658,6 +4658,32 @@ napi_value getStreamEventFlags(napi_env env, napi_callback_info info) {
   return result;
 }
 
+napi_value getFirstDts(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVStream* stream;
+
+  status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &stream);
+  CHECK_STATUS;
+
+  status = napi_create_int64(env, stream->first_dts, &result);
+  CHECK_STATUS;
+  return result;
+}
+
+napi_value getCurrentDts(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVStream* stream;
+
+  status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &stream);
+  CHECK_STATUS;
+
+  status = napi_create_int64(env, stream->cur_dts, &result);
+  CHECK_STATUS;
+  return result;
+}
+
 napi_value setStreamEventFlags(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
@@ -5175,6 +5201,8 @@ napi_value streamToJSON(napi_env env, napi_callback_info info) {
   // TODO attached_pic
   DECLARE_GETTER3("side_data", s->nb_side_data > 0, getStreamSideData, s);
   DECLARE_GETTER3("event_flags", s->event_flags > 0, getStreamEventFlags, s);
+  DECLARE_GETTER3("first_dts", s->first_dts > 0, getFirstDts, s);
+  DECLARE_GETTER3("cur_dts", s->cur_dts > 0, getCurrentDts, s);
   DECLARE_GETTER3("r_frame_rate", s->r_frame_rate.num != 0, getStreamRFrameRate, s);
   DECLARE_GETTER3("codecpar", true, codecParToJSON, s->codecpar);
 
@@ -5228,6 +5256,10 @@ napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result) {
     { "side_data", nullptr, nullptr, getStreamSideData, setStreamSideData, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "event_flags", nullptr, nullptr, getStreamEventFlags, setStreamEventFlags, nullptr,
+      (napi_property_attributes) (napi_writable | napi_enumerable), stream },
+    { "first_dts", nullptr, nullptr, getFirstDts, nullptr, nullptr,
+      (napi_property_attributes) (napi_writable | napi_enumerable), stream },
+    { "cur_dts", nullptr, nullptr, getCurrentDts, nullptr, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "r_frame_rate", nullptr, nullptr, getStreamRFrameRate, setStreamRFrameRate, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
