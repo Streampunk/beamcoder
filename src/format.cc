@@ -171,7 +171,7 @@ napi_status getIOFormatCodecTag(napi_env env, AVInputFormat* format, napi_value*
       }
       status = napi_set_element(env, value, i++, tagObj);
       PASS_STATUS;
-      tag += 2;      
+      tag += 2;
     }
   }
 
@@ -5257,9 +5257,9 @@ napi_status fromAVStream(napi_env env, AVStream* stream, napi_value* result) {
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "event_flags", nullptr, nullptr, getStreamEventFlags, setStreamEventFlags, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
-    { "first_dts", nullptr, nullptr, getFirstDts, nullptr, nullptr,
+    { "first_dts", nullptr, nullptr, getFirstDts, nop, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
-    { "cur_dts", nullptr, nullptr, getCurrentDts, nullptr, nullptr,
+    { "cur_dts", nullptr, nullptr, getCurrentDts, nop, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
     { "r_frame_rate", nullptr, nullptr, getStreamRFrameRate, setStreamRFrameRate, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), stream },
