@@ -52,7 +52,9 @@ function demuxerStream(params) {
   stream.on('close', () => governor.finish());
   stream.on('finish', () => governor.finish());
   stream.on('error', console.error);
-  stream.demuxer = () => beamcoder.demuxer(governor);
+  stream.demuxer = () =>
+    // delay initialisation of demuxer until stream has been written to - avoids lock-up
+    new Promise(async resolve => setTimeout(() => resolve(beamcoder.demuxer(governor)), 20));
   return stream;
 }
 
