@@ -72,3 +72,4 @@ ffmpeg/
 
 # Editors and IDE's
 *.swp
+.vscode/
