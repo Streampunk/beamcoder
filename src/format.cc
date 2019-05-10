@@ -3827,10 +3827,9 @@ void formatContextFinalizer(napi_env env, void* data, void* hint) {
   Adaptor *adaptor = (Adaptor *)hint;
   int ret;
   if (fc->pb != nullptr) {
-    if (adaptor) {
-      adaptor->finish();
+    if (adaptor)
       avio_context_free(&fc->pb);
-    } else {
+    else {
       ret = avio_closep(&fc->pb);
       if (ret < 0) {
         printf("DEBUG: For url '%s', %s", (fc->url != nullptr) ? fc->url : "unknown",
@@ -3851,7 +3850,8 @@ void formatContextFinalizer(napi_env env, void* data, void* hint) {
   if (fc->protocol_blacklist != nullptr) {
     av_freep(fc->protocol_blacklist);
   } */
-  avformat_free_context(fc);
+  if (!adaptor) // crashes otherwise...
+    avformat_free_context(fc);
 }
 
 napi_value newStream(napi_env env, napi_callback_info info) {
