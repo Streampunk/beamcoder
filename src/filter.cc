@@ -358,6 +358,20 @@ napi_value getLinkSAR(napi_env env, napi_callback_info info) {
   return pair;
 }
 
+napi_value getLinkChannelCount(napi_env env, napi_callback_info info) {
+  napi_status status;
+  AVFilterLink* filterLink;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterLink);
+  CHECK_STATUS;
+
+  napi_value channelCountVal;
+  int channelCount = av_get_channel_layout_nb_channels(filterLink->channel_layout);
+  status = napi_create_int32(env, channelCount, &channelCountVal);
+
+  return channelCountVal;
+}
+
 napi_value getLinkChannelLayout(napi_env env, napi_callback_info info) {
   napi_status status;
   AVFilterLink* filterLink;
@@ -454,6 +468,8 @@ napi_status fromAVFilterLink(napi_env env, const AVFilterLink* link, napi_value*
       (AVMEDIA_TYPE_VIDEO == link->type) ? napi_enumerable : napi_default, (void*)link },
     { "sample_aspect_ratio", nullptr, nullptr, getLinkSAR, nullptr, nullptr,
       (AVMEDIA_TYPE_VIDEO == link->type) ? napi_enumerable : napi_default, (void*)link },
+    { "channel_count", nullptr, nullptr, getLinkChannelCount, nullptr, nullptr,
+      (AVMEDIA_TYPE_AUDIO == link->type) ? napi_enumerable : napi_default, (void*)link },
     { "channel_layout", nullptr, nullptr, getLinkChannelLayout, nullptr, nullptr,
       (AVMEDIA_TYPE_AUDIO == link->type) ? napi_enumerable : napi_default, (void*)link },
     { "sample_rate", nullptr, nullptr, getLinkSampleRate, nullptr, nullptr,
@@ -461,7 +477,7 @@ napi_status fromAVFilterLink(napi_env env, const AVFilterLink* link, napi_value*
     { "format", nullptr, nullptr, getLinkFormat, nullptr, nullptr, napi_enumerable, (void*)link },
     { "time_base", nullptr, nullptr, getLinkTimeBase, nullptr, nullptr, napi_enumerable, (void*)link }
   };
-  status = napi_define_properties(env, *result, 12, desc);
+  status = napi_define_properties(env, *result, 13, desc);
   PASS_STATUS;
 
   return napi_ok;
@@ -911,10 +927,16 @@ void filtererExecute(napi_env env, void* data) {
       }
       p = c->outParams[i].find("channel_layouts");
       if (p != c->outParams[i].end()) {
-        const uint64_t out_channel_layouts[] = { av_get_channel_layout(p->second.c_str()), 0 };
-        ret = av_opt_set_int_list(sinkCtx, "channel_layouts", out_channel_layouts, 0,
+        const int64_t out_channel_layout = av_get_channel_layout(p->second.c_str());
+        int out_channel_counts[] = { av_get_channel_layout_nb_channels(out_channel_layout), -1 };
+        ret = av_opt_set_int_list(sinkCtx, "channel_counts", out_channel_counts, -1,
                                   AV_OPT_SEARCH_CHILDREN);
-        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output sample format\n"); }
+        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output channel count\n"); }
+
+        const int64_t out_channel_layouts[] = { out_channel_layout, -1 };
+        ret = av_opt_set_int_list(sinkCtx, "channel_layouts", out_channel_layouts, -1,
+                                  AV_OPT_SEARCH_CHILDREN);
+        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output channel layout\n"); }
       }
     } else {
       auto p = c->outParams[i].find("pix_fmts");
