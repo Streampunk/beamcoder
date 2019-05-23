@@ -134,10 +134,6 @@ create:
   status = napi_call_function(env, result, assign, 2, fargs, &result);
   CHECK_BAIL;
 
-  if ((ret = avcodec_open2(encoder, encoder->codec, nullptr))) {
-    NAPI_THROW_ERROR(avErrorMsg("Failed to open encoder: ", ret));
-  }
-
   if (encoder != nullptr) return result;
 
 bail:
