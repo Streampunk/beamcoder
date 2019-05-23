@@ -116,7 +116,7 @@ create:
 
   if (codecParams != nullptr) {
     if ((ret = avcodec_parameters_to_context(encoder, (const AVCodecParameters*) codecParams))) {
-      NAPI_THROW_ERROR(avErrorMsg("Failed to set encoder paramters from provided params: ", ret));
+      NAPI_THROW_ERROR(avErrorMsg("Failed to set encoder parameters from provided params: ", ret));
     }
     // printf("Params to context result: %i\n", ret);
   }
@@ -133,6 +133,10 @@ create:
   CHECK_BAIL;
   status = napi_call_function(env, result, assign, 2, fargs, &result);
   CHECK_BAIL;
+
+  if ((ret = avcodec_open2(encoder, encoder->codec, nullptr))) {
+    NAPI_THROW_ERROR(avErrorMsg("Failed to open encoder: ", ret));
+  }
 
   if (encoder != nullptr) return result;
 
