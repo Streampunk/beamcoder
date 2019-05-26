@@ -26,14 +26,6 @@ const beamstreams = require('./beamstreams.js');
 const SegfaultHandler = require('segfault-handler');
 SegfaultHandler.registerHandler('crash.log');
 
-const splash = `Aerostat Beam Coder  Copyright (C) 2019  Streampunk Media Ltd
-GPL v3.0 or later license. This program comes with ABSOLUTELY NO WARRANTY.
-This is free software, and you are welcome to redistribute it
-under certain conditions. Conditions and warranty at:
-https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
-
-console.log(splash);
-
 beamcoder.demuxerStream = beamstreams.demuxerStream;
 beamcoder.muxerStream = beamstreams.muxerStream;
 
