@@ -22,11 +22,21 @@
 const test = require('tape');
 const beamcoder = require('../index.js');
 
-test('Creating an encoder', t => {
+test('Creating a video encoder', t => {
   let enc = beamcoder.encoder({ name: 'h264' });
   t.ok(enc, 'is truthy.');
   t.equal(enc.name, 'libx264', 'has the expected name.');
   t.equal(enc.codec_id, 27, 'has the expected codec_id.');
+  t.ok(typeof enc._CodecContext == 'object', 'external value present.');
+  t.equal(enc.type, 'encoder', 'has expected type name.');
+  t.end();
+});
+
+test('Creating an audio encoder', t => {
+  let enc = beamcoder.encoder({ name: 'aac' });
+  t.ok(enc, 'is truthy.');
+  t.equal(enc.name, 'aac', 'has the expected name.');
+  t.equal(enc.codec_id, 86018, 'has the expected codec_id.');
   t.ok(typeof enc._CodecContext == 'object', 'external value present.');
   t.equal(enc.type, 'encoder', 'has expected type name.');
   t.end();
