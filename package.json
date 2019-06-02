@@ -1,6 +1,6 @@
 {
   "name": "beamcoder",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Node.js native bindings to FFmpeg.",
   "main": "index.js",
   "scripts": {
@@ -35,12 +35,12 @@
   "dependencies": {
     "bindings": "^1.5.0",
     "koa": "^2.7.0",
-    "segfault-handler": "^1.0.1",
+    "segfault-handler": "^1.2.0",
     "unzip": "^0.1.11"
   },
   "devDependencies": {
-    "eslint": "^5.15.1",
-    "tape": "^4.10.1"
+    "eslint": "^5.16.0",
+    "tape": "^4.10.2"
   },
   "gypfile": true
 }
