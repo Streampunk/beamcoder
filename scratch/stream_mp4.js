@@ -33,7 +33,7 @@ async function run() {
         ],
         filterSpec: '[in0:v] scale=1280:720, colorspace=all=bt709 [out0:v]',
         streams: [
-          { name: 'h264', time_base: [1, 90000], encoderName: 'libx264',
+          { name: 'h264', time_base: [1, 90000],
             codecpar: {
               width: 1280, height: 720, format: 'yuv422p', color_space: 'bt709',
               sample_aspect_ratio: [1, 1]
@@ -49,7 +49,7 @@ async function run() {
         ],
         filterSpec: '[in0:a] aformat=sample_fmts=fltp:channel_layouts=mono [out0:a]',
         streams: [
-          { name: 'aac', time_base: [1, 90000], encoderName: 'aac',
+          { name: 'aac', time_base: [1, 90000],
             codecpar: {
               sample_rate: 48000, format: 'fltp', frame_size: 1024,
               channels: 1, channel_layout: 'mono'
@@ -65,7 +65,9 @@ async function run() {
   };
 
   await beamcoder.makeSources(params);
-  await beamcoder.makeStreams(params);
+  const beamStreams = await beamcoder.makeStreams(params);
+
+  await beamStreams.run();
 }
 
 console.log('Running mp4 maker');

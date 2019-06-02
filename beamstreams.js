@@ -22,62 +22,77 @@
 const beamcoder = require('bindings')('beamcoder');
 const { Writable, Readable, Transform } = require('stream');
 
-function frameDicer(dstStrm) {
-  const sampleBytes = 4; // Assume floating point 4 byte samples for now...
-  let lastFrm = beamcoder.frame({ pts: 0, data: [ Buffer.alloc(0) ]});
-  const dstNumSamples = dstStrm.codecpar.frame_size;
-  const dstFrmBytes = dstNumSamples * dstStrm.codecpar.channels * sampleBytes;
+function frameDicer(encoder, isAudio) {
+  let sampleBytes = 4; // Assume floating point 4 byte samples for now...
+  const numChannels = encoder.channels;
+  const dstNumSamples = encoder.frame_size;
+  let dstFrmBytes = dstNumSamples * sampleBytes;
+  const doDice = false === beamcoder.encoders()[encoder.name].capabilities.VARIABLE_FRAME_SIZE;
 
-  const isAudio = () => 'audio' === dstStrm.codecpar.codec_type;
+  let lastFrm = null;
+  let lastBuf = [];
+  const nullBuf = [];
+  for (let b = 0; b < numChannels; ++b)
+    nullBuf.push(Buffer.alloc(0));
 
   const addFrame = srcFrm => {
     let result = [];
     let dstFrm;
     let curStart = 0;
-    if (lastFrm.data[0].length > 0)
+    if (!lastFrm) {
+      lastFrm = beamcoder.frame(srcFrm.toJSON());
+      lastBuf = nullBuf;
+
+      sampleBytes = srcFrm.pkt_size / srcFrm.nb_samples;
+      dstFrmBytes = dstNumSamples * sampleBytes;
+    }
+
+    if (lastBuf[0].length > 0)
       dstFrm = beamcoder.frame(lastFrm.toJSON());
     else
       dstFrm = beamcoder.frame(srcFrm.toJSON());
     dstFrm.nb_samples = dstNumSamples;
     dstFrm.pkt_duration = dstNumSamples;
 
-    while (curStart + dstFrmBytes - lastFrm.data[0].length < srcFrm.nb_samples * sampleBytes) {
+    while (curStart + dstFrmBytes - lastBuf[0].length <= srcFrm.nb_samples * sampleBytes) {
       const resFrm = beamcoder.frame(dstFrm.toJSON());
-      resFrm.data = [
+      resFrm.data = lastBuf.map((d, i) => 
         Buffer.concat([
-          lastFrm.data[0],
-          srcFrm.data[0].slice(curStart, curStart + dstFrmBytes - lastFrm.data[0].length)],
-        dstFrmBytes)];
+          d, srcFrm.data[i].slice(curStart, curStart + dstFrmBytes - d.length)],
+        dstFrmBytes));
       result.push(resFrm);
 
       dstFrm.pts += dstNumSamples;
       dstFrm.pkt_dts += dstNumSamples;
-      curStart += dstFrmBytes - lastFrm.data[0].length;
-      lastFrm = beamcoder.frame({ pts: 0, data: [ Buffer.alloc(0) ]});
+      curStart += dstFrmBytes - lastBuf[0].length;
+      lastFrm.pts = 0;
+      lastFrm.pkt_dts = 0;
+      lastBuf = nullBuf;
     }
 
-    lastFrm.data = [ srcFrm.data[0].slice(curStart, srcFrm.nb_samples * sampleBytes)];
     lastFrm.pts = dstFrm.pts;
-    lastFrm.pkt_dts = dstFrm.pts;
+    lastFrm.pkt_dts = dstFrm.pkt_dts;
+    lastBuf = srcFrm.data.map(d => d.slice(curStart, srcFrm.nb_samples * sampleBytes));
 
     return result;
   };
 
   const getLast = () => {
     let result = [];
-    if (lastFrm.data[0].length > 0) {
+    if (lastBuf[0].length > 0) {
       const resFrm = beamcoder.frame(lastFrm.toJSON());
-      resFrm.data = [ lastFrm.data[0].slice(0) ];
-      resFrm.nb_samples = lastFrm.data[0].length / sampleBytes;
+      resFrm.data = lastBuf.map(d => d.slice(0));
+      resFrm.nb_samples = lastBuf[0].length / sampleBytes;
       resFrm.pkt_duration = resFrm.nb_samples;
-      lastFrm = beamcoder.frame({ pts: 0, data: [ Buffer.alloc(0) ]});
+      lastFrm.pts = 0;
+      lastBuf = nullBuf;
       result.push(resFrm);
     }
     return result;
   };
 
   this.dice = (frames, flush = false) => {
-    if (isAudio()) {
+    if (isAudio && doDice) {
       let result = frames.reduce((muxFrms, frm) => {
         addFrame(frm).forEach(f => muxFrms.push(f));
         return muxFrms;
@@ -356,7 +371,7 @@ function createBeamReadableStream(params, governor) {
 }
 
 function muxerStream(params) {
-  const governor = new beamcoder.governor({});
+  const governor = new beamcoder.governor({ highWaterMark: 1 });
   const stream = createBeamReadableStream(params, governor);
   stream.on('end', () => governor.finish());
   stream.on('error', console.error);
@@ -396,9 +411,9 @@ async function makeSources(params) {
   }, Promise.resolve());
 
   params.video.forEach(p => p.sources.forEach(src => 
-    src.stream = readStream({ highWaterMark : 2 }, src.format, src.ms, src.streamIndex)));
+    src.stream = readStream({ highWaterMark : 1 }, src.format, src.ms, src.streamIndex)));
   params.audio.forEach(p => p.sources.forEach(src => 
-    src.stream = readStream({ highWaterMark : 2 }, src.format, src.ms, src.streamIndex)));
+    src.stream = readStream({ highWaterMark : 1 }, src.format, src.ms, src.streamIndex)));
 }
 
 function runStreams(streamType, sources, filterer, streams, mux, muxBalancer) {
@@ -407,31 +422,35 @@ function runStreams(streamType, sources, filterer, streams, mux, muxBalancer) {
       return resolve();
 
     const timeBaseStream = sources[0].format.streams[sources[0].streamIndex];
-    const filterBalancer = parallelBalancer({ highWaterMark : 2 }, streamType, sources.length);
+    const filterBalancer = parallelBalancer({ highWaterMark : 1 }, streamType, sources.length);
 
     sources.forEach((src, srcIndex) => {
-      const decStream = transformStream({ highWaterMark : 2 },
+      const decStream = transformStream({ highWaterMark : 1 },
         pkts => src.decoder.decode(pkts), () => src.decoder.flush(), reject);
-      const filterSource = writeStream({ highWaterMark : 2 },
+      const filterSource = writeStream({ highWaterMark : 1 },
         pkts => filterBalancer.pushPkts(pkts.frames, src.format.streams[src.streamIndex], srcIndex),
         () => filterBalancer.pushPkts([], src.format.streams[src.streamIndex], srcIndex, true), reject);
 
       src.stream.pipe(decStream).pipe(filterSource);
     });
 
-    const streamTee = teeBalancer({ highWaterMark : 2 }, streams.length);
-    const filtStream = transformStream({ highWaterMark : 2 }, frms => filterer.filter(frms), () => {}, reject);
-    const streamSource = writeStream({ highWaterMark : 2 },
+    const streamTee = teeBalancer({ highWaterMark : 1 }, streams.length);
+    const filtStream = transformStream({ highWaterMark : 1 }, frms => {
+      if (filterer.cb) filterer.cb(frms[0].frames[0].pts);
+      return filterer.filter(frms);
+    }, () => {}, reject);
+    const streamSource = writeStream({ highWaterMark : 1 },
       frms => streamTee.pushFrames(frms), () => streamTee.pushFrames([], true), reject);
 
     filterBalancer.pipe(filtStream).pipe(streamSource);
 
     streams.forEach((str, i) => {
-      const dicer = new frameDicer(str.stream);
-      const diceStream = transformStream({ highWaterMark : 2 },
+      const dicer = new frameDicer(str.encoder, 'audio' === streamType);
+      const diceStream = transformStream({ highWaterMark : 1 },
         frms => dicer.dice(frms), () => dicer.dice([], true), reject);
-      const encStream = transformStream({ highWaterMark : 2 }, frms => str.encoder.encode(frms), () => str.encoder.flush(), reject);
-      const muxStream = writeStream({ highWaterMark : 2 },
+      const encStream = transformStream({ highWaterMark : 1 },
+        frms => str.encoder.encode(frms), () => str.encoder.flush(), reject);
+      const muxStream = writeStream({ highWaterMark : 1 },
         pkts => muxBalancer.writePkts(pkts.packets, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts)),
         () => muxBalancer.writePkts([], timeBaseStream, str.stream, pkts => mux.writeFrame(pkts), true), reject);
       muxStream.on('finish', resolve);
@@ -466,29 +485,10 @@ async function makeStreams(params) {
       }),
       outputParams: p.streams.map((str, i) => { return { name: `out${i}:v`, pixelFormat: str.codecpar.format }; }),
       filterSpec: p.filterSpec });
-    // console.log(p.filter.graph.dump());
   });
   const vidFilts = await Promise.all(params.video.map(p => p.filter));
   params.video.forEach((p, i) => p.filter = vidFilts[i]);
-
-  params.video.forEach(p => {
-    p.streams.forEach((str, i) => {
-      const encParams = p.filter.graph.filters.find(f => f.name === `out${i}:v`).inputs[0];
-      str.encoder = beamcoder.encoder({
-        name: str.encoderName,
-        width: encParams.w,
-        height: encParams.h,
-        pix_fmt: encParams.format,
-        sample_aspect_ratio: encParams.sample_aspect_ratio,
-        time_base: encParams.time_base,
-        // framerate: [encParams.time_base[1], encParams.time_base[0]],
-        // bit_rate: 2000000,
-        // gop_size: 10,
-        // max_b_frames: 1,
-        // priv_data: { preset: 'slow' }
-        priv_data: { crf: 23 } }); // ... more required ...
-    });
-  });
+  // params.video.forEach(p => console.log(p.filter.graph.dump()));
 
   params.audio.forEach(p => {
     p.filter = beamcoder.filterer({
@@ -509,25 +509,51 @@ async function makeStreams(params) {
           sampleFormat: str.codecpar.format,
           channelLayout: str.codecpar.channel_layout }; }),
       filterSpec: p.filterSpec });
-    // console.log(p.filter.graph.dump());
   });
   const audFilts = await Promise.all(params.audio.map(p => p.filter));
   params.audio.forEach((p, i) => p.filter = audFilts[i]);
+  // params.audio.forEach(p => console.log(p.filter.graph.dump()));
+
+  let mux;
+  if (params.out.output_stream) {
+    let muxerStream = beamcoder.muxerStream({ highwaterMark: 1024 });
+    muxerStream.pipe(params.out.output_stream);
+    mux = muxerStream.muxer({ format_name: params.out.formatName });
+  } else
+    mux = beamcoder.muxer({ format_name: params.out.formatName });
+
+  params.video.forEach(p => {
+    p.streams.forEach((str, i) => {
+      const encParams = p.filter.graph.filters.find(f => f.name === `out${i}:v`).inputs[0];
+      str.encoder = beamcoder.encoder({
+        name: str.name,
+        width: encParams.w,
+        height: encParams.h,
+        pix_fmt: encParams.format,
+        sample_aspect_ratio: encParams.sample_aspect_ratio,
+        time_base: encParams.time_base,
+        // framerate: [encParams.time_base[1], encParams.time_base[0]],
+        // bit_rate: 2000000,
+        // gop_size: 10,
+        // max_b_frames: 1,
+        // priv_data: { preset: 'slow' }
+        priv_data: { crf: 23 } }); // ... more required ...
+    });
+  });
 
   params.audio.forEach(p => {
     p.streams.forEach((str, i) => {
       const encParams = p.filter.graph.filters.find(f => f.name === `out${i}:a`).inputs[0];
       str.encoder = beamcoder.encoder({
-        name: str.encoderName,
+        name: str.name,
         sample_fmt: encParams.format,
         sample_rate: encParams.sample_rate,
-        channels: 1, // ??? - not in encParams
         channel_layout: encParams.channel_layout,
-        flags: { GLOBAL_HEADER: true } });
+        flags: { GLOBAL_HEADER: mux.oformat.flags.GLOBALHEADER } });
+      
+      str.codecpar.frame_size = str.encoder.frame_size;
     });
   });
-
-  const mux = beamcoder.muxer({ format_name: params.out.formatName });
 
   params.video.forEach(p => {
     p.streams.forEach(str => {
@@ -549,18 +575,22 @@ async function makeStreams(params) {
     });
   });
 
-  await mux.openIO({
-    url: params.out.url
-  });
-  await mux.writeHeader();
+  return {
+    run: async () => {
+      await mux.openIO(params.out.url ? {
+        url: params.out.url
+      } : {});
+      await mux.writeHeader();
 
-  const muxBalancer = new serialBalancer(mux.streams.length);
-  const muxStreamPromises = [];
-  params.video.forEach(p => muxStreamPromises.push(runStreams('video', p.sources, p.filter, p.streams, mux, muxBalancer)));
-  params.audio.forEach(p => muxStreamPromises.push(runStreams('audio', p.sources, p.filter, p.streams, mux, muxBalancer)));
-  await Promise.all(muxStreamPromises);
+      const muxBalancer = new serialBalancer(mux.streams.length);
+      const muxStreamPromises = [];
+      params.video.forEach(p => muxStreamPromises.push(runStreams('video', p.sources, p.filter, p.streams, mux, muxBalancer)));
+      params.audio.forEach(p => muxStreamPromises.push(runStreams('audio', p.sources, p.filter, p.streams, mux, muxBalancer)));
+      await Promise.all(muxStreamPromises);
 
-  await mux.writeTrailer();
+      await mux.writeTrailer();
+    }
+  };
 }
 
 module.exports = {
