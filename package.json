@@ -34,9 +34,11 @@
   "homepage": "https://github.com/Streampunk/beamcoder#readme",
   "dependencies": {
     "bindings": "^1.5.0",
-    "koa": "^2.7.0",
     "segfault-handler": "^1.2.0",
     "unzip": "^0.1.11"
+  },
+  "peerDependencies": {
+    "koa": "^2.7.0"
   },
   "devDependencies": {
     "eslint": "^5.16.0",
