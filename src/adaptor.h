@@ -80,9 +80,9 @@ private:
 
 class Chunk {
 public:
-  Chunk(napi_ref bufRef, const void *buf, size_t bufLen)
+  Chunk(napi_ref bufRef, void *buf, size_t bufLen)
     : mBufRef(bufRef), mBuf(buf), mLen(bufLen) {}
-  ~Chunk() {}
+  ~Chunk() { free(mBuf); }
 
   napi_ref buf_ref() const  { return mBufRef; }
   const void *buf() const  { return mBuf; }
@@ -90,7 +90,7 @@ public:
 
 private:
   const napi_ref mBufRef;
-  const void *mBuf;
+  void *mBuf;
   const size_t mLen;
 };
 
@@ -110,7 +110,9 @@ public:
   }
 
   int write(const uint8_t *buf, int bufSize) {
-    mQueue->enqueue(new Chunk(nullptr, buf, bufSize));
+    uint8_t *qBuf = (uint8_t *)malloc(bufSize);
+    memcpy(qBuf, buf, bufSize);
+    mQueue->enqueue(new Chunk(nullptr, qBuf, bufSize));
     return bufSize;
   }
 

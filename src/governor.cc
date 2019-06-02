@@ -231,11 +231,22 @@ napi_value governor(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
+  napi_value highWaterMarkVal;
+  int32_t highWaterMark = 3;
+  status = napi_get_named_property(env, params, "highWaterMark", &highWaterMarkVal);
+  CHECK_STATUS;
+  status = napi_typeof(env, highWaterMarkVal, &t);
+  CHECK_STATUS;
+  if (t == napi_number) {
+    status = napi_get_value_int32(env, highWaterMarkVal, &highWaterMark);
+    CHECK_STATUS;
+  }
+
   napi_value governorObj;
   status = napi_create_object(env, &governorObj);
   CHECK_STATUS;
 
-  Adaptor *adaptor = new Adaptor(3);
+  Adaptor *adaptor = new Adaptor(highWaterMark);
 
   napi_value adaptorValue;
   status = napi_create_external(env, adaptor, finalizeAdaptor, nullptr, &adaptorValue);

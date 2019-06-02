@@ -85,6 +85,7 @@ struct initOutputCarrier : carrier {
 
 struct writeFrameCarrier : carrier {
   AVFormatContext* format;
+  Adaptor *adaptor = nullptr;
   AVPacket* packet = nullptr;
   AVFrame* frame = nullptr;
   int streamIndex = 0;
