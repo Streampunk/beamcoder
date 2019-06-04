@@ -1,10 +1,10 @@
 {
   "name": "beamcoder",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Node.js native bindings to FFmpeg.",
   "main": "index.js",
   "scripts": {
-    "preinstall": "npm install unzip && node install_ffmpeg.js",
+    "preinstall": "npm install unzipper && node install_ffmpeg.js",
     "install": "node-gyp rebuild",
     "test": "tape test/*.js",
     "lint": "eslint **/*.js",
@@ -36,7 +36,7 @@
     "bindings": "^1.5.0",
     "koa": "^2.7.0",
     "segfault-handler": "^1.2.0",
-    "unzip": "^0.1.11"
+    "unzipper": "^0.10.0"
   },
   "devDependencies": {
     "eslint": "^5.16.0",
