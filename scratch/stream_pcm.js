@@ -72,7 +72,7 @@ async function run() {
       // console.log(frames);
 
       let filtFrames = await filterer.filter([ // eslint-disable-line
-        { name: '0:a', frames: frames }
+        { name: '0:a', frames: frames.frames }
       ]);
       // console.log(filtFrames);
     }
