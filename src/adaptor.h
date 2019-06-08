@@ -81,8 +81,8 @@ private:
 class Chunk {
 public:
   Chunk(napi_ref bufRef, void *buf, size_t bufLen)
-    : mBufRef(bufRef), mBuf(buf), mLen(bufLen) {}
-  ~Chunk() { free(mBuf); }
+    : mBufRef(bufRef), mBuf(buf), mLen(bufLen), mLocalAlloc(nullptr == bufRef) {}
+  ~Chunk() { if (mLocalAlloc) free(mBuf); }
 
   napi_ref buf_ref() const  { return mBufRef; }
   const void *buf() const  { return mBuf; }
@@ -92,12 +92,13 @@ private:
   const napi_ref mBufRef;
   void *mBuf;
   const size_t mLen;
+  const bool mLocalAlloc;
 };
 
 class Adaptor {
 public:
   Adaptor(uint32_t queueLen)
-    : mQueue(new Queue<Chunk *>(queueLen)), mCurChunk(nullptr), mChunkPos(0), m(), mBuf(4096) {}
+    : mQueue(new Queue<Chunk *>(queueLen)), mCurChunk(nullptr), mChunkPos(0), m(), mBuf(1024) {}
   ~Adaptor() {
     delete mQueue;
     std::unique_lock<std::mutex> lk(m);
