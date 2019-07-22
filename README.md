@@ -55,7 +55,7 @@ If you are looking to write your own frame-by-frame transcoder, media mangler or
 
 Does beam coder support X, Y or Z protocol / format / codec / file type / stream type / hardware etc.? If FFmpeg supports it, its possible and likely. Beam coder is self-describing at runtime, allowing exploration of what should be possible. However, you have to start somewhere, and the developers have been testing with the codecs and formats they are familiar with. Issues are expected so please raise any problems or requests for additional features as git hub issues. Even better, raise a pull request to fix a problem or add in missing features. Automated testing will be extended in due course, memory management improved, more examples added and hardware accelerated codecs added.
 
-Beam coder will be a cross-platform module for Windows, Mac and Linux. In this early release, only Windows and Linux are available. The Mac platform will follow shortly. The release version of FFmpeg that beam coder links with is currently 4.1.
+Beam coder will be a cross-platform module for Windows, Mac and Linux. The release version of FFmpeg that beam coder links with is currently 4.1.
 
 ### Aerostat
 
