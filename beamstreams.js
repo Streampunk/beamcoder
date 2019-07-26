@@ -22,6 +22,9 @@
 const beamcoder = require('bindings')('beamcoder');
 const { Writable, Readable, Transform } = require('stream');
 
+const doTimings = false;
+const timings = [];
+
 function frameDicer(encoder, isAudio) {
   let sampleBytes = 4; // Assume floating point 4 byte samples for now...
   const numChannels = encoder.channels;
@@ -134,8 +137,8 @@ function serialBalancer(numStreams) {
   };
 
   this.writePkts = (packets, srcStream, dstStream, writeFn, final = false) => {
-    if (packets.length) {
-      return packets.reduce(async (promise, pkt) => {
+    if (packets && packets.packets.length) {
+      return packets.packets.reduce(async (promise, pkt) => {
         await promise;
         pkt.stream_index = dstStream.index;
         adjustTS(pkt, srcStream.time_base, dstStream.time_base);
@@ -164,7 +167,7 @@ function parallelBalancer(params, streamType, numStreams) {
       if (nextPends) {
         nextPends.forEach(pend => pend.resolve());
         resolve({
-          value: nextPends.map(pend => { 
+          value: nextPends.map(pend => {
             return { name: `in${pend.streamIndex}:${tag}`, frames: [ pend.pkt ] }; }), 
           done: false });
         resolveGet = null;
@@ -191,20 +194,26 @@ function parallelBalancer(params, streamType, numStreams) {
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
     read() {
       (async () => {
+        const start = process.hrtime();
+        const reqTime = start[0] * 1e3 + start[1] / 1e6;
         const result = await pullSet();
         if (result.done)
           this.push(null);
-        else
+        else {
+          result.value.timings = result.value[0].frames[0].timings;
+          result.value.timings[params.name] = { reqTime: reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
           this.push(result.value);
+        }
       })();
     },
   });
 
   readStream.pushPkts = (packets, stream, streamIndex, final = false) => {
-    if (packets.length) {
-      return packets.reduce(async (promise, pkt) => {
+    if (packets && packets.frames.length) {
+      return packets.frames.reduce(async (promise, pkt) => {
         await promise;
         const ts = pkt.pts * stream.time_base[0] / stream.time_base[1];
+        pkt.timings = packets.timings;
         return pushPkt(pkt, streamIndex, ts);
       }, Promise.resolve());
     } else if (final) {
@@ -245,16 +254,20 @@ function teeBalancer(params, numStreams) {
       highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
       read() {
         (async () => {
+          const start = process.hrtime();
+          const reqTime = start[0] * 1e3 + start[1] / 1e6;
           const result = await pullFrame(s);
           if (result.done)
             this.push(null);
-          else
+          else {
+            result.value.timings[params.name] = { reqTime: reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
             this.push(result.value);
+          }
         })();
       },
     }));
 
-  readStreams.pushFrames = async frames => {
+  readStreams.pushFrames = frames => {
     return new Promise(resolve => {
       pending.forEach((p, index) => {
         if (frames.length)
@@ -265,9 +278,10 @@ function teeBalancer(params, numStreams) {
 
       pending.forEach(p => {
         if (p.resolve) {
-          if (p.frames)
+          if (p.frames) {
+            p.frames.timings = frames.timings;
             p.resolve({ value: p.frames, done: false });
-          else if (p.final)
+          } else if (p.final)
             p.resolve({ done: true });
         }
         Object.assign(p, { frames: null, resolve: null });
@@ -284,23 +298,81 @@ function transformStream(params, processFn, flushFn, reject) {
     objectMode: true,
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
     transform(val, encoding, cb) {
-      (async () => cb(null, await processFn(val)))().catch(cb);
+      (async () => {
+        const start = process.hrtime();
+        const reqTime = start[0] * 1e3 + start[1] / 1e6;
+        const result = await processFn(val);
+        result.timings = val.timings;
+        if (result.timings)
+          result.timings[params.name] = { reqTime: reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
+        cb(null, result);
+      })().catch(cb);
     },
     flush(cb) {
-      (async () => cb(null, flushFn ? await flushFn() : null))().catch(cb);
+      (async () => {
+        const result = flushFn ? await flushFn() : null;
+        if (result) result.timings = {};
+        cb(null, result);
+      })().catch(cb);
     }
   }).on('error', err => reject(err));
 }
+
+const calcStats = (arr, elem, prop) => {
+  const mean = arr.reduce((acc, cur) => cur[elem] ? acc + cur[elem][prop] : acc, 0) / arr.length;
+  const stdDev = Math.pow(arr.reduce((acc, cur) => cur[elem] ? acc + Math.pow(cur[elem][prop] - mean, 2) : acc, 0) / arr.length, 0.5);
+  const max = arr.reduce((acc, cur) => cur[elem] ? Math.max(cur[elem][prop], acc) : acc, 0);
+  const min = arr.reduce((acc, cur) => cur[elem] ? Math.min(cur[elem][prop], acc) : acc, Number.MAX_VALUE);
+  return { mean: mean, stdDev: stdDev, max: max, min: min };
+};
 
 function writeStream(params, processFn, finalFn, reject) {
   return new Writable({
     objectMode: true,
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
     write(val, encoding, cb) {
-      (async () => cb(null, await processFn(val)))().catch(cb);
+      (async () => {
+        const start = process.hrtime();
+        const reqTime = start[0] * 1e3 + start[1] / 1e6;
+        const result = await processFn(val);
+        if ('mux' === params.name) {
+          const pktTimings = val.timings;
+          pktTimings[params.name] = { reqTime: reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
+          if (doTimings)
+            timings.push(pktTimings);
+        }
+        cb(null, result);
+      })().catch(cb);
     },
     final(cb) {
-      (async () => cb(null, finalFn ? await finalFn() : null))().catch(cb);
+      (async () => {
+        const result = finalFn ? await finalFn() : null;
+        if (doTimings && ('mux' === params.name)) {
+          const elapsedStats = {};
+          Object.keys(timings[0]).forEach(k => elapsedStats[k] = calcStats(timings.slice(10, -10), k, 'elapsed'));
+          console.log('elapsed:');
+          console.table(elapsedStats);
+
+          const absArr = timings.map(t => {
+            const absDelays = {};
+            const keys = Object.keys(t);
+            keys.forEach((k, i) => absDelays[k] = { reqDelta: i > 0 ? t[k].reqTime - t[keys[i-1]].reqTime : 0 });
+            return absDelays;
+          });
+          const absStats = {};
+          Object.keys(absArr[0]).forEach(k => absStats[k] = calcStats(absArr.slice(10, -10), k, 'reqDelta'));
+          console.log('request time delta:');
+          console.table(absStats);
+
+          const totalsArr = timings.map(t => { 
+            const total = (t.mux && t.read) ? t.mux.reqTime - t.read.reqTime + t.mux.elapsed : 0;
+            return { total: { total: total }};
+          });
+          console.log('total time:');
+          console.table(calcStats(totalsArr.slice(10, -10), 'total', 'total'));
+        }
+        cb(null, result);
+      })().catch(cb);
     }
   }).on('error', err => reject(err));
 }
@@ -320,13 +392,17 @@ function readStream(params, demuxer, ms, index) {
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
     read() {
       (async () => {
+        const start = process.hrtime();
+        const reqTime = start[0] * 1e3 + start[1] / 1e6;
         const packet = await getPacket();
-        if (packet && (packet.pts < end_pts))
+        if (packet && (packet.pts < end_pts)) {
+          packet.timings = {};
+          packet.timings.read = { reqTime: reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
           this.push(packet);
-        else
+        } else
           this.push(null);
       })();
-    },
+    }
   });
 }
 
@@ -348,9 +424,11 @@ function demuxerStream(params) {
   const stream = createBeamWritableStream(params, governor);
   stream.on('finish', () => governor.finish());
   stream.on('error', console.error);
-  stream.demuxer = () =>
+  stream.demuxer = options => {
+    options.governor = governor;
     // delay initialisation of demuxer until stream has been written to - avoids lock-up
-    new Promise(resolve => setTimeout(async () => resolve(await beamcoder.demuxer(governor)), 20));
+    return new Promise(resolve => setTimeout(async () => resolve(await beamcoder.demuxer(options)), 20));
+  };
   return stream;
 }
 
@@ -386,15 +464,29 @@ async function makeSources(params) {
   if (!params.video) params.video = [];
   if (!params.audio) params.audio = [];
 
-  params.video.forEach(p => p.sources.forEach(src => src.format = beamcoder.demuxer(src.url)));
-  params.audio.forEach(p => p.sources.forEach(src => src.format = beamcoder.demuxer(src.url)));
+  params.video.forEach(p => p.sources.forEach(src => {
+    if (src.input_stream) {
+      const demuxerStream = beamcoder.demuxerStream({ highwaterMark: 1024 });
+      src.input_stream.pipe(demuxerStream);
+      src.format = demuxerStream.demuxer({ iformat: src.iformat, options: src.options });
+    } else
+      src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options });
+  }));
+  params.audio.forEach(p => p.sources.forEach(src => {
+    if (src.input_stream) {
+      const demuxerStream = beamcoder.demuxerStream({ highwaterMark: 1024 });
+      src.input_stream.pipe(demuxerStream);
+      src.format = demuxerStream.demuxer({ iformat: src.iformat, options: src.options });
+    } else
+      src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options });
+  }));
 
   await params.video.reduce(async (promise, p) => {
     await promise;
     return p.sources.reduce(async (promise, src) => {
       await promise;
       src.format = await src.format;
-      if (src.ms)
+      if (src.ms && !src.input_stream)
         src.format.seek({ time: src.ms.start });
       return src.format;
     }, Promise.resolve());
@@ -404,7 +496,7 @@ async function makeSources(params) {
     return p.sources.reduce(async (promise, src) => {
       await promise;
       src.format = await src.format;
-      if (src.ms)
+      if (src.ms && !src.input_stream)
         src.format.seek({ time: src.ms.start });
       return src.format;
     }, Promise.resolve());
@@ -422,37 +514,37 @@ function runStreams(streamType, sources, filterer, streams, mux, muxBalancer) {
       return resolve();
 
     const timeBaseStream = sources[0].format.streams[sources[0].streamIndex];
-    const filterBalancer = parallelBalancer({ highWaterMark : 1 }, streamType, sources.length);
+    const filterBalancer = parallelBalancer({ name: 'filterBalance', highWaterMark : 1 }, streamType, sources.length);
 
     sources.forEach((src, srcIndex) => {
-      const decStream = transformStream({ highWaterMark : 1 },
+      const decStream = transformStream({ name: 'decode', highWaterMark : 1 },
         pkts => src.decoder.decode(pkts), () => src.decoder.flush(), reject);
-      const filterSource = writeStream({ highWaterMark : 1 },
-        pkts => filterBalancer.pushPkts(pkts.frames, src.format.streams[src.streamIndex], srcIndex),
-        () => filterBalancer.pushPkts([], src.format.streams[src.streamIndex], srcIndex, true), reject);
+      const filterSource = writeStream({ name: 'filterSource', highWaterMark : 1 },
+        pkts => filterBalancer.pushPkts(pkts, src.format.streams[src.streamIndex], srcIndex),
+        () => filterBalancer.pushPkts(null, src.format.streams[src.streamIndex], srcIndex, true), reject);
 
       src.stream.pipe(decStream).pipe(filterSource);
     });
 
-    const streamTee = teeBalancer({ highWaterMark : 1 }, streams.length);
-    const filtStream = transformStream({ highWaterMark : 1 }, frms => {
+    const streamTee = teeBalancer({ name: 'streamTee', highWaterMark : 1 }, streams.length);
+    const filtStream = transformStream({ name: 'filter', highWaterMark : 1 }, frms => {
       if (filterer.cb) filterer.cb(frms[0].frames[0].pts);
       return filterer.filter(frms);
     }, () => {}, reject);
-    const streamSource = writeStream({ highWaterMark : 1 },
+    const streamSource = writeStream({ name: 'streamSource', highWaterMark : 1 },
       frms => streamTee.pushFrames(frms), () => streamTee.pushFrames([], true), reject);
 
     filterBalancer.pipe(filtStream).pipe(streamSource);
 
     streams.forEach((str, i) => {
       const dicer = new frameDicer(str.encoder, 'audio' === streamType);
-      const diceStream = transformStream({ highWaterMark : 1 },
+      const diceStream = transformStream({ name: 'dice', highWaterMark : 1 },
         frms => dicer.dice(frms), () => dicer.dice([], true), reject);
-      const encStream = transformStream({ highWaterMark : 1 },
+      const encStream = transformStream({ name: 'encode', highWaterMark : 1 },
         frms => str.encoder.encode(frms), () => str.encoder.flush(), reject);
-      const muxStream = writeStream({ highWaterMark : 1 },
-        pkts => muxBalancer.writePkts(pkts.packets, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts)),
-        () => muxBalancer.writePkts([], timeBaseStream, str.stream, pkts => mux.writeFrame(pkts), true), reject);
+      const muxStream = writeStream({ name: 'mux', highWaterMark : 1 },
+        pkts => muxBalancer.writePkts(pkts, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts)),
+        () => muxBalancer.writePkts(null, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts), true), reject);
       muxStream.on('finish', resolve);
 
       streamTee[i].pipe(diceStream).pipe(encStream).pipe(muxStream);
@@ -577,10 +669,11 @@ async function makeStreams(params) {
 
   return {
     run: async () => {
-      await mux.openIO(params.out.url ? {
-        url: params.out.url
-      } : {});
-      await mux.writeHeader();
+      await mux.openIO({
+        url: params.out.url ? params.out.url : '',
+        flags: params.out.flags ? params.out.flags : {}
+      });
+      await mux.writeHeader({ options: params.out.options ? params.out.options : {} });
 
       const muxBalancer = new serialBalancer(mux.streams.length);
       const muxStreamPromises = [];
