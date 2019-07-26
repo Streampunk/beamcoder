@@ -434,17 +434,41 @@ Beam coder offers a [Node.js Writable stream](https://nodejs.org/docs/latest-v10
 
 To create a Writable stream interface with for example a 64kbyte threshold, use:
 
-    let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
+```javascript
+let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
+```
 
 This stream can then have data written to it or piped from a source stream
 
-    fs.createReadStream('file:media/bbb_1080p_c.ts').pipe(demuxerStream);
+```javascript
+fs.createReadStream('file:media/bbb_1080p_c.ts').pipe(demuxerStream);
+```
 
 Once the source data is connected to the stream, the demuxer can be created:
 
-    let demuxer = await demuxerStream.demuxer();
+```javascript
+let demuxer = await demuxerStream.demuxer();
+```
 
 This function will return a promise that will resolve when it has determined sufficient format details by consuming data from the source. The promise will wait indefinitely until sufficient source data has been provided.
+
+If the stream source is not a file that provides format information then further parameters are required on the creation of the demuxer. In the simple example below the demuxer is created to expect a raw stream of 16-bit 2-channel audio samples from a stream source `inStream`.
+
+```javascript
+let demuxers = beamcoder.demuxers();
+let iformat = demuxers[Object.keys(demuxers).find(k => demuxers[k].name === 's16le')];
+
+let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 1024 });
+inStream.pipe(demuxerStream);
+let demuxer = demuxerStream.demuxer({
+  iformat: iformat,
+  options: {
+    sample_rate: 48000,
+    channels: 2,
+    packetsize: 1024
+  }
+});
+```
 
 ### Decoding
 
@@ -1016,17 +1040,36 @@ Beam coder offers a [Node.js Readable stream](https://nodejs.org/docs/latest-v10
 
 To create a Readable stream interface with for example a 64kbyte threshold, use:
 
-    let muxerStream = beamcoder.muxerStream({ highwaterMark: 65536 });
+```javascript
+let muxerStream = beamcoder.muxerStream({ highwaterMark: 65536 });
+```
 
 This stream can then have data read or piped from it:
 
-    muxerStream.pipe(fs.createWriteStream('test.wav'));
+```javascript
+muxerStream.pipe(fs.createWriteStream('test.wav'));
+```
 
 Once the stream is initialised, the muxer can be created and used as above:
 
-    let muxer = muxerStream.muxer({ format_name: 'wav' });
+```javascript
+let muxer = muxerStream.muxer({ format_name: 'wav' });
+```
 
 The muxer async methods such as writeFrame return a promise that will resolve when the Readable stream has bufferred the packet. If the Readable stream is not flowing or the buffer is full the promise will wait indefinitely.
+
+If the stream destination is not a file then further parameters may be required on the creation of the muxer. In the simple example below the muxer is created to produce a raw stream of 16-bit 2-channel audio samples for a stream destination `outStream`.
+
+```javascript
+let muxerStream = beamcoder.muxerStream({ highwaterMark: 1024 });
+muxerStream.pipe(outStream);
+
+let muxer = muxerStream.muxer({ format_name: 's16le' });
+await muxer.openIO({ url: '', flags: { DIRECT: true } });
+await muxer.writeHeader({
+  options: { flags: { AVFMT_NOFILE: true }, fflags: 'flush_packets' }
+});
+```
 
 ### Codec parameters
 
@@ -1122,8 +1165,9 @@ The parameters are split into video and audio arrays each with sources, a filter
 To start processing, simply pass the params object to the source creator, which will make the demuxers and source streams, then to the stream creator, which makes the output:
 
 ```javascript
-await makeSources(params);
-await makeStreams(params);
+await beamcoder.makeSources(params);
+let beamStreams = await beamcoder.makeStreams(params);
+await beamStreams.run();
 ```
 The processing will begin immediately and will continue until the time specification has been completed or the end is reached of any of the sources.
 
