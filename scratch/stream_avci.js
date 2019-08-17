@@ -21,7 +21,7 @@
 
 const beamcoder = require('../index.js');
 const fs = require('fs');
-const util = require('util');
+// const util = require('util');
 
 async function run() {
   // let demuxer = await createDemuxer('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
@@ -71,9 +71,9 @@ async function run() {
   // scaleFilter.priv = { width: 1000 };
   // console.log(util.inspect(scaleFilter, {depth: null}));
 
-  const overlayFilter = filterer.graph.filters.find(f => 'overlay' === f.filter.name);
-  overlayFilter.priv = { x: 100, y: 100 };
-  console.log(util.inspect(overlayFilter, {depth: null}));
+  // const overlayFilter = filterer.graph.filters.find(f => 'overlay' === f.filter.name);
+  // overlayFilter.priv = { x: 100, y: 100 };
+  // console.log(util.inspect(overlayFilter, {depth: null}));
 
   let encParams = {
     name: 'libx264',
@@ -108,8 +108,8 @@ async function run() {
       let frames = await decoder.decode(packet);
       // console.log(frames);
       let filtFrames = await filterer.filter([
-        { name: 'in0:v', frames: frames },
-        { name: 'in1:v', frames: frames },
+        { name: 'in0:v', frames: frames.frames },
+        { name: 'in1:v', frames: frames.frames },
       ]);
       // console.log(filtFrames);
 

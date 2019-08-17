@@ -20,6 +20,7 @@
 */
 
 const beamcoder = require('bindings')('beamcoder');
+const beamstreams = require('./beamstreams.js');
 
 // Provide useful debug on segfault-related crash
 const SegfaultHandler = require('segfault-handler');
@@ -33,56 +34,10 @@ https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
 
 console.log(splash);
 
-const { Writable, Readable } = require('stream');
+beamcoder.demuxerStream = beamstreams.demuxerStream;
+beamcoder.muxerStream = beamstreams.muxerStream;
 
-function createBeamWritableStream(params, governor) {
-  const beamStream = new Writable({
-    highWaterMark: params.highwaterMark || 16384,
-    write: async (chunk, encoding, cb) => {
-      await governor.write(chunk);
-      cb();
-    }
-  });
-  return beamStream;
-}
-
-function demuxerStream(params) {
-  const governor = new beamcoder.governor({});
-  const stream = createBeamWritableStream(params, governor);
-  stream.on('close', () => governor.finish());
-  stream.on('finish', () => governor.finish());
-  stream.on('error', console.error);
-  stream.demuxer = () => beamcoder.demuxer(governor);
-  return stream;
-}
-
-function createBeamReadableStream(params, governor) {
-  const beamStream = new Readable({
-    highWaterMark: params.highwaterMark || 16384,
-    read: async size => {
-      const chunk = await governor.read(size);
-      if (0 === chunk.length)
-        beamStream.push(null);
-      else
-        beamStream.push(chunk);
-    }
-  });
-  return beamStream;
-}
-
-function muxerStream(params) {
-  const governor = new beamcoder.governor({});
-  const stream = createBeamReadableStream(params, governor);
-  stream.on('close', () => governor.finish());
-  stream.on('error', console.error);
-  stream.muxer = options => {
-    options.governor = governor;
-    return beamcoder.muxer(options);
-  };
-  return stream;
-}
-
-beamcoder.demuxerStream = demuxerStream;
-beamcoder.muxerStream = muxerStream;
+beamcoder.makeSources = beamstreams.makeSources;
+beamcoder.makeStreams = beamstreams.makeStreams;
 
 module.exports = beamcoder;

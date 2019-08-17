@@ -587,6 +587,12 @@ void writeFrameComplete(napi_env env, napi_status asyncStatus, void* data) {
   }
   REJECT_STATUS;
 
+  // tidy up adaptor chunks if required
+  if (c->adaptor) {
+    c->status = c->adaptor->finaliseBufs(env);
+    REJECT_STATUS;
+  }
+
   c->status = napi_get_undefined(env, &result);
   REJECT_STATUS;
 
@@ -598,7 +604,7 @@ void writeFrameComplete(napi_env env, napi_status asyncStatus, void* data) {
 }
 
 napi_value writeFrame(napi_env env, napi_callback_info info) {
-  napi_value promise, formatJS, formatExt, interleavedJS, resourceName, options, prop;
+  napi_value promise, formatJS, formatExt, adaptorExt, interleavedJS, resourceName, options, prop;
   napi_valuetype type;
   bool isArray;
   bool hasOptions = false;
@@ -617,6 +623,11 @@ napi_value writeFrame(napi_env env, napi_callback_info info) {
   c->status = napi_get_named_property(env, formatJS, "_formatContext", &formatExt);
   REJECT_RETURN;
   c->status = napi_get_value_external(env, formatExt, (void**) &c->format);
+  REJECT_RETURN;
+
+  c->status = napi_get_named_property(env, formatJS, "_adaptor", &adaptorExt);
+  REJECT_RETURN;
+  c->status = napi_get_value_external(env, adaptorExt, (void**)&c->adaptor);
   REJECT_RETURN;
 
   c->status = napi_get_named_property(env, formatJS, "interleaved", &interleavedJS);

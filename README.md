@@ -55,7 +55,7 @@ If you are looking to write your own frame-by-frame transcoder, media mangler or
 
 Does beam coder support X, Y or Z protocol / format / codec / file type / stream type / hardware etc.? If FFmpeg supports it, its possible and likely. Beam coder is self-describing at runtime, allowing exploration of what should be possible. However, you have to start somewhere, and the developers have been testing with the codecs and formats they are familiar with. Issues are expected so please raise any problems or requests for additional features as git hub issues. Even better, raise a pull request to fix a problem or add in missing features. Automated testing will be extended in due course, memory management improved, more examples added and hardware accelerated codecs added.
 
-Beam coder will be a cross-platform module for Windows, Mac and Linux. In this early release, only Windows and Linux are available. The Mac platform will follow shortly. The release version of FFmpeg that beam coder links with is currently 4.1.
+Beam coder will be a cross-platform module for Windows, Mac and Linux. The release version of FFmpeg that beam coder links with is currently 4.1.
 
 ### Aerostat
 
@@ -434,17 +434,41 @@ Beam coder offers a [Node.js Writable stream](https://nodejs.org/docs/latest-v10
 
 To create a Writable stream interface with for example a 64kbyte threshold, use:
 
-    let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
+```javascript
+let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
+```
 
 This stream can then have data written to it or piped from a source stream
 
-    fs.createReadStream('file:media/bbb_1080p_c.ts').pipe(demuxerStream);
+```javascript
+fs.createReadStream('file:media/bbb_1080p_c.ts').pipe(demuxerStream);
+```
 
 Once the source data is connected to the stream, the demuxer can be created:
 
-    let demuxer = await demuxerStream.demuxer();
+```javascript
+let demuxer = await demuxerStream.demuxer();
+```
 
 This function will return a promise that will resolve when it has determined sufficient format details by consuming data from the source. The promise will wait indefinitely until sufficient source data has been provided.
+
+If the stream source is not a file that provides format information then further parameters are required on the creation of the demuxer. In the simple example below the demuxer is created to expect a raw stream of 16-bit 2-channel audio samples from a stream source `inStream`.
+
+```javascript
+let demuxers = beamcoder.demuxers();
+let iformat = demuxers[Object.keys(demuxers).find(k => demuxers[k].name === 's16le')];
+
+let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 1024 });
+inStream.pipe(demuxerStream);
+let demuxer = demuxerStream.demuxer({
+  iformat: iformat,
+  options: {
+    sample_rate: 48000,
+    channels: 2,
+    packetsize: 1024
+  }
+});
+```
 
 ### Decoding
 
@@ -1016,17 +1040,36 @@ Beam coder offers a [Node.js Readable stream](https://nodejs.org/docs/latest-v10
 
 To create a Readable stream interface with for example a 64kbyte threshold, use:
 
-    let muxerStream = beamcoder.muxerStream({ highwaterMark: 65536 });
+```javascript
+let muxerStream = beamcoder.muxerStream({ highwaterMark: 65536 });
+```
 
 This stream can then have data read or piped from it:
 
-    muxerStream.pipe(fs.createWriteStream('test.wav'));
+```javascript
+muxerStream.pipe(fs.createWriteStream('test.wav'));
+```
 
 Once the stream is initialised, the muxer can be created and used as above:
 
-    let muxer = muxerStream.muxer({ format_name: 'wav' });
+```javascript
+let muxer = muxerStream.muxer({ format_name: 'wav' });
+```
 
 The muxer async methods such as writeFrame return a promise that will resolve when the Readable stream has bufferred the packet. If the Readable stream is not flowing or the buffer is full the promise will wait indefinitely.
+
+If the stream destination is not a file then further parameters may be required on the creation of the muxer. In the simple example below the muxer is created to produce a raw stream of 16-bit 2-channel audio samples for a stream destination `outStream`.
+
+```javascript
+let muxerStream = beamcoder.muxerStream({ highwaterMark: 1024 });
+muxerStream.pipe(outStream);
+
+let muxer = muxerStream.muxer({ format_name: 's16le' });
+await muxer.openIO({ url: '', flags: { DIRECT: true } });
+await muxer.writeHeader({
+  options: { flags: { AVFMT_NOFILE: true }, fflags: 'flush_packets' }
+});
+```
 
 ### Codec parameters
 
@@ -1064,13 +1107,79 @@ let stream = muxer.newStream({ // ... to set up a new stream in the muxer
 
 Care must be taken not to change codec parameters by side effects, for example using the same codec parameters in a transcoder where the decoder parameters are used to set up the encoder without copying them (extracting them) first. Modifications to the shared codec parameters object could effect both the decoder and encoder.
 
+### Reactive streams
+
+In order to facilitate more complex decoding, filtering, encoding and muxing operations an experimental [Reactive Streams](https://en.wikipedia.org/wiki/Reactive_Streams) implementation of a configurable pipeline of FFmpeg components is available.
+
+The pipeline supports multiple sources, each with a demuxer and decoder, feeding into a filter that will process them to one or more outputs that are each encoded and sent to a muxer stream. Each FFmpeg processing element works asynchronously while the pipeline keeps all the input, processing and output streams in step as required according to their timestamps. Small buffers are maintained between each processing element and back pressure is used to ensure that resources are kept reasonably constrained.
+
+A parameters object is set up to describe the sources, filters and mux streams that are desired and passed to a function that will create the necessary components, connect them together and start streaming. Each sources object maps to filter inputs in array order and the filter specification must use input names in the form `in0:v` where the number increments according to the sources array ordinal and the 'v' refers to video and is replaced by 'a' for audio filters. Similarly each streams object expects to receive an output from the filter with a name in the form `out0:v`.
+
+Below is an example parameters object describing a simple transformation:
+
+```javascript
+const urls = [ 'file:../../Media/big_buck_bunny_1080p_h264.mov' ];
+const spec = { start: 0, end: 48 };
+
+const params = {
+  video: [
+    {
+      sources: [
+        { url: urls[0], ms: spec, streamIndex: 0 }
+      ],
+      filterSpec: '[in0:v] scale=1280:720, colorspace=all=bt709 [out0:v]',
+      streams: [
+        { name: 'h264', time_base: [1, 90000], encoderName: 'libx264',
+          codecpar: {
+            width: 1280, height: 720, format: 'yuv422p', color_space: 'bt709',
+            sample_aspect_ratio: [1, 1]
+          }
+        }
+      ]
+    }
+  ],
+  audio: [
+    {
+      sources: [
+        { url: urls[0], ms: spec, streamIndex: 2 }
+      ],
+      filterSpec: '[in0:a] aformat=sample_fmts=fltp:channel_layouts=mono [out0:a]',
+      streams: [
+        { name: 'aac', time_base: [1, 90000], encoderName: 'aac',
+          codecpar: {
+            sample_rate: 48000, format: 'fltp', frame_size: 1024,
+            channels: 1, channel_layout: 'mono'
+          }
+        }
+      ]
+    },
+  ],
+  out: {
+    formatName: 'mp4',
+    url: 'file:temp.mp4'
+  }
+};
+```
+The parameters are split into video and audio arrays each with sources, a filter specification string and output streams. A optional time specification object is also provided so that a section of the source can be extracted.
+
+To start processing, simply pass the params object to the source creator, which will make the demuxers and source streams, then to the stream creator, which makes the output:
+
+```javascript
+await beamcoder.makeSources(params);
+let beamStreams = await beamcoder.makeStreams(params);
+await beamStreams.run();
+```
+The processing will begin immediately and will continue until the time specification has been completed or the end is reached of any of the sources.
+
+The `UV_THREADPOOL_SIZE` environment variable (see above) can be used to control the number of asynchronous processes that are progressing at once and hence the impact on the CPU load in the computer that is running the program.
+
 ## Status, support and further development
 
 Although the architecture of the aerostat beam coder is such that it could be used at scale in production environments, development is not yet complete. In its current state, it is recommended that this software is used in development environments, primarily for building prototypes. Future development will make this more appropriate for production use.
 
 The developers of beam coder aimed to find a balance between being a faithful mapping of FFmpeg to Javascript while creating a Javascript API that is useful and easy to use. This may mean that certain features of FFmpeg are not yet exposed or choices have been made that lead to sub-optimal performance. Areas that are known to need further development and optimisation include:
 
-* imporved shared memory management between Javascript and C, specifically adding support for pools;
+* improved shared memory management between Javascript and C, specifically adding support for pools;
 * hardware acceleration,
 * improving support for the `codec_tag` property.
 

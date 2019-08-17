@@ -29,8 +29,13 @@ struct readCarrier : carrier {
   void *readBuf = nullptr;
 };
 
-void readFinaliser(napi_env env, void* data, void* hint) {
+void readFinalizer(napi_env env, void* data, void* hint) {
   free(data);
+
+  int64_t externalMemory;
+  int32_t len = (int32_t)(uint64_t)hint;
+  if (BEAMCODER_SUCCESS != napi_adjust_external_memory(env, -len, &externalMemory))
+    printf("Error finalising governor read buffer %p, len %d\n", data, len);
 }
 
 void readExecute(napi_env env, void *data) {
@@ -43,13 +48,18 @@ void readExecute(napi_env env, void *data) {
 void readComplete(napi_env env, napi_status asyncStatus, void *data) {
   readCarrier* c = (readCarrier*) data;
   napi_value result;
+  int64_t externalMemory;
+
   if (asyncStatus != napi_ok) {
     c->status = asyncStatus;
     c->errorMsg = "governor read failed to complete.";
   }
   REJECT_STATUS;
 
-  c->status = napi_create_external_buffer(env, c->readLen, c->readBuf, readFinaliser, nullptr, &result);
+  c->status = napi_create_external_buffer(env, c->readLen, c->readBuf, readFinalizer, (void*)(uint64_t)c->readLen, &result);
+  REJECT_STATUS;
+
+  c->status = napi_adjust_external_memory(env, c->readLen, &externalMemory);
   REJECT_STATUS;
 
   napi_status status;
@@ -231,11 +241,22 @@ napi_value governor(napi_env env, napi_callback_info info) {
     return nullptr;
   }
 
+  napi_value highWaterMarkVal;
+  int32_t highWaterMark = 3;
+  status = napi_get_named_property(env, params, "highWaterMark", &highWaterMarkVal);
+  CHECK_STATUS;
+  status = napi_typeof(env, highWaterMarkVal, &t);
+  CHECK_STATUS;
+  if (t == napi_number) {
+    status = napi_get_value_int32(env, highWaterMarkVal, &highWaterMark);
+    CHECK_STATUS;
+  }
+
   napi_value governorObj;
   status = napi_create_object(env, &governorObj);
   CHECK_STATUS;
 
-  Adaptor *adaptor = new Adaptor(3);
+  Adaptor *adaptor = new Adaptor(highWaterMark);
 
   napi_value adaptorValue;
   status = napi_create_external(env, adaptor, finalizeAdaptor, nullptr, &adaptorValue);

@@ -3639,6 +3639,7 @@ napi_value setCodecCtxChanLayout(napi_env env, napi_callback_info info) {
   free(name);
   if (chanLay != 0) {
     codec->channel_layout = chanLay;
+    codec->channels = av_get_channel_layout_nb_channels(chanLay);
   } else {
     NAPI_THROW_ERROR("Channel layout name is not recognized. Set 'null' for '0 channels'.");
   }

@@ -33,52 +33,131 @@ extern "C" {
   #include <libavfilter/buffersrc.h>
 }
 
-napi_status setFilterOptions(napi_env env, napi_value value, AVFilterContext *filterContext, napi_value* result) {
+napi_status toFilterPrivData(napi_env env, napi_value params, AVFilterContext *filterContext) {
   napi_status status;
-  napi_value names, element, valueStr;
+  napi_value names, element, subel;
+  napi_valuetype type, subtype;
+  bool isArray, flag;
+  double dValue;
   uint32_t uThirtwo;
+  char* sValue;
+  char* strProp;
+  size_t sLen;
   const AVOption* option;
+  int64_t iValue;
   int ret;
-
+  AVRational qValue = {0,0};
   AVFilterGraph *graph = filterContext->graph;
+  void* priv_data = filterContext->priv;
 
-  status = napi_get_property_names(env, value, &names);
-  PASS_STATUS;
-  status = napi_get_array_length(env, names, &uThirtwo);
-  PASS_STATUS;
-  for ( uint32_t x = 0 ; x < uThirtwo ; x++ ) {
-    status = napi_get_element(env, names, x, &element);
-    PASS_STATUS;
-    std::string optionKey;
-    size_t keyLen;
-    status = napi_get_value_string_utf8(env, element, nullptr, 0, &keyLen);
-    PASS_STATUS;
-    optionKey.resize(keyLen);
-    status = napi_get_value_string_utf8(env, element, (char *)optionKey.data(), keyLen+1, nullptr);
-    PASS_STATUS;
-    const char *keyStr = optionKey.c_str();
-    option = av_opt_find(filterContext->priv, keyStr, nullptr, 0, 0);
-    if (option != nullptr) {
-      status = napi_get_named_property(env, value, keyStr, &element);
-      PASS_STATUS;
-      status = napi_coerce_to_string(env, element, &valueStr);
-      PASS_STATUS;
-      std::string propStr;
-      size_t strLen;
-      status = napi_get_value_string_utf8(env, valueStr, nullptr, 0, &strLen);
-      PASS_STATUS;
-      propStr.resize(strLen);
-      status = napi_get_value_string_utf8(env, valueStr, (char *)propStr.data(), strLen+1, nullptr);
-      PASS_STATUS;
-      ret = avfilter_graph_send_command (graph, filterContext->name, keyStr, propStr.c_str(), nullptr, 0, 0);
-      if (ret < 0) printf("DEBUG: Unable to set option %s with value %s.\n", keyStr, propStr.c_str());
-    } else {
-      printf("DEBUG: Filter option %s not found.\n", keyStr);
-    }
+  if (priv_data == nullptr) {
+    return napi_invalid_arg;
   }
 
-  status = napi_get_undefined(env, result);
+  status = napi_typeof(env, params, &type);
   PASS_STATUS;
+  status = napi_is_array(env, params, &isArray);
+  PASS_STATUS;
+  if ((isArray == false) && (type == napi_object)) {
+    status = napi_get_property_names(env, params, &names);
+    PASS_STATUS;
+    status = napi_get_array_length(env, names, &uThirtwo);
+    PASS_STATUS;
+    for ( uint32_t x = 0 ; x < uThirtwo ; x++ ) {
+      status = napi_get_element(env, names, x, &element);
+      PASS_STATUS;
+      status = napi_get_value_string_utf8(env, element, nullptr, 0, &sLen);
+      PASS_STATUS;
+      sValue = (char*) malloc(sizeof(char) * (sLen + 1));
+      status = napi_get_value_string_utf8(env, element, sValue, sLen + 1, &sLen);
+      PASS_STATUS;
+      option = av_opt_find(priv_data, sValue, nullptr, 0, 0);
+      if (option != nullptr) {
+        if (option->flags & AV_OPT_FLAG_READONLY) { continue; }
+        status = napi_get_named_property(env, params, sValue, &element);
+        PASS_STATUS;
+        status = napi_typeof(env, element, &type);
+        PASS_STATUS;
+        switch (type) {
+          case napi_boolean:
+            status = napi_get_value_bool(env, element, &flag);
+            PASS_STATUS;
+            ret = av_opt_set_int(priv_data, sValue, flag, 0);
+            if (ret < 0) printf("DEBUG: Unable to set %s with a boolean value.\n", sValue);
+            break;
+          case napi_number:
+            if ((option->type == AV_OPT_TYPE_DOUBLE) ||
+                (option->type == AV_OPT_TYPE_FLOAT)) {
+              status = napi_get_value_double(env, element, &dValue);
+              PASS_STATUS;
+              ret = av_opt_set_double(priv_data, sValue, dValue, 0);
+              if (ret < 0) printf("DEBUG: Unable to set %s with a double value %f.\n", sValue, dValue);
+              break;
+            }
+            status = napi_get_value_int64(env, element, &iValue);
+            PASS_STATUS;
+            ret = av_opt_set_int(priv_data, sValue, iValue, 0);
+            if (ret < 0) printf("DEBUG: Unable to set %s with an integer value %" PRId64 ": %s.\n",
+              sValue, iValue, avErrorMsg("", ret));
+            break;
+          case napi_string:
+            status = napi_get_value_string_utf8(env, element, nullptr, 0, &sLen);
+            PASS_STATUS;
+            strProp = (char*) malloc(sizeof(char) * (sLen + 1));
+            PASS_STATUS;
+            status = napi_get_value_string_utf8(env, element, strProp, sLen + 1, &sLen);
+            PASS_STATUS;
+            ret = avfilter_graph_send_command (graph, filterContext->name, sValue, strProp, nullptr, 0, 0);
+            free(strProp);
+            if (ret < 0) printf("DEBUG: Unable to set %s with a string value %s.\n", sValue, strProp);
+            break;
+          case napi_object:
+            status = napi_is_array(env, element, &isArray);
+            PASS_STATUS;
+            if (isArray && (option->type == AV_OPT_TYPE_RATIONAL)) {
+              status = napi_get_element(env, element, 0, &subel);
+              PASS_STATUS;
+              status = napi_typeof(env, subel, &subtype);
+              PASS_STATUS;
+              if (subtype != napi_number) {
+                printf("DEBUG: Non-number value for rational numerator of property %s.\n", sValue);
+                break;
+              }
+              status = napi_get_value_int32(env, subel, &qValue.num);
+              PASS_STATUS;
+              status = napi_get_element(env, element, 1, &subel);
+              PASS_STATUS;
+              status = napi_typeof(env, subel, &subtype);
+              PASS_STATUS;
+              if (subtype != napi_number) {
+                printf("DEBUG: Non-number value for rational denominator of property %s.\n", sValue);
+                qValue.num = 0; qValue.den = 1;
+                break;
+              }
+              status = napi_get_value_int32(env, subel, &qValue.den);
+              PASS_STATUS;
+              ret = av_opt_set_q(priv_data, sValue, qValue, 0);
+              if (ret < 0) {
+                printf("DEBUG: Failed to set rational property %s.\n", sValue);
+              }
+              qValue.num = 0; qValue.den = 1;
+            } else {
+              printf("DEBUG: Non-array for non-rational property %s.\n", sValue);
+            }
+            break;
+          default:
+            printf("DEBUG: Failed to set a private data value %s\n", sValue);
+            break;
+        }
+      } else {
+        printf("DEBUG: Option %s not found.\n", sValue);
+      }
+      free(sValue);
+    }
+  } else {
+    return napi_invalid_arg;
+  }
+
   return napi_ok;
 }
 
@@ -126,7 +205,7 @@ napi_value setFilterCtxPrivData(napi_env env, napi_callback_info info) {
   status = napi_is_array(env, value, &isArray);
   CHECK_STATUS;
   if ((isArray == false) && (type == napi_object)) {
-    status = setFilterOptions(env, value, filterContext, &result);
+    status = toFilterPrivData(env, value, filterContext);
     CHECK_STATUS;
   } else {
     NAPI_THROW_ERROR("An object with key/value pairs is required to set private data.");
@@ -358,6 +437,20 @@ napi_value getLinkSAR(napi_env env, napi_callback_info info) {
   return pair;
 }
 
+napi_value getLinkChannelCount(napi_env env, napi_callback_info info) {
+  napi_status status;
+  AVFilterLink* filterLink;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterLink);
+  CHECK_STATUS;
+
+  napi_value channelCountVal;
+  int channelCount = av_get_channel_layout_nb_channels(filterLink->channel_layout);
+  status = napi_create_int32(env, channelCount, &channelCountVal);
+
+  return channelCountVal;
+}
+
 napi_value getLinkChannelLayout(napi_env env, napi_callback_info info) {
   napi_status status;
   AVFilterLink* filterLink;
@@ -454,6 +547,8 @@ napi_status fromAVFilterLink(napi_env env, const AVFilterLink* link, napi_value*
       (AVMEDIA_TYPE_VIDEO == link->type) ? napi_enumerable : napi_default, (void*)link },
     { "sample_aspect_ratio", nullptr, nullptr, getLinkSAR, nullptr, nullptr,
       (AVMEDIA_TYPE_VIDEO == link->type) ? napi_enumerable : napi_default, (void*)link },
+    { "channel_count", nullptr, nullptr, getLinkChannelCount, nullptr, nullptr,
+      (AVMEDIA_TYPE_AUDIO == link->type) ? napi_enumerable : napi_default, (void*)link },
     { "channel_layout", nullptr, nullptr, getLinkChannelLayout, nullptr, nullptr,
       (AVMEDIA_TYPE_AUDIO == link->type) ? napi_enumerable : napi_default, (void*)link },
     { "sample_rate", nullptr, nullptr, getLinkSampleRate, nullptr, nullptr,
@@ -461,7 +556,7 @@ napi_status fromAVFilterLink(napi_env env, const AVFilterLink* link, napi_value*
     { "format", nullptr, nullptr, getLinkFormat, nullptr, nullptr, napi_enumerable, (void*)link },
     { "time_base", nullptr, nullptr, getLinkTimeBase, nullptr, nullptr, napi_enumerable, (void*)link }
   };
-  status = napi_define_properties(env, *result, 12, desc);
+  status = napi_define_properties(env, *result, 13, desc);
   PASS_STATUS;
 
   return napi_ok;
@@ -911,10 +1006,16 @@ void filtererExecute(napi_env env, void* data) {
       }
       p = c->outParams[i].find("channel_layouts");
       if (p != c->outParams[i].end()) {
-        const uint64_t out_channel_layouts[] = { av_get_channel_layout(p->second.c_str()), 0 };
-        ret = av_opt_set_int_list(sinkCtx, "channel_layouts", out_channel_layouts, 0,
+        const int64_t out_channel_layout = av_get_channel_layout(p->second.c_str());
+        int out_channel_counts[] = { av_get_channel_layout_nb_channels(out_channel_layout), -1 };
+        ret = av_opt_set_int_list(sinkCtx, "channel_counts", out_channel_counts, -1,
                                   AV_OPT_SEARCH_CHILDREN);
-        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output sample format\n"); }
+        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output channel count\n"); }
+
+        const int64_t out_channel_layouts[] = { out_channel_layout, -1 };
+        ret = av_opt_set_int_list(sinkCtx, "channel_layouts", out_channel_layouts, -1,
+                                  AV_OPT_SEARCH_CHILDREN);
+        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output channel layout\n"); }
       }
     } else {
       auto p = c->outParams[i].find("pix_fmts");

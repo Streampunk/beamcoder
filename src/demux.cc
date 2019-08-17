@@ -52,7 +52,7 @@ void demuxerExecute(napi_env env, void* data) {
     c->format->pb = avio_ctx;
   }
 
-  if ((ret = avformat_open_input(&c->format, c->filename, nullptr, &c->options))) {
+  if ((ret = avformat_open_input(&c->format, c->filename, c->iformat, &c->options))) {
     c->status = BEAMCODER_ERROR_START;
     c->errorMsg = avErrorMsg("Problem opening input format: ", ret);
     return;
@@ -110,7 +110,7 @@ void demuxerComplete(napi_env env,  napi_status asyncStatus, void* data) {
 }
 
 napi_value demuxer(napi_env env, napi_callback_info info) {
-  napi_value resourceName, promise, value;
+  napi_value resourceName, promise, value, subValue;
   napi_valuetype type;
   size_t strLen;
   bool isArray;
@@ -142,17 +142,24 @@ napi_value demuxer(napi_env env, napi_callback_info info) {
     c->status = napi_get_value_string_utf8(env, args[0], (char *) c->filename, strLen + 1, &strLen);
     REJECT_RETURN;
   } else if ((isArray == false) && (type == napi_object)) {
-    napi_value adaptorValue;
-    c->status = napi_get_named_property(env, args[0], "_adaptor", &adaptorValue);
+    napi_value governorValue;
+    c->status = napi_get_named_property(env, args[0], "governor", &governorValue);
     REJECT_RETURN;
-    c->status = napi_typeof(env, adaptorValue, &type);
+    c->status = napi_typeof(env, governorValue, &type);
     REJECT_RETURN;
-    if (type == napi_external) {
-      c->status = napi_get_value_external(env, adaptorValue, (void**)&c->adaptor);
+    if (type == napi_object) {
+      napi_value adaptorValue;
+      c->status = napi_get_named_property(env, governorValue, "_adaptor", &adaptorValue);
       REJECT_RETURN;
-    } else if (type != napi_undefined) {
-      REJECT_ERROR_RETURN("Adaptor must be of external type when specified.",
-        BEAMCODER_INVALID_ARGS);
+      c->status = napi_typeof(env, adaptorValue, &type);
+      REJECT_RETURN;
+      if (type == napi_external) {
+        c->status = napi_get_value_external(env, adaptorValue, (void**)&c->adaptor);
+        REJECT_RETURN;
+      } else if (type != napi_undefined) {
+        REJECT_ERROR_RETURN("Adaptor must be of external type when specified.",
+          BEAMCODER_INVALID_ARGS);
+      }
     }
 
     c->status = napi_get_named_property(env, args[0], "url", &value);
@@ -165,6 +172,23 @@ napi_value demuxer(napi_env env, napi_callback_info info) {
       c->filename = (const char *) malloc((strLen + 1) * sizeof(char));
       c->status = napi_get_value_string_utf8(env, value, (char *) c->filename, strLen + 1, &strLen);
       REJECT_RETURN;
+    }
+
+    c->status = napi_get_named_property(env, args[0], "iformat", &value);
+    REJECT_RETURN;
+    c->status = napi_typeof(env, value, &type);
+    REJECT_RETURN;
+    c->status = napi_is_array(env, value, &isArray);
+    REJECT_RETURN;
+    if (!isArray && (type == napi_object)) {
+      c->status = napi_get_named_property(env, value, "_iformat", &subValue);
+      REJECT_RETURN;
+      c->status = napi_typeof(env, subValue, &type);
+      REJECT_RETURN;
+      if (type == napi_external) {
+        c->status = napi_get_value_external(env, subValue, (void**) &c->iformat);
+        REJECT_RETURN;
+      }
     }
 
     c->status = napi_get_named_property(env, args[0], "options", &value);

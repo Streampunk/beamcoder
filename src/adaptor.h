@@ -80,9 +80,9 @@ private:
 
 class Chunk {
 public:
-  Chunk(napi_ref bufRef, const void *buf, size_t bufLen)
-    : mBufRef(bufRef), mBuf(buf), mLen(bufLen) {}
-  ~Chunk() {}
+  Chunk(napi_ref bufRef, void *buf, size_t bufLen)
+    : mBufRef(bufRef), mBuf(buf), mLen(bufLen), mLocalAlloc(nullptr == bufRef) {}
+  ~Chunk() { if (mLocalAlloc) free(mBuf); }
 
   napi_ref buf_ref() const  { return mBufRef; }
   const void *buf() const  { return mBuf; }
@@ -90,14 +90,15 @@ public:
 
 private:
   const napi_ref mBufRef;
-  const void *mBuf;
+  void *mBuf;
   const size_t mLen;
+  const bool mLocalAlloc;
 };
 
 class Adaptor {
 public:
   Adaptor(uint32_t queueLen)
-    : mQueue(new Queue<Chunk *>(queueLen)), mCurChunk(nullptr), mChunkPos(0), m(), mBuf(4096) {}
+    : mQueue(new Queue<Chunk *>(queueLen)), mCurChunk(nullptr), mChunkPos(0), m(), mBuf(1024) {}
   ~Adaptor() {
     delete mQueue;
     std::unique_lock<std::mutex> lk(m);
@@ -110,7 +111,9 @@ public:
   }
 
   int write(const uint8_t *buf, int bufSize) {
-    mQueue->enqueue(new Chunk(nullptr, buf, bufSize));
+    uint8_t *qBuf = (uint8_t *)malloc(bufSize);
+    memcpy(qBuf, buf, bufSize);
+    mQueue->enqueue(new Chunk(nullptr, qBuf, bufSize));
     return bufSize;
   }
 

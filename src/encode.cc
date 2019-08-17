@@ -116,7 +116,7 @@ create:
 
   if (codecParams != nullptr) {
     if ((ret = avcodec_parameters_to_context(encoder, (const AVCodecParameters*) codecParams))) {
-      NAPI_THROW_ERROR(avErrorMsg("Failed to set encoder paramters from provided params: ", ret));
+      NAPI_THROW_ERROR(avErrorMsg("Failed to set encoder parameters from provided params: ", ret));
     }
     // printf("Params to context result: %i\n", ret);
   }
@@ -133,6 +133,15 @@ create:
   CHECK_BAIL;
   status = napi_call_function(env, result, assign, 2, fargs, &result);
   CHECK_BAIL;
+
+  if ((encoder->sample_fmt != AV_SAMPLE_FMT_NONE) && 
+      (encoder->sample_rate > 0) && (encoder->channel_layout != 0)) {
+    // For audio encodes open the encoder if sufficient parameters have been provided
+    // Encoder specific parameters will then be set up and available before the first encode
+    if (ret = avcodec_open2(encoder, encoder->codec, nullptr)) {
+      NAPI_THROW_ERROR(avErrorMsg("Failed to open audio encoder: ", ret));
+    }
+  }
 
   if (encoder != nullptr) return result;
 

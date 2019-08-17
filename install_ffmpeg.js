@@ -23,7 +23,7 @@ const os = require('os');
 const fs = require('fs');
 const util = require('util');
 const https = require('https');
-const unzip = require('unzip');
+const unzip = require('unzipper');
 const cp = require('child_process');
 const [ mkdir, access, rename, execFile, exec ] = // eslint-disable-line
   [ fs.mkdir, fs.access, fs.rename, cp.execFile, cp.exec ].map(util.promisify);
