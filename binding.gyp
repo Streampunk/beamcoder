@@ -17,6 +17,10 @@
           "-fno-rtti",
           "-fno-exceptions"
         ],
+        "include_dirs" : [
+          "/usr/include/ffmpeg",
+          "/usr/local/include"
+        ],        
         "cflags_cc": [
           "-std=c++11",
           "-fexceptions"
