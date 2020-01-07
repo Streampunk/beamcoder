@@ -23,7 +23,6 @@ const os = require('os');
 const fs = require('fs');
 const util = require('util');
 const https = require('https');
-const unzip = require('unzipper');
 const cp = require('child_process');
 const [ mkdir, access, rename, execFile, exec ] = // eslint-disable-line
   [ fs.mkdir, fs.access, fs.rename, cp.execFile, cp.exec ].map(util.promisify);
@@ -51,6 +50,8 @@ async function get(ws, url, name) {
 }
 
 async function inflate(rs, folder, name) {
+  const unzip = require('unzipper');
+
   return new Promise((comp, err) => {
     console.log(`Unzipping '${folder}/${name}'.`);
     rs.pipe(unzip.Extract({ path: folder }));
@@ -64,6 +65,7 @@ async function inflate(rs, folder, name) {
 
 async function win32() {
   console.log('Installing FFmpeg dependencies for Beam Coder on Windows.');
+  await exec('npm install unzipper --no-save');
 
   await mkdir('ffmpeg').catch(e => {
     if (e.code === 'EEXIST') return;

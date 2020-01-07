@@ -25,7 +25,7 @@
 */
 
 const beamcoder = require('../index.js'); // Use require('beamcoder') externally
-const Koa = require('koa');
+const Koa = require('koa'); // Add koa to package.json dependencies
 const app = new Koa();
 
 app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>

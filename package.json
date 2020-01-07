@@ -4,7 +4,7 @@
   "description": "Node.js native bindings to FFmpeg.",
   "main": "index.js",
   "scripts": {
-    "preinstall": "npm install unzipper && node install_ffmpeg.js",
+    "preinstall": "node install_ffmpeg.js",
     "install": "node-gyp rebuild",
     "test": "tape test/*.js",
     "lint": "eslint **/*.js",
@@ -34,9 +34,7 @@
   "homepage": "https://github.com/Streampunk/beamcoder#readme",
   "dependencies": {
     "bindings": "^1.5.0",
-    "koa": "^2.11.0",
-    "segfault-handler": "^1.3.0",
-    "unzipper": "^0.10.5"
+    "segfault-handler": "^1.3.0"
   },
   "devDependencies": {
     "eslint": "^5.16.0",
