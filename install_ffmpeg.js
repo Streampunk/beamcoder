@@ -71,21 +71,21 @@ async function win32() {
     if (e.code === 'EEXIST') return;
     else throw e;
   });
-  await access('ffmpeg/ffmpeg-4.1-win64-shared', fs.constants.R_OK).catch(async () => {
-    let ws_shared = fs.createWriteStream('ffmpeg/ffmpeg-4.1-win64-shared.zip');
+  await access('ffmpeg/ffmpeg-4.2.1-win64-shared', fs.constants.R_OK).catch(async () => {
+    let ws_shared = fs.createWriteStream('ffmpeg/ffmpeg-4.2.1-win64-shared.zip');
     await get(ws_shared,
-      'https://ffmpeg.zeranoe.com/builds/win64/shared/ffmpeg-4.1-win64-shared.zip',
-      'ffmpeg-4.1-win64-shared.zip');
-    let rs_shared = fs.createReadStream('ffmpeg/ffmpeg-4.1-win64-shared.zip');
-    await inflate(rs_shared, 'ffmpeg', 'ffmpeg-4.1-win64-shared.zip');
+      'https://ffmpeg.zeranoe.com/builds/win64/shared/ffmpeg-4.2.1-win64-shared.zip',
+      'ffmpeg-4.2.1-win64-shared.zip');
+    let rs_shared = fs.createReadStream('ffmpeg/ffmpeg-4.2.1-win64-shared.zip');
+    await inflate(rs_shared, 'ffmpeg', 'ffmpeg-4.2.1-win64-shared.zip');
   });
-  await access('ffmpeg/ffmpeg-4.1-win64-dev', fs.constants.R_OK).catch(async () => {
-    let ws_dev = fs.createWriteStream('ffmpeg/ffmpeg-4.1-win64-dev.zip');
+  await access('ffmpeg/ffmpeg-4.2.1-win64-dev', fs.constants.R_OK).catch(async () => {
+    let ws_dev = fs.createWriteStream('ffmpeg/ffmpeg-4.2.1-win64-dev.zip');
     await get(ws_dev,
-      'https://ffmpeg.zeranoe.com/builds/win64/dev/ffmpeg-4.1-win64-dev.zip',
-      'ffmpeg-win64-dev.zip');
-    let rs_dev = fs.createReadStream('ffmpeg/ffmpeg-4.1-win64-dev.zip');
-    console.log(await inflate(rs_dev, 'ffmpeg', 'ffmpeg-4.1-win64-dev.zip'));
+      'https://ffmpeg.zeranoe.com/builds/win64/dev/ffmpeg-4.2.1-win64-dev.zip',
+      'ffmpeg-4.2.1-win64-dev.zip');
+    let rs_dev = fs.createReadStream('ffmpeg/ffmpeg-4.2.1-win64-dev.zip');
+    console.log(await inflate(rs_dev, 'ffmpeg', 'ffmpeg-4.2.1-win64-dev.zip'));
   });
 }
 
