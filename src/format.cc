@@ -4567,7 +4567,7 @@ napi_value setStreamDiscard(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   enumValue = beam_lookup_enum(beam_avdiscard->inverse, enumName);
-  stream->discard = (enumValue != BEAM_ENUM_UNKNOWN) ? (AVDiscard) enumValue : AVDISCARD_NONE;
+  stream->discard = (enumValue != BEAM_ENUM_UNKNOWN) ? (AVDiscard) enumValue : AVDISCARD_DEFAULT;
   free(enumName);
 
   status = napi_get_undefined(env, &result);

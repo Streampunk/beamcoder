@@ -24,10 +24,11 @@ const beamcoder = require('../index.js');
 async function run() {
   let demuxer = await beamcoder.demuxer('../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
   console.log(JSON.stringify(demuxer, null, 2));
+  demuxer.streams.forEach(s => s.discard = (0 == s.index) ? 'default' : 'all');
   let decoder = beamcoder.decoder({ name: 'h264' });
   //console.log(JSON.stringify(decoder, null, 2));
   let packet = {};
-  for ( let x = 0 ; x < 100 && packet != null; x++ ) {
+  for ( let x = 0 ; x < 200 && packet != null; x++ ) {
     let packet = await demuxer.read();
     if (packet.stream_index === 0) {
       //console.log(JSON.stringify(packet, null, 2));
