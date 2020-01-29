@@ -200,6 +200,7 @@ napi_value setPacketData(napi_env env, napi_callback_info info) {
   p->packet->buf = av_buffer_create(data, length, packetBufferFree, avr, 0);
   CHECK_STATUS;
   p->packet->data = data;
+  p->packet->size = length;
 
 done:
   status = napi_get_undefined(env, &result);
