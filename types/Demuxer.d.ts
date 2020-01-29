@@ -107,24 +107,3 @@ export interface DemuxerCreateOptions {
  * until sufficient source data has been read.
  */
 export function demuxer(options: DemuxerCreateOptions): Promise<Demuxer>
-
-/**
- * A [Node.js Writable stream](https://nodejs.org/docs/latest-v12.x/api/stream.html#stream_writable_streams)
- * allowing source data to be streamed to the demuxer from a file or other stream source such as a network connection
- */
-export interface WritableDemuxerStream extends NodeJS.WritableStream {
-	/**
-	 * Create a demuxer for this source
-	 * @param options a DemuxerCreateOptions object
-   * @returns a promise that resolves to a Demuxer when it has determined sufficient 
-	 * format details by consuming data from the source. The promise will wait indefinitely 
-	 * until sufficient source data has been read.
-	 */
-	demuxer(options: DemuxerCreateOptions): Promise<Demuxer>
-}
-/**
- * Create a WritableDemuxerStream to allow streaming to a Demuxer
- * @param options.highwaterMark Buffer level when `stream.write()` starts returng false.
- * @returns A WritableDemuxerStream that can be streamed to.
- */
-export function demuxerStream(options: { highwaterMark?: number }): WritableDemuxerStream

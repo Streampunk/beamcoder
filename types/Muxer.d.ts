@@ -120,22 +120,3 @@ export interface MuxerCreateOptions {
  * @returns A Muxer object
  */
 export function muxer(options: MuxerCreateOptions): Muxer
-
-/**
- * A [Node.js Readable stream](https://nodejs.org/docs/latest-v12.x/api/stream.html#stream_readable_streams)
- * allowing data to be streamed from the muxer to a file or other stream destination such as a network connection
- */
-export interface ReadableMuxerStream extends NodeJS.ReadableStream {
-	/**
-	 * Create a muxer for this source
-	 * @param options a MuxerCreateOptions object
-   * @returns A Muxer object
-	 */
-	muxer(options: MuxerCreateOptions): Muxer
-}
-/**
- * Create a ReadableMuxerStream to allow streaming from a Muxer
- * @param options.highwaterMark The maximum number of bytes to store in the internal buffer before ceasing to read from the underlying resource.
- * @returns A ReadableMuxerStream that can be streamed from.
- */
-export function muxerStream(options: { highwaterMark?: number }): ReadableMuxerStream
