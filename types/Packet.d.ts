@@ -77,6 +77,6 @@ export interface Packet {
 
 /**
  * Packets for decoding can be created without reading them from a demuxer
- * Set parameters as required from the Packet object
+ * Set parameters as required from the Packet object, passing in a buffer and the required size in bytes
  */
-export function packet(options: { [key: string]: any, data: Buffer }): Packet
+export function packet(options: { [key: string]: any, data: Buffer, size: number }): Packet
