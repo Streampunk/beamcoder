@@ -57,6 +57,8 @@ Does beam coder support X, Y or Z protocol / format / codec / file type / stream
 
 Beam coder will be a cross-platform module for Windows, Mac and Linux. The release version of FFmpeg that beam coder links with is currently 4.1.
 
+Typescript bindings are available
+
 ### Aerostat
 
 Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wikipedia.org/wiki/Aerostat) open-source product set, whereby a conceptual fleet of media-oriented _aerostats_ (_blimps_, _air ships_, _zeppelins_ etc.) are launched into the clouds. Media content is beamed between the fleet as if light beams, and beamed to and from locations on the planet surface as required. See also the [_Aerostat Beam Engine_](https://www.npmjs.com/package/beamengine).
@@ -745,8 +747,8 @@ The parameters of an individual filter are available via that filter's `priv` pr
 
 ```javascript
 let scaleFilter = filterer.graph.filters.find(f => 'scale' === f.filter.name); // find the first 'scale' filter
-scaleFilter.priv = { width: 1000 }; // only the included properties are changed, other existing properties are unaltered
-// scaleFilter.priv.width = 1000; - this will not work !!
+scaleFilter.priv = { width: '1000' }; // only the included properties are changed, other existing properties are unaltered
+// scaleFilter.priv.width = '1000'; - this will not work !!
 ```
 
 #### Filter
@@ -767,11 +769,11 @@ If the filter has only one input then a simplification is available that takes t
 let filtFrames = await filterer.filter(frames);
 ```
 
-The result is an array containing objects with a `frames` property which is an array of `frame` objects.
+The result is an object with a `result` property which is an array containing objects with a `frames` property which is an array of `frame` objects along with a `name` property which is the output pad name.
 
-Multiple output objects appear in the output array with each object having a name property that matches the output name property defined in the `filterSpec` string. For single input and single output filters the name property is optional, though if the filter string has defined a name the same name must be used.
+Multiple output objects appear in the result array with each object having a name property that matches the output name property defined in the `filterSpec` string. For single input and single output filters the name property is optional, though if the filter string has defined a name the same name must be used.
 
-The output array objects also contain a `total_time` property which logs the time the operation took to complete.
+The output object also contains a `total_time` property which logs the time the operation took to complete.
 
 Filters do not need to be flushed.
 
