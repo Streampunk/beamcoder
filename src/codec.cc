@@ -1614,7 +1614,7 @@ napi_value getCodecCtxDarkMasking(napi_env env, napi_callback_info info) {
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
   CHECK_STATUS;
-  status = napi_create_double(env, codec->p_masking, &result);
+  status = napi_create_double(env, codec->dark_masking, &result);
   CHECK_STATUS;
 
   return result;
@@ -1640,6 +1640,47 @@ napi_value setCodecCtxDarkMasking(napi_env env, napi_callback_info info) {
   }
 
   status = napi_get_value_double(env, args[0], (double*) &codec->dark_masking);
+  CHECK_STATUS;
+
+  status = napi_get_undefined(env, &result);
+  CHECK_STATUS;
+  return result;
+}
+
+napi_value getCodecCtxSliceCount(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVCodecContext* codec;
+
+  size_t argc = 0;
+  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
+  CHECK_STATUS;
+  status = napi_create_int32(env, codec->slice_count, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
+napi_value setCodecCtxSliceCount(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  napi_valuetype type;
+  AVCodecContext* codec;
+
+  size_t argc = 1;
+  napi_value args[1];
+  status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &codec);
+  CHECK_STATUS;
+  if (argc < 1) {
+    NAPI_THROW_ERROR("A value is required to set the slice_count property.");
+  }
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
+  if (type != napi_number) {
+    NAPI_THROW_ERROR("A number is required to set the slice_count property.");
+  }
+
+  status = napi_get_value_int32(env, args[0], &codec->slice_count);
   CHECK_STATUS;
 
   status = napi_get_undefined(env, &result);
@@ -2192,7 +2233,7 @@ napi_value getCodecCtxMeSubpelQual(napi_env env, napi_callback_info info) {
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
   CHECK_STATUS;
-  status = napi_create_int32(env, codec->pre_dia_size, &result);
+  status = napi_create_int32(env, codec->me_subpel_quality, &result);
   CHECK_STATUS;
 
   return result;
@@ -6817,6 +6858,9 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? getCodecCtxDarkMasking : nullptr,
       encoding ? setCodecCtxDarkMasking : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
+    { "slice_count", nullptr, nullptr, getCodecCtxSliceCount,
+      encoding ? failEncoding : setCodecCtxSliceCount, nullptr,
+      encoding ? napi_enumerable : (napi_property_attributes) (napi_writable | napi_enumerable), codec},
     { "slice_offset", nullptr, nullptr, getCodecCtxSliceOffset,
       encoding ? failEncoding : setCodecCtxSliceOffset, nullptr,
       encoding ? napi_enumerable : (napi_property_attributes) (napi_writable | napi_enumerable), codec},
@@ -6835,11 +6879,11 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? getCodecCtxMbCmp: nullptr,
       encoding ? setCodecCtxMbCmp : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
+    // 40
     { "ildct_cmp", nullptr, nullptr,
       encoding ? getCodecCtxIldctCmp: nullptr,
       encoding ? setCodecCtxIldctCmp : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
-    // 40
     { "dia_size", nullptr, nullptr,
       encoding ? getCodecCtxDiaSize: nullptr,
       encoding ? setCodecCtxDiaSize : failDecoding, nullptr,
@@ -6848,7 +6892,7 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? getCodecCtxLastPredCount: nullptr,
       encoding ? setCodecCtxLastPredCount : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
-    { "mb_pre_cmp", nullptr, nullptr,
+    { "me_pre_cmp", nullptr, nullptr,
       encoding ? getCodecCtxMePreCmp : nullptr,
       encoding ? setCodecCtxMePreCmp : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
@@ -6856,7 +6900,7 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? getCodecCtxPreDiaSize: nullptr,
       encoding ? setCodecCtxPreDiaSize : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
-    { "me_sbupel_quality", nullptr, nullptr,
+    { "me_subpel_quality", nullptr, nullptr,
       encoding ? getCodecCtxMeSubpelQual : nullptr,
       encoding ? setCodecCtxMeSubpelQual : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
@@ -6875,10 +6919,10 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
     { "intra_matrix", nullptr, nullptr, getCodecCtxIntraMatrix,
       encoding ? setCodecCtxIntraMatrix : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
+    // 50
     { "inter_matrix", nullptr, nullptr, getCodecCtxInterMatrix,
       encoding ? setCodecCtxInterMatrix : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
-    // 50
     { "intra_dc_precision", nullptr, nullptr, getCodecCtxIntraDCProv,
       encoding ? setCodecCtxIntraDCProv : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
@@ -6913,10 +6957,10 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? getCodecCtxMv0Threshold : nullptr,
       encoding ? setCodecCtxMv0Threshold : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
+    // 60
     { "color_primaries", nullptr, nullptr, getCodecCtxColorPrim,
       encoding ? setCodecCtxColorPrim : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
-    // 60
     { "color_trc", nullptr, nullptr, getCodecCtxColorTrc,
       encoding ? setCodecCtxColorTrc : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
@@ -6943,9 +6987,9 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
     { "sample_fmt", nullptr, nullptr, getCodecCtxSampleFmt,
       encoding ? setCodecCtxSampleFmt : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
+    // 70
     { "frame_size", nullptr, nullptr, getCodecCtxFrameSize, failBoth, nullptr,
       napi_enumerable, codec},
-    // 70
     { "frame_number", nullptr, nullptr, getCodecCtxFrameNb, failBoth, nullptr,
       napi_enumerable, codec},
     { "block_align", nullptr, nullptr,
@@ -6962,7 +7006,7 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? napi_default : (napi_property_attributes) (napi_writable | napi_enumerable), codec},
     { "audio_service_type", nullptr, nullptr, getCodecCtxAudioSvcType,
       encoding ? setCodecCtxAudioSvcType : failDecoding, nullptr,
-      encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
+      encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
     { "request_sample_fmt", nullptr, nullptr,
       encoding ? nullptr : getCodecCtxReqSampleFmt,
       encoding ? failEncoding : setCodecCtxReqSampleFmt, nullptr,
@@ -6975,11 +7019,11 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? getCodecCtxQBlur : nullptr,
       encoding ? setCodecCtxQBlur : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
+    // 80
     { "qmin", nullptr, nullptr,
       encoding ? getCodecCtxQMin : nullptr,
       encoding ? setCodecCtxQMin : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
-    // 80
     { "qmax", nullptr, nullptr,
       encoding ? getCodecCtxQMax : nullptr,
       encoding ? setCodecCtxQMax : failDecoding, nullptr,
@@ -7014,11 +7058,11 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? getCodecCtxRcInitBufOc : nullptr,
       encoding ? setCodecCtxRcInitBufOc : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
+    // 90
     { "trellis", nullptr, nullptr,
       encoding ? getCodecCtxTrellis : nullptr,
       encoding ? setCodecCtxTrellis : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
-    // 90
     { "stats_out", nullptr, nullptr,
       encoding ? getCodecCtxStatsOut : nullptr, failBoth, nullptr,
       encoding ? napi_enumerable : napi_default, codec},
@@ -7048,11 +7092,11 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
     { "error", nullptr, nullptr,
       encoding ? getCodecCtxError : nullptr, failBoth, nullptr,
       encoding ? napi_enumerable : napi_default, codec},
+    // 100
     { "dct_algo", nullptr, nullptr,
       encoding ? getCodecCtxDctAlgo : nullptr,
       encoding ? setCodecCtxDctAlgo : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_default, codec},
-    // 100
     { "idct_algo", nullptr, nullptr, getCodecCtxIdctAlgo, setCodecCtxIdctAlgo, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), codec},
     { "bits_per_coded_sample", nullptr, nullptr, getCodecCtxBitsPCodedSmp,
@@ -7077,10 +7121,10 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
     { "profile", nullptr, nullptr, getCodecCtxProfile,
       encoding ? setCodecCtxProfile : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
+    // 110
     { "level", nullptr, nullptr, getCodecCtxLevel,
       encoding ? setCodecCtxLevel : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
-    // 110
     { "skip_loop_filter", nullptr, nullptr,
       encoding ? nullptr : getCodecCtxSkipLpFilter,
       encoding ? failEncoding : setCodecCtxSkipLpFilter, nullptr,
@@ -7096,7 +7140,7 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
     { "subtitle_header", nullptr, nullptr, getCodecCtxSubtitleHdr,
        encoding? setCodecCtxSubtitleHdr : failDecoding, nullptr,
        encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
-    { "inital_padding", nullptr, nullptr,
+    { "initial_padding", nullptr, nullptr,
       encoding ? getCodecCtxInitPad : nullptr, failBoth, nullptr,
       encoding ? napi_enumerable : napi_default, codec},
     { "framerate", nullptr, nullptr, getCodecCtxFramerate,
@@ -7114,11 +7158,11 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? napi_default : napi_enumerable, codec},
     // TODO not exposing lowres ... it's on its way out
     // not exposing PTS correct stats - "not intended to be used by user apps"
+    // 120
     { "sub_charenc", nullptr, nullptr,
       encoding ? nullptr : getCodecCtxSubCharenc,
       encoding ? failEncoding : setCodecCtxSubCharenc, nullptr,
       encoding ? napi_default : (napi_property_attributes) (napi_writable | napi_enumerable), codec},
-    // 120
     { "sub_charenc_mode", nullptr, nullptr,
       encoding ? nullptr : getCodecCtxSubCharencMode, failBoth, nullptr,
       encoding ? napi_default : napi_enumerable, codec},
@@ -7150,9 +7194,9 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? nullptr : getCodecCtxSubTextFmt,
       encoding ? failEncoding : setCodecCtxSubTextFmt, nullptr,
       encoding ? napi_default : (napi_property_attributes) (napi_writable | napi_enumerable), codec},
+    // 130
     { "trailing_padding", nullptr, nullptr, getCodecCtxTrailPad, setCodecCtxTrailPad, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), codec},
-    // 130
     { "max_pixels", nullptr, nullptr, getCodecCtxMaxPixels, setCodecCtxMaxPixels, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), codec},
     // TODO hw_device_ctx
@@ -7178,11 +7222,11 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
     { "params", nullptr, nullptr, nullptr, nop, undef, // Set for muxing
       napi_writable, nullptr},
     { "stream_index", nullptr, nullptr, nullptr, nop, undef, napi_writable, nullptr },
-    { "demuxer", nullptr, nullptr, nullptr, nop, undef, napi_writable, nullptr},
     // 140
+    { "demuxer", nullptr, nullptr, nullptr, nop, undef, napi_writable, nullptr},
     { "_CodecContext", nullptr, nullptr, nullptr, nullptr, extCodec, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsCodec, 141, desc);
+  status = napi_define_properties(env, jsCodec, 142, desc);
   PASS_STATUS;
 
   *result = jsCodec;

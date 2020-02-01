@@ -83,7 +83,7 @@ napi_value read(napi_env env, napi_callback_info info) {
   REJECT_RETURN;
 
   if (argc < 1) {
-    REJECT_ERROR_RETURN("governor write requires a buffer as its argument.",
+    REJECT_ERROR_RETURN("governor read requires a read length as its argument.",
       BEAMCODER_INVALID_ARGS);
   }
 

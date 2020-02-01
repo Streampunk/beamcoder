@@ -23,7 +23,6 @@ const os = require('os');
 const fs = require('fs');
 const util = require('util');
 const https = require('https');
-const unzip = require('unzipper');
 const cp = require('child_process');
 const [ mkdir, access, rename, execFile, exec ] = // eslint-disable-line
   [ fs.mkdir, fs.access, fs.rename, cp.execFile, cp.exec ].map(util.promisify);
@@ -51,6 +50,8 @@ async function get(ws, url, name) {
 }
 
 async function inflate(rs, folder, name) {
+  const unzip = require('unzipper');
+
   return new Promise((comp, err) => {
     console.log(`Unzipping '${folder}/${name}'.`);
     rs.pipe(unzip.Extract({ path: folder }));
@@ -64,26 +65,27 @@ async function inflate(rs, folder, name) {
 
 async function win32() {
   console.log('Installing FFmpeg dependencies for Beam Coder on Windows.');
+  await exec('npm install unzipper --no-save');
 
   await mkdir('ffmpeg').catch(e => {
     if (e.code === 'EEXIST') return;
     else throw e;
   });
-  await access('ffmpeg/ffmpeg-4.1-win64-shared', fs.constants.R_OK).catch(async () => {
-    let ws_shared = fs.createWriteStream('ffmpeg/ffmpeg-4.1-win64-shared.zip');
+  await access('ffmpeg/ffmpeg-4.2.1-win64-shared', fs.constants.R_OK).catch(async () => {
+    let ws_shared = fs.createWriteStream('ffmpeg/ffmpeg-4.2.1-win64-shared.zip');
     await get(ws_shared,
-      'https://ffmpeg.zeranoe.com/builds/win64/shared/ffmpeg-4.1-win64-shared.zip',
-      'ffmpeg-4.1-win64-shared.zip');
-    let rs_shared = fs.createReadStream('ffmpeg/ffmpeg-4.1-win64-shared.zip');
-    await inflate(rs_shared, 'ffmpeg', 'ffmpeg-4.1-win64-shared.zip');
+      'https://ffmpeg.zeranoe.com/builds/win64/shared/ffmpeg-4.2.1-win64-shared.zip',
+      'ffmpeg-4.2.1-win64-shared.zip');
+    let rs_shared = fs.createReadStream('ffmpeg/ffmpeg-4.2.1-win64-shared.zip');
+    await inflate(rs_shared, 'ffmpeg', 'ffmpeg-4.2.1-win64-shared.zip');
   });
-  await access('ffmpeg/ffmpeg-4.1-win64-dev', fs.constants.R_OK).catch(async () => {
-    let ws_dev = fs.createWriteStream('ffmpeg/ffmpeg-4.1-win64-dev.zip');
+  await access('ffmpeg/ffmpeg-4.2.1-win64-dev', fs.constants.R_OK).catch(async () => {
+    let ws_dev = fs.createWriteStream('ffmpeg/ffmpeg-4.2.1-win64-dev.zip');
     await get(ws_dev,
-      'https://ffmpeg.zeranoe.com/builds/win64/dev/ffmpeg-4.1-win64-dev.zip',
-      'ffmpeg-win64-dev.zip');
-    let rs_dev = fs.createReadStream('ffmpeg/ffmpeg-4.1-win64-dev.zip');
-    console.log(await inflate(rs_dev, 'ffmpeg', 'ffmpeg-4.1-win64-dev.zip'));
+      'https://ffmpeg.zeranoe.com/builds/win64/dev/ffmpeg-4.2.1-win64-dev.zip',
+      'ffmpeg-4.2.1-win64-dev.zip');
+    let rs_dev = fs.createReadStream('ffmpeg/ffmpeg-4.2.1-win64-dev.zip');
+    console.log(await inflate(rs_dev, 'ffmpeg', 'ffmpeg-4.2.1-win64-dev.zip'));
   });
 }
 

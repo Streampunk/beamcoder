@@ -27,7 +27,7 @@ async function run() {
   // let demuxer = await createDemuxer('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
   let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
   fs.createReadStream('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf').pipe(demuxerStream);
-  let demuxer = await demuxerStream.demuxer();
+  let demuxer = await demuxerStream.demuxer({});
   // console.log(demuxer);
 
   let decoder = await beamcoder.decoder({ name: 'h264' });
@@ -113,7 +113,7 @@ async function run() {
       ]);
       // console.log(filtFrames);
 
-      let packets = await encoder.encode(filtFrames[0].frames[0]);
+      let packets = await encoder.encode(filtFrames.result[0].frames[0]);
       // console.log(x, packets.totalTime);
       packets.packets.forEach(x => outFile.write(x.data));
     }

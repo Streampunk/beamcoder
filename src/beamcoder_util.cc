@@ -866,7 +866,7 @@ napi_status toContextPrivData(napi_env env, napi_value params, void* priv_data) 
             PASS_STATUS;
             ret = av_opt_set(priv_data, sValue, strProp, 0);
             free(strProp);
-            if (ret < 0) printf("DEBUG: Uable to set %s with a string value %s.\n", sValue, strProp);
+            if (ret < 0) printf("DEBUG: Unable to set %s with a string value %s.\n", sValue, strProp);
             break;
           case napi_object:
             status = napi_is_array(env, element, &isArray);

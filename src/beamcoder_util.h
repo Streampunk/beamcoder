@@ -163,10 +163,7 @@ int beam_lookup_enum(std::unordered_map<std::string, int> m, char* value);
 struct beamEnum {
   std::unordered_map<int, std::string> forward;
   std::unordered_map<std::string, int> inverse;
-  beamEnum(std::unordered_map<int, std::string> fwd) {
-    forward = fwd;
-    inverse = inverse_map(fwd);
-  };
+  beamEnum(std::unordered_map<int, std::string> fwd) : forward(fwd), inverse(inverse_map(fwd)) {};
 };
 
 napi_status beam_set_enum(napi_env env, napi_value target, char* name,
