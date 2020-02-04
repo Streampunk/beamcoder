@@ -220,18 +220,18 @@ export interface Filterer {
 	 * and the filter input will have a default name applied.
 	 * This name will match a filter specification that doesn't name its inputs.
 	 * @param frames Array of Frame objects to be applied to the single input pad
-	 * @returns Object with a result array of objects containing Frame arrays for each output pad of the filter
+	 * @returns Array of objects containing Frame arrays for each output pad of the filter
 	 */
-	filter(frames: Array<Frame>): Promise<{ result: Array<FiltererResult>, total_time: number }>
+	filter(frames: Array<Frame>): Promise<Array<FiltererResult> & { total_time: number }>
   /**
 	 * Filter an array of frames
 	 * Pass an array of objects, one per filter input, each with a name string property
 	 * and a frames property that contains an array of frame objects
 	 * The name must match the input name in the filter specification
 	 * @param framesArr Array of objects with name and Frame array for each input pad
-	 * @returns Object with a result array of objects containing Frame arrays for each output pad of the filter
+	 * @returns Array of objects containing Frame arrays for each output pad of the filter
    */
-	filter(framesArr: Array<{ name: string, frames: Array<Frame> }>): Promise<{ result: Array<FiltererResult>, total_time: number }>
+	filter(framesArr: Array<{ name: string, frames: Array<Frame> }>): Promise<Array<FiltererResult> & { total_time: number }>
 }
 
 /**
