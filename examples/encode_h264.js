@@ -46,7 +46,7 @@ async function run() {
     priv_data: { preset: 'slow' }
   };
 
-  let encoder = await beamcoder.encoder(encParams);
+  let encoder = beamcoder.encoder(encParams);
   console.log('Encoder', encoder);
 
   let outFile = fs.createWriteStream(process.argv[2]);
