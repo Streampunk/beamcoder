@@ -9,6 +9,14 @@
                   "src/codec_par.cc", "src/format.cc",
                   "src/codec.cc" ],
     "conditions": [
+      ['OS=="mac"', {
+        "include_dirs" : [
+          "/usr/local/Cellar/ffmpeg/4.2.2/include"
+        ],
+        "library_dirs": [
+          "/usr/local/Cellar/ffmpeg/4.2.2/lib",
+        ]
+      }],
       ['OS!="win"', {
         "defines": [
           "__STDC_CONSTANT_MACROS"
