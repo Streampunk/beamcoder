@@ -267,9 +267,9 @@ export interface VideoInputParam extends InputParam {
 }
 /** The required parameters for setting up audio filter inputs */
 export interface AudioInputParam extends InputParam {
-	sample_rate: number
-	sample_format: string
-	channel_layout: string
+	sampleRate: number
+	sampleFormat: string
+	channelLayout: string
 }
 /** The required parameters for setting up filter inputs */
 export interface OutputParam {
@@ -285,9 +285,9 @@ export interface VideoOutputParam extends OutputParam {
 }
 /** The required parameters for setting up audio filter outputs */
 export interface AudioOutputParam extends OutputParam {
-	sample_rate: number
-	sample_format: string
-	channel_layout: string
+	sampleRate: number
+	sampleFormat: string
+	channelLayout: string
 }
 
 export interface FiltererOptions {
