@@ -45,8 +45,6 @@ function frameDicer(encoder, isAudio) {
     if (!lastFrm) {
       lastFrm = beamcoder.frame(srcFrm.toJSON());
       lastBuf = nullBuf;
-
-      sampleBytes = srcFrm.pkt_size / srcFrm.nb_samples;
       dstFrmBytes = dstNumSamples * sampleBytes;
     }
 
