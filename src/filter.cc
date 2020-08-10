@@ -745,9 +745,7 @@ napi_status fromAVFilterCtx(napi_env env, AVFilterContext* filtCtx, napi_value* 
     { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
     { "filter", nullptr, nullptr, getFilter, nullptr, nullptr, napi_enumerable, filtCtx },
     { "name", nullptr, nullptr, getFilterContextName, nullptr, nullptr, napi_enumerable, filtCtx },
-    { "input_pads", nullptr, nullptr, getFilterPads, nullptr, nullptr, napi_enumerable, filtCtx->input_pads },
     { "inputs", nullptr, nullptr, getFiltCtxInputs, nullptr, nullptr, napi_enumerable, filtCtx },
-    { "output_pads", nullptr, nullptr, getFilterPads, nullptr, nullptr, napi_enumerable, filtCtx->output_pads },
     { "outputs", nullptr, nullptr, getFiltCtxOutputs, nullptr, nullptr, napi_enumerable, filtCtx },
     { "priv", nullptr, nullptr, getFilterCtxPrivData, setFilterCtxPrivData, nullptr, napi_enumerable, filtCtx },
     { "thread_type", nullptr, nullptr, getFilterCtxThreadType, nullptr, nullptr, napi_enumerable, filtCtx },
@@ -755,7 +753,7 @@ napi_status fromAVFilterCtx(napi_env env, AVFilterContext* filtCtx, napi_value* 
     { "ready", nullptr, nullptr, getReady, nullptr, nullptr, napi_enumerable, filtCtx },
     { "extra_hw_frames", nullptr, nullptr, getExtraHwFrames, nullptr, nullptr, napi_enumerable, filtCtx }
   };
-  status = napi_define_properties(env, *result, 12, desc);
+  status = napi_define_properties(env, *result, 10, desc);
   PASS_STATUS;
 
   return napi_ok;
@@ -1525,7 +1523,7 @@ void filterExecute(napi_env env, void* data) {
 
 void filterComplete(napi_env env, napi_status asyncStatus, void* data) {
   filterCarrier* c = (filterCarrier*) data;
-  napi_value result, resultArr, dstFrame, nameVal, frames, frame, prop;
+  napi_value result, dstFrame, nameVal, frames, frame, prop;
 
   for (auto it = c->frameRefs.cbegin(); it != c->frameRefs.cend(); it++) {
     c->status = napi_delete_reference(env, *it);
@@ -1538,11 +1536,9 @@ void filterComplete(napi_env env, napi_status asyncStatus, void* data) {
   }
   REJECT_STATUS;
 
-  c->status = napi_create_object(env, &result);
+  c->status = napi_create_array(env, &result);
   REJECT_STATUS;
 
-  c->status = napi_create_array(env, &resultArr);
-  REJECT_STATUS;
   uint32_t outCount = 0;
   for (auto it = c->dstFrames.begin(); it != c->dstFrames.end(); it++) {
     c->status = napi_create_object(env, &dstFrame);
@@ -1570,11 +1566,9 @@ void filterComplete(napi_env env, napi_status asyncStatus, void* data) {
     c->status = napi_set_named_property(env, dstFrame, "frames", frames);
     REJECT_STATUS;
 
-    c->status = napi_set_element(env, resultArr, outCount++, dstFrame);
+    c->status = napi_set_element(env, result, outCount++, dstFrame);
     REJECT_STATUS;
   }
-  c->status = napi_set_named_property(env, result, "result", resultArr);
-  REJECT_STATUS;
 
   c->status = napi_create_int64(env, c->totalTime, &prop);
   REJECT_STATUS;

@@ -1568,18 +1568,25 @@ napi_value setCodecParProfile(napi_env env, napi_callback_info info) {
   codecDesc = avcodec_descriptor_get(c->codec_id);
   if (codecDesc == nullptr) goto done;
   profile = codecDesc->profiles;
-  while (profile->profile != FF_PROFILE_UNKNOWN) {
-    if (strcmp(enumString, profile->name) == 0) {
-      c->profile = profile->profile;
-      foundProfile = true;
-      break;
+  if (!profile) {
+    printf("Failed to set codec profile \'%s\' - recognised profiles not available for codec \'%s\'.\n", enumString, codecDesc->name);
+    printf("Set profile as a numeric value to work around this problem.\n");
+    c->profile = FF_PROFILE_UNKNOWN;
+  } else {
+    while (profile->profile != FF_PROFILE_UNKNOWN) {
+      if (strcmp(enumString, profile->name) == 0) {
+        c->profile = profile->profile;
+        foundProfile = true;
+        break;
+      }
+      profile = profile + 1;
     }
-    profile = profile + 1;
+    if (!foundProfile) {
+      c->profile = FF_PROFILE_UNKNOWN;
+      printf("Failed to find codec profile \'%s\' in recognised profiles.\n", enumString);
+    }
   }
   free(enumString);
-  if (!foundProfile) {
-    NAPI_THROW_ERROR("Unknown profile name. Set to 'null' for unknown.");
-  }
 
 done:
   status = napi_get_undefined(env, &result);

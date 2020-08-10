@@ -45,8 +45,6 @@ function frameDicer(encoder, isAudio) {
     if (!lastFrm) {
       lastFrm = beamcoder.frame(srcFrm.toJSON());
       lastBuf = nullBuf;
-
-      sampleBytes = srcFrm.pkt_size / srcFrm.nb_samples;
       dstFrmBytes = dstNumSamples * sampleBytes;
     }
 
@@ -270,8 +268,8 @@ function teeBalancer(params, numStreams) {
   readStreams.pushFrames = frames => {
     return new Promise(resolve => {
       pending.forEach((p, index) => {
-        if (frames.result && frames.result.length)
-          p.frames = frames.result[index].frames;
+        if (frames.length)
+          p.frames = frames[index].frames;
         else
           p.final = true;
       });

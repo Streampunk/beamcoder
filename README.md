@@ -769,11 +769,11 @@ If the filter has only one input then a simplification is available that takes t
 let filtFrames = await filterer.filter(frames);
 ```
 
-The result is an object with a `result` property which is an array containing objects with a `frames` property which is an array of `frame` objects along with a `name` property which is the output pad name.
+The result is an array containing objects with a `frames` property which is an array of `frame` objects along with a `name` property which is the output pad name.
 
-Multiple output objects appear in the result array with each object having a name property that matches the output name property defined in the `filterSpec` string. For single input and single output filters the name property is optional, though if the filter string has defined a name the same name must be used.
+Multiple output objects appear in the output array with each object having a name property that matches the output name property defined in the `filterSpec` string. For single input and single output filters the name property is optional, though if the filter string has defined a name the same name must be used.
 
-The output object also contains a `total_time` property which logs the time the operation took to complete.
+The output array object also contains a `total_time` property which logs the time the operation took to complete.
 
 Filters do not need to be flushed.
 

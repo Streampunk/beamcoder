@@ -5588,18 +5588,26 @@ napi_value setCodecCtxProfile(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   profile = codec->codec->profiles;
-  while (profile->profile != FF_PROFILE_UNKNOWN) {
-    if (strcmp(name, profile->name) == 0) {
-      codec->profile = profile->profile;
-      foundProfile = true;
-      break;
+  if (!profile) {
+    printf("Failed to set codec profile \'%s\' - recognised profiles not available for codec \'%s\'.\n", name, codec->codec->name);
+    printf("Set profile as a numeric value to work around this problem.\n");
+    codec->profile = FF_PROFILE_UNKNOWN;
+  } else {
+    while (profile->profile != FF_PROFILE_UNKNOWN) {
+      if (strcmp(name, profile->name) == 0) {
+        codec->profile = profile->profile;
+        foundProfile = true;
+        break;
+      }
+      profile = profile + 1;
     }
-    profile = profile + 1;
+
+    if (!foundProfile) {
+      codec->profile = FF_PROFILE_UNKNOWN;
+      printf("Failed to find codec profile \'%s\' in recognised profiles.\n", name);
+    }
   }
   free(name);
-  if (!foundProfile) {
-    NAPI_THROW_ERROR("Unknown profile name. Set to 'null' for unknown.");
-  }
 
 done:
   status = napi_get_undefined(env, &result);

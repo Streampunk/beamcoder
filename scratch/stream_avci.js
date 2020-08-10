@@ -113,7 +113,7 @@ async function run() {
       ]);
       // console.log(filtFrames);
 
-      let packets = await encoder.encode(filtFrames.result[0].frames[0]);
+      let packets = await encoder.encode(filtFrames[0].frames[0]);
       // console.log(x, packets.totalTime);
       packets.packets.forEach(x => outFile.write(x.data));
     }
