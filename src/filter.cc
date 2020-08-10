@@ -1148,11 +1148,25 @@ napi_value filterer(napi_env env, napi_callback_info info) {
   c->status = napi_is_array(env, paramsArrayVal, &isArray);
   REJECT_RETURN;
   if (!isArray) {
-    REJECT_ERROR_RETURN("Filterer inputParams must be an array.",
-      BEAMCODER_INVALID_ARGS);
+    // Might be array like, as proxied by VM2 decontextify
+    napi_value nameResult;
+    bool hasElement;
+    c->status = napi_get_property_names(env, paramsArrayVal, &nameResult);
+    REJECT_RETURN;
+    c->status = napi_get_array_length(env, nameResult, &paramsArrayLen);
+    REJECT_RETURN;
+    for ( uint32_t i = 0 ; i < paramsArrayLen ; ++i ) {
+      c->status = napi_has_element(env, paramsArrayVal, i, &hasElement);
+      REJECT_RETURN;
+      if (!hasElement) {
+        REJECT_ERROR_RETURN("Filterer inputParams must be an array or array-like.",
+          BEAMCODER_INVALID_ARGS);
+      }
+    }
+  } else {
+    c->status = napi_get_array_length(env, paramsArrayVal, &paramsArrayLen);
+    REJECT_RETURN;
   }
-  c->status = napi_get_array_length(env, paramsArrayVal, &paramsArrayLen);
-  REJECT_RETURN;
 
   for (uint32_t i = 0; i < paramsArrayLen; ++i) {
     napi_value inParamsVal;
@@ -1247,14 +1261,20 @@ napi_value filterer(napi_env env, napi_callback_info info) {
       if (isArray) {
         c->status = napi_get_array_length(env, pixelAspectVal, &arrayLen);
         REJECT_RETURN;
+      } else {
+        napi_value arrayLikeProps;
+        c->status = napi_get_property_names(env, pixelAspectVal, &arrayLikeProps);
+        REJECT_RETURN;
+        c->status = napi_get_array_length(env, arrayLikeProps, &arrayLen);
+        REJECT_RETURN;
       }
-      if (!(isArray && (2 == arrayLen))) {
+      if (2 != arrayLen) {
         REJECT_ERROR_RETURN("Filterer inputParams pixelAspect must be an array with 2 values representing a rational number.",
           BEAMCODER_INVALID_ARGS);
       }
       for (uint32_t i = 0; i < arrayLen; ++i) {
         napi_value arrayVal;
-        c->status = napi_get_element(env, pixelAspectVal, i, &arrayVal);
+        c->status = napi_get_element(env, pixelAspectVal, i, &arrayVal); // Will detect if not array or array-like
         REJECT_RETURN;
         c->status = napi_get_value_int32(env, arrayVal, (0==i)?&pixelAspect.num:&pixelAspect.den);
         REJECT_RETURN;
@@ -1269,14 +1289,20 @@ napi_value filterer(napi_env env, napi_callback_info info) {
     if (isArray) {
       c->status = napi_get_array_length(env, timeBaseVal, &arrayLen);
       REJECT_RETURN;
+    } else {
+        napi_value arrayLikeProps;
+        c->status = napi_get_property_names(env, timeBaseVal, &arrayLikeProps);
+        REJECT_RETURN;
+        c->status = napi_get_array_length(env, arrayLikeProps, &arrayLen);
+        REJECT_RETURN;
     }
-    if (!(isArray && (2 == arrayLen))) {
+    if (2 != arrayLen) {
       REJECT_ERROR_RETURN("Filterer inputParams timeBase must be an array with 2 values representing a rational number.",
         BEAMCODER_INVALID_ARGS);
     }
     for (uint32_t i = 0; i < arrayLen; ++i) {
       napi_value arrayVal;
-      c->status = napi_get_element(env, timeBaseVal, i, &arrayVal);
+      c->status = napi_get_element(env, timeBaseVal, i, &arrayVal); // Will detect if not array or array-like
       REJECT_RETURN;
       c->status = napi_get_value_int32(env, arrayVal, (0==i)?&timeBase.num:&timeBase.den);
       REJECT_RETURN;
@@ -1301,12 +1327,25 @@ napi_value filterer(napi_env env, napi_callback_info info) {
   REJECT_RETURN;
   c->status = napi_is_array(env, paramsArrayVal, &isArray);
   REJECT_RETURN;
-  if (!isArray) {
-    REJECT_ERROR_RETURN("Filterer outputParams must be an array.",
-      BEAMCODER_INVALID_ARGS);
+  if (!isArray) {    // Might be array like, as proxied by VM2 decontextify
+    napi_value nameResult;
+    bool hasElement;
+    c->status = napi_get_property_names(env, paramsArrayVal, &nameResult);
+    REJECT_RETURN;
+    c->status = napi_get_array_length(env, nameResult, &paramsArrayLen);
+    REJECT_RETURN;
+    for ( uint32_t i = 0 ; i < paramsArrayLen ; ++i ) {
+      c->status = napi_has_element(env, paramsArrayVal, i, &hasElement);
+      REJECT_RETURN;
+      if (!hasElement) {
+        REJECT_ERROR_RETURN("Filterer outputParams must be an array.",
+          BEAMCODER_INVALID_ARGS);
+      }
+    }
+  } else {
+    c->status = napi_get_array_length(env, paramsArrayVal, &paramsArrayLen);
+    REJECT_RETURN;
   }
-  c->status = napi_get_array_length(env, paramsArrayVal, &paramsArrayLen);
-  REJECT_RETURN;
 
   for (uint32_t i = 0; i < paramsArrayLen; ++i) {
     napi_value outParamsVal;
