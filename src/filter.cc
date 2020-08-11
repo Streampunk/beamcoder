@@ -1651,16 +1651,19 @@ napi_value filter(napi_env env, napi_callback_info info) {
       BEAMCODER_INVALID_ARGS);
   }
 
-  bool isArray;
-  c->status = napi_is_array(env, args[0], &isArray);
-  REJECT_RETURN;
-  if (!isArray)
-    REJECT_ERROR_RETURN("Expected an array of source frame objects.",
-      BEAMCODER_INVALID_ARGS);
+  // bool isArray;
+  // c->status = napi_is_array(env, args[0], &isArray);
+  // REJECT_RETURN;
+  // if (!isArray) // Allow array-like objects
+  //   REJECT_ERROR_RETURN("Expected an array of source frame objects.",
+  //     BEAMCODER_INVALID_ARGS);
 
   napi_value item;
   c->status = napi_get_element(env, args[0], 0, &item);
-  REJECT_RETURN;
+  if (c->status != napi_ok) {
+    REJECT_ERROR_RETURN("Expected an array or array-like object of source frame objects.",
+      BEAMCODER_INVALID_ARGS);
+  }
   if (napi_ok == isFrame(env, item)) {
     // Simplest case of an array of frame objects
     uint32_t framesLen;
@@ -1725,19 +1728,24 @@ napi_value filter(napi_env env, napi_callback_info info) {
       REJECT_RETURN;
 
       bool isArray;
+      uint32_t framesLen;
       c->status = napi_is_array(env, framesArrVal, &isArray);
       REJECT_RETURN;
-      if (!isArray)
-        REJECT_ERROR_RETURN("Expected an array of frame objects.",
-          BEAMCODER_INVALID_ARGS);
+      if (isArray) {
+        c->status = napi_get_array_length(env, framesArrVal, &framesLen);
+        REJECT_RETURN;
+      } else {
+        napi_value propNames;
+        c->status = napi_get_property_names(env, framesArrVal, &propNames);
+        REJECT_RETURN;
+        c->status = napi_get_array_length(env, propNames, &framesLen);
+        REJECT_RETURN;
+      }
 
-      uint32_t framesLen;
-      c->status = napi_get_array_length(env, framesArrVal, &framesLen);
-      REJECT_RETURN;
       std::deque<AVFrame *> frames;
       for (uint32_t f = 0; f < framesLen; ++f) {
         c->status = napi_get_element(env, framesArrVal, f, &value);
-        REJECT_RETURN;
+        REJECT_RETURN; // Blow up here if not array or array-like
         c->status = isFrame(env, value);
         if (c->status != napi_ok) {
           REJECT_ERROR_RETURN("Values in array must by of type frame.",
