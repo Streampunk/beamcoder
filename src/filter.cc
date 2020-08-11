@@ -1651,8 +1651,8 @@ napi_value filter(napi_env env, napi_callback_info info) {
       BEAMCODER_INVALID_ARGS);
   }
 
-  // bool isArray;
-  // c->status = napi_is_array(env, args[0], &isArray);
+  bool isArray;
+  c->status = napi_is_array(env, args[0], &isArray);
   // REJECT_RETURN;
   // if (!isArray) // Allow array-like objects
   //   REJECT_ERROR_RETURN("Expected an array of source frame objects.",
@@ -1667,8 +1667,16 @@ napi_value filter(napi_env env, napi_callback_info info) {
   if (napi_ok == isFrame(env, item)) {
     // Simplest case of an array of frame objects
     uint32_t framesLen;
-    c->status = napi_get_array_length(env, args[0], &framesLen);
-    REJECT_RETURN;
+    if (isArray) {
+      c->status = napi_get_array_length(env, args[0], &framesLen);
+      REJECT_RETURN;
+    } else {
+      napi_value propNames;
+      c->status = napi_get_property_names(env, args[0], &propNames);
+      REJECT_RETURN;
+      c->status = napi_get_array_length(env, propNames, &framesLen);
+      REJECT_RETURN;
+    }
     for (uint32_t f = 0; f < framesLen; ++f) {
       c->status = napi_get_element(env, args[0], f, &value);
       REJECT_RETURN;
