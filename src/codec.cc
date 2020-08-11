@@ -856,7 +856,7 @@ napi_value setCodecCtxTimeBase(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVCodecContext* codec;
 
   size_t argc = 1;
@@ -866,14 +866,16 @@ napi_value setCodecCtxTimeBase(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set the time_base property.");
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("An array of two numbers is required to set the time_base property.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("An array of two numbers is required to set the time_base property.");
+  // }
   for ( int x = 0 ; x < 2 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("An array of two numbers is required to set the time_base property.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type != napi_number) {
@@ -1738,13 +1740,20 @@ napi_value setCodecCtxSliceOffset(napi_env env, napi_callback_info info) {
   status = napi_is_array(env, args[0], &isArray);
   CHECK_STATUS;
   if (!isArray) {
-    NAPI_THROW_ERROR("An array of numbers is required to set the slice_offset property.");
+    napi_value propNames;
+    status = napi_get_property_names(env, args[0], &propNames);
+    CHECK_STATUS;
+    status = napi_get_array_length(env, propNames, (uint32_t*) &sliceCount);
+    CHECK_STATUS;
+  } else {
+    status = napi_get_array_length(env, args[0], (uint32_t*) &sliceCount);
+    CHECK_STATUS;
   }
-  status = napi_get_array_length(env, args[0], (uint32_t*) &sliceCount);
-  CHECK_STATUS;
   for ( int x = 0 ; x < sliceCount ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("An array of numbers is required to set the slice_offset property.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type != napi_number) {
@@ -1793,7 +1802,7 @@ napi_value setCodecCtxSampleAspRt(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVCodecContext* codec;
 
   size_t argc = 1;
@@ -1803,14 +1812,16 @@ napi_value setCodecCtxSampleAspRt(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set the sample_aspect_ratio property.");
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("An array of two numbers is required to set the sample_aspect_ratio property.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("An array of two numbers is required to set the sample_aspect_ratio property.");
+  // }
   for ( int x = 0 ; x < 2 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("An array of two numbers is required to set the sample_aspect_ratio property.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type != napi_number) {
@@ -2462,7 +2473,7 @@ napi_value setCodecCtxIntraMatrix(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVCodecContext* codec;
   uint32_t uThirtwo;
 
@@ -2479,15 +2490,17 @@ napi_value setCodecCtxIntraMatrix(napi_env env, napi_callback_info info) {
     codec->intra_matrix = nullptr;
     goto done;
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("An array of numbers is required to set the intra_matrix property.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("An array of numbers is required to set the intra_matrix property.");
+  // }
   codec->intra_matrix = (uint16_t*) av_mallocz(sizeof(uint16_t) * 64);
   for ( int x = 0 ; x < 64 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("An array of numbers is required to set the intra_matrix property.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type == napi_number) {
@@ -2534,7 +2547,7 @@ napi_value setCodecCtxInterMatrix(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVCodecContext* codec;
   uint32_t uThirtwo;
 
@@ -2551,15 +2564,17 @@ napi_value setCodecCtxInterMatrix(napi_env env, napi_callback_info info) {
     codec->intra_matrix = nullptr;
     goto done;
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("An array of numbers is required to set the inter_matrix property.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("An array of numbers is required to set the inter_matrix property.");
+  // }
   codec->inter_matrix = (uint16_t*) av_mallocz(sizeof(uint16_t) * 64);
   for ( int x = 0 ; x < 64 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("An array of 64 numbers is required to set the inter_matrix property.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type == napi_number) {
@@ -4178,10 +4193,19 @@ napi_value setCodecCtxRcOverride(napi_env env, napi_callback_info info) {
   status = napi_is_array(env, args[0], &isArray);
   CHECK_STATUS;
   if (!isArray) {
-    NAPI_THROW_ERROR("An array of RcOverride values is required to set the rc_override property.");
-  }
-  status = napi_get_array_length(env, args[0], &count);
-  CHECK_STATUS;
+    napi_value propNames;
+    status = napi_get_property_names(env, args[0], &propNames);
+    CHECK_STATUS;
+    status = napi_get_array_length(env, propNames, &count);
+    CHECK_STATUS;
+    status = napi_get_element(env, args[0], 0, &element);
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("An array of RcOverride values is required to set the rc_override property.");
+    }
+  } else {
+    status = napi_get_array_length(env, args[0], &count);
+    CHECK_STATUS;
+  }  
   if (count == 0) {
     if (codec->rc_override != nullptr) {
       av_freep(&codec->rc_override);
@@ -5934,7 +5958,7 @@ napi_value setCodecCtxFramerate(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVCodecContext* codec;
 
   size_t argc = 1;
@@ -5944,14 +5968,16 @@ napi_value setCodecCtxFramerate(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set the framerate property.");
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("An array of two numbers is required to set the framerate property.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("An array of two numbers is required to set the framerate property.");
+  // }
   for ( int x = 0 ; x < 2 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("An array of two numbers is required to set the framerate property.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type != napi_number) {
@@ -6021,7 +6047,7 @@ napi_value setCodecCtxPktTimebase(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVCodecContext* codec;
 
   size_t argc = 1;
@@ -6031,14 +6057,16 @@ napi_value setCodecCtxPktTimebase(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set the pkt_timebase property.");
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("An array of two numbers is required to set the pkt_timebase property.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("An array of two numbers is required to set the pkt_timebase property.");
+  // }
   for ( int x = 0 ; x < 2 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("An array of two numbers is required to set the pkt_timebase property.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type != napi_number) {
@@ -6243,7 +6271,7 @@ napi_value setCodecCtxChromaIntraMatrix(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVCodecContext* codec;
   uint32_t uThirtwo;
 
@@ -6260,15 +6288,17 @@ napi_value setCodecCtxChromaIntraMatrix(napi_env env, napi_callback_info info) {
     codec->chroma_intra_matrix = nullptr;
     goto done;
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("An array of numbers is required to set the chroma_intra_matrix property.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("An array of 64 numbers is required to set the chroma_intra_matrix property.");
+  // }
   codec->chroma_intra_matrix = (uint16_t*) av_mallocz(sizeof(uint16_t) * 64);
   for ( int x = 0 ; x < 64 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("An array of 64 numbers is required to set the chroma_intra_matrix property.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type == napi_number) {
