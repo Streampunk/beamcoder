@@ -4023,16 +4023,28 @@ napi_value newStream(napi_env env, napi_callback_info info) {
     CHECK_STATUS;
   }
 
-  status = napi_get_named_property(env, jsContext, "__streams", &jsStreams);
+  status = napi_get_named_property(env, jsContext, "__streams", &jsStreams); 
   CHECK_STATUS;
+  status = napi_typeof(env, jsStreams, &type);
+  CHECK_STATUS;
+  if (type != napi_object) {
+    return result;
+  }
+
   status = napi_is_array(env, jsStreams, &isArray);
   CHECK_STATUS;
   if (isArray) {
     status = napi_get_array_length(env, jsStreams, &streamCount);
     CHECK_STATUS;
-    status = napi_set_element(env, jsStreams, streamCount, result);
+  } else {
+    napi_value propNames;
+    status = napi_get_property_names(env, jsStreams, &propNames);
     CHECK_STATUS;
-  } // else let the first call to get create array
+    status = napi_get_array_length(env, propNames, &streamCount);
+    CHECK_STATUS;
+  }
+  status = napi_set_element(env, jsStreams, streamCount, result);
+  CHECK_STATUS;
   return result;
 }
 
@@ -4173,7 +4185,7 @@ napi_value setStreamTimeBase(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVStream* stream;
 
   size_t argc = 1;
@@ -4184,14 +4196,16 @@ napi_value setStreamTimeBase(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set the stream time_base property.");
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("The stream's time_base property must be set with an array of two numbers.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("The stream's time_base property must be set with an array of two numbers.");
+  // }
   for ( uint32_t x = 0 ; x < 2 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("The stream's time_base property must be set with an array of two numbers.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type != napi_number) {
@@ -4601,7 +4615,7 @@ napi_value setStreamSmpAspectRt(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVStream* stream;
 
   size_t argc = 1;
@@ -4612,14 +4626,16 @@ napi_value setStreamSmpAspectRt(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set the stream sample_aspect_ratio property.");
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("The stream's sample_aspect_ratio property must be set with an array of two numbers.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("The stream's sample_aspect_ratio property must be set with an array of two numbers.");
+  // }
   for ( uint32_t x = 0 ; x < 2 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("The stream's sample_aspect_ratio property must be set with an array of two numbers.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type != napi_number) {
@@ -4770,7 +4786,7 @@ napi_value setStreamAvgFrameRate(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVStream* stream;
 
   size_t argc = 1;
@@ -4781,14 +4797,16 @@ napi_value setStreamAvgFrameRate(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set the stream avg_frame_rate property.");
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("The stream's avg_frame_rate property must be set with an array of two numbers.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("The stream's avg_frame_rate property must be set with an array of two numbers.");
+  // }
   for ( uint32_t x = 0 ; x < 2 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("The stream's avg_frame_rate property must be set with an array of two numbers.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type != napi_number) {
@@ -4835,7 +4853,7 @@ napi_value setStreamRFrameRate(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, element;
   napi_valuetype type;
-  bool isArray;
+  // bool isArray;
   AVStream* stream;
 
   size_t argc = 1;
@@ -4846,14 +4864,16 @@ napi_value setStreamRFrameRate(napi_env env, napi_callback_info info) {
   if (argc < 1) {
     NAPI_THROW_ERROR("A value is required to set the stream r_frame_rate property.");
   }
-  status = napi_is_array(env, args[0], &isArray);
-  CHECK_STATUS;
-  if (!isArray) {
-    NAPI_THROW_ERROR("The stream's r_frame_rate property must be set with an array of two numbers.");
-  }
+  // status = napi_is_array(env, args[0], &isArray);
+  // CHECK_STATUS;
+  // if (!isArray) {
+  //   NAPI_THROW_ERROR("The stream's r_frame_rate property must be set with an array of two numbers.");
+  // }
   for ( uint32_t x = 0 ; x < 2 ; x++ ) {
     status = napi_get_element(env, args[0], x, &element);
-    CHECK_STATUS;
+    if (status != napi_ok) {
+      NAPI_THROW_ERROR("The stream's r_frame_rate property must be set with an array of two numbers.");
+    }
     status = napi_typeof(env, element, &type);
     CHECK_STATUS;
     if (type != napi_number) {
