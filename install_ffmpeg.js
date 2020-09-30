@@ -70,8 +70,7 @@ async function inflate(rs, folder, name) {
 }
 
 async function win32() {
-  console.log('Installing FFmpeg dependencies for Beam Coder on Windows.');
-  await exec('npm install unzipper --no-save');
+  console.log('Checking/Installing FFmpeg dependencies for Beam Coder on Windows.');
 
   await mkdir('ffmpeg').catch(e => {
     if (e.code === 'EEXIST') return;
@@ -79,7 +78,7 @@ async function win32() {
   });
   
   const ffmpegFilename = 'ffmpeg-4.3.1-win64-shared';
-  const downloadSource = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2020-09-29-12-56/ffmpeg-n4.3.1-18-g6d886b6586-win64-gpl-shared.zip';
+  const downloadSource = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2020-09-30-13-11/ffmpeg-n4.3.1-19-gaf2a430bb1-win64-gpl-shared-4.3.zip';
   await access(`ffmpeg/${ffmpegFilename}`, fs.constants.R_OK).catch(async () => {
     let ws_shared = fs.createWriteStream(`ffmpeg/${ffmpegFilename}.zip`);
     await get(ws_shared, downloadSource, `${ffmpegFilename}.zip`)
@@ -89,6 +88,8 @@ async function win32() {
           await get(ws_shared, redirectURL, `${ffmpegFilename}.zip`);
         } else console.error(err);
       });
+
+    await exec('npm install unzipper --no-save');
     let rs_shared = fs.createReadStream(`ffmpeg/${ffmpegFilename}.zip`);
     await inflate(rs_shared, 'ffmpeg', `${ffmpegFilename}`);
   });
