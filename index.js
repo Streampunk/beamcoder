@@ -33,6 +33,7 @@ under certain conditions. Conditions and warranty at:
 https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
 
 console.log(splash);
+console.log('Using FFmpeg version', beamcoder.avVersionInfo());
 
 beamcoder.demuxerStream = beamstreams.demuxerStream;
 beamcoder.muxerStream = beamstreams.muxerStream;

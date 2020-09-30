@@ -32,33 +32,39 @@ async function get(ws, url, name) {
   let totalLength = 0;
   return new Promise((comp, err) => {
     https.get(url, res => {
-      res.pipe(ws);
-      if (totalLength == 0) {
-        totalLength = +res.headers['content-length'];
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        err({ name: 'RedirectError', message: res.headers.location });
+      } else {
+        res.pipe(ws);
+        if (totalLength == 0) {
+          totalLength = +res.headers['content-length'];
+        }
+        res.on('end', () => {
+          process.stdout.write(`Downloaded 100% of '${name}'. Total length ${received} bytes.\n`);
+          comp();
+        });
+        res.on('error', err);
+        res.on('data', x => {
+          received += x.length;
+          process.stdout.write(`Downloaded ${received * 100/ totalLength | 0 }% of '${name}'.\r`);
+        });
       }
-      res.on('end', () => {
-        process.stdout.write(`Downloaded 100% of '${name}'. Total length ${received} bytes.\n`);
-        comp();
-      });
-      res.on('error', err);
-      res.on('data', x => {
-        received += x.length;
-        process.stdout.write(`Downloaded ${received * 100/ totalLength | 0 }% of '${name}'.\r`);
-      });
     }).on('error', err);
   });
 }
 
 async function inflate(rs, folder, name) {
   const unzip = require('unzipper');
-
+  const directory = await unzip.Open.file(`${folder}/${name}.zip`);
+  const directoryName = directory.files[0].path;
   return new Promise((comp, err) => {
-    console.log(`Unzipping '${folder}/${name}'.`);
-    rs.pipe(unzip.Extract({ path: folder }));
-    rs.on('close', () => {
-      console.log(`Unzipping of '${folder}/${name}' completed.`);
-      comp();
-    });
+    console.log(`Unzipping '${folder}/${name}.zip'.`);
+    rs.pipe(unzip.Extract({ path: folder }).on('close', () => {
+      fs.rename(`./${folder}/${directoryName}`, `./${folder}/${name}`, () => {
+        console.log(`Unzipping of '${folder}/${name}.zip' completed.`);
+        comp();
+      });
+    }));
     rs.on('error', err);
   });
 }
@@ -71,21 +77,20 @@ async function win32() {
     if (e.code === 'EEXIST') return;
     else throw e;
   });
-  await access('ffmpeg/ffmpeg-4.2.1-win64-shared', fs.constants.R_OK).catch(async () => {
-    let ws_shared = fs.createWriteStream('ffmpeg/ffmpeg-4.2.1-win64-shared.zip');
-    await get(ws_shared,
-      'https://ffmpeg.zeranoe.com/builds/win64/shared/ffmpeg-4.2.1-win64-shared.zip',
-      'ffmpeg-4.2.1-win64-shared.zip');
-    let rs_shared = fs.createReadStream('ffmpeg/ffmpeg-4.2.1-win64-shared.zip');
-    await inflate(rs_shared, 'ffmpeg', 'ffmpeg-4.2.1-win64-shared.zip');
-  });
-  await access('ffmpeg/ffmpeg-4.2.1-win64-dev', fs.constants.R_OK).catch(async () => {
-    let ws_dev = fs.createWriteStream('ffmpeg/ffmpeg-4.2.1-win64-dev.zip');
-    await get(ws_dev,
-      'https://ffmpeg.zeranoe.com/builds/win64/dev/ffmpeg-4.2.1-win64-dev.zip',
-      'ffmpeg-4.2.1-win64-dev.zip');
-    let rs_dev = fs.createReadStream('ffmpeg/ffmpeg-4.2.1-win64-dev.zip');
-    console.log(await inflate(rs_dev, 'ffmpeg', 'ffmpeg-4.2.1-win64-dev.zip'));
+  
+  const ffmpegFilename = 'ffmpeg-4.3.1-win64-shared';
+  const downloadSource = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2020-09-29-12-56/ffmpeg-n4.3.1-18-g6d886b6586-win64-gpl-shared.zip';
+  await access(`ffmpeg/${ffmpegFilename}`, fs.constants.R_OK).catch(async () => {
+    let ws_shared = fs.createWriteStream(`ffmpeg/${ffmpegFilename}.zip`);
+    await get(ws_shared, downloadSource, `${ffmpegFilename}.zip`)
+      .catch(async (err) => {
+        if (err.name === 'RedirectError') {
+          const redirectURL = err.message;
+          await get(ws_shared, redirectURL, `${ffmpegFilename}.zip`);
+        } else console.error(err);
+      });
+    let rs_shared = fs.createReadStream(`ffmpeg/${ffmpegFilename}.zip`);
+    await inflate(rs_shared, 'ffmpeg', `${ffmpegFilename}`);
   });
 }
 
