@@ -53,6 +53,29 @@ async function get(ws, url, name) {
   });
 }
 
+async function getHTML(url, name) {
+  let received = 0;
+  let totalLength = 0;
+  return new Promise((resolve, reject) => {
+    https.get(url, res => {
+      const chunks = [];
+      if (totalLength == 0) {
+        totalLength = +res.headers['content-length'];
+      }
+      res.on('end', () => {
+        process.stdout.write(`Downloaded 100% of '${name}'. Total length ${received} bytes.\n`);
+        resolve(Buffer.concat(chunks));
+      });
+      res.on('error', reject);
+      res.on('data', (chunk) => {
+        chunks.push(chunk);
+        received += chunk.length;
+        process.stdout.write(`Downloaded ${received * 100/ totalLength | 0 }% of '${name}'.\r`);
+      });
+    }).on('error', reject);
+  });
+}
+
 async function inflate(rs, folder, name) {
   const unzip = require('unzipper');
   const directory = await unzip.Open.file(`${folder}/${name}.zip`);
@@ -77,9 +100,18 @@ async function win32() {
     else throw e;
   });
   
-  const ffmpegFilename = 'ffmpeg-4.3.1-win64-shared';
-  const downloadSource = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2020-09-30-13-11/ffmpeg-n4.3.1-19-gaf2a430bb1-win64-gpl-shared-4.3.zip';
+  const ffmpegFilename = 'ffmpeg-4.3-win64-shared';
   await access(`ffmpeg/${ffmpegFilename}`, fs.constants.R_OK).catch(async () => {
+    const html = await getHTML('https://github.com/BtbN/FFmpeg-Builds/wiki/Latest', 'latest autobuilds');
+    const htmlStr = html.toString('utf-8');
+    const autoPos = htmlStr.indexOf('<p><a href=');
+    const endPos = htmlStr.indexOf('</div>', autoPos);
+    const autoStr = htmlStr.substring(autoPos, endPos);
+    const sharedEndPos = autoStr.lastIndexOf('">win64-gpl-shared-4.3');
+    const startStr = '<p><a href="';
+    const sharedStartPos = autoStr.lastIndexOf(startStr, sharedEndPos) + startStr.length;
+    const downloadSource = autoStr.substring(sharedStartPos, sharedEndPos);
+
     let ws_shared = fs.createWriteStream(`ffmpeg/${ffmpegFilename}.zip`);
     await get(ws_shared, downloadSource, `${ffmpegFilename}.zip`)
       .catch(async (err) => {
