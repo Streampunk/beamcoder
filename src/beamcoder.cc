@@ -926,6 +926,9 @@ napi_value Init(napi_env env, napi_value exports) {
     codec = av_codec_iterate(&opaque);
     // printf("Registered '%s'\n", (codec != nullptr) ? codec->name : "(null)");
   } while (codec != nullptr);
+
+  avdevice_register_all();
+
   return exports;
 }
 
