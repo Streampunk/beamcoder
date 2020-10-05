@@ -180,6 +180,10 @@ void encodeExecute(napi_env env, void* data) {
        c->errorMsg = "The encoder has been flushed, and no new frames can be sent to it.";
        return;
      case AVERROR(EINVAL):
+       // if hw context is present in frame, use it
+       if(c->encoder->hw_frames_ctx == nullptr && (*it)->hw_frames_ctx != nullptr) {
+          c->encoder->hw_frames_ctx = av_buffer_ref((*it)->hw_frames_ctx);
+       }
        if ((ret = avcodec_open2(c->encoder, c->encoder->codec, nullptr))) {
          c->status = BEAMCODER_ERROR_ALLOC_ENCODER;
          c->errorMsg = avErrorMsg("Problem opening encoder: ", ret);
