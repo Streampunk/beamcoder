@@ -70,9 +70,9 @@ napi_value getHWDeviceCtxType(napi_env env, napi_callback_info info) {
     case AV_HWDEVICE_TYPE_MEDIACODEC:
       name = "mediacodec";
       break;
-    case AV_HWDEVICE_TYPE_VULKAN:
-      name = "vulkan";
-      break;
+    // case AV_HWDEVICE_TYPE_VULKAN:
+    //   name = "vulkan";
+    //   break;
     default:
       name = nullptr;
       break;

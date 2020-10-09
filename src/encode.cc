@@ -138,7 +138,8 @@ create:
       (encoder->sample_rate > 0) && (encoder->channel_layout != 0)) {
     // For audio encodes open the encoder if sufficient parameters have been provided
     // Encoder specific parameters will then be set up and available before the first encode
-    if (ret = avcodec_open2(encoder, encoder->codec, nullptr)) {
+    ret = avcodec_open2(encoder, encoder->codec, nullptr);
+    if (ret) {
       NAPI_THROW_ERROR(avErrorMsg("Failed to open audio encoder: ", ret));
     }
   }
