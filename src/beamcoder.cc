@@ -919,6 +919,9 @@ napi_value Init(napi_env env, napi_value exports) {
   status = napi_define_properties(env, exports, 28, desc);
   CHECK_STATUS;
 
+  avdevice_register_all();
+  avformat_network_init();
+
   // Iterate over all codecs to makes sure they are registered
   void* opaque = nullptr;
   const AVCodec* codec;

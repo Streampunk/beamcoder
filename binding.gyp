@@ -7,7 +7,7 @@
                   "src/encode.cc", "src/mux.cc",
                   "src/packet.cc", "src/frame.cc",
                   "src/codec_par.cc", "src/format.cc",
-                  "src/codec.cc" ],
+                  "src/codec.cc", "src/hwcontext.cc" ],
     "conditions": [
       ['OS!="win"', {
         "defines": [

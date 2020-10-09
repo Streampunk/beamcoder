@@ -20,6 +20,7 @@
 */
 
 #include "frame.h"
+#include "hwcontext.h"
 
 napi_value getFrameLinesize(napi_env env, napi_callback_info info) {
   napi_status status;
@@ -1994,6 +1995,56 @@ napi_value setFramePktSize(napi_env env, napi_callback_info info) {
   return result;
 }
 
+napi_value getFrameHWFramesCtx(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  frameData* f;
+
+  size_t argc = 0;
+  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &f);
+  CHECK_STATUS;
+
+  if (f->frame->hw_frames_ctx == nullptr) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+  } else {
+    status = fromHWFramesContext(env, f->frame->hw_frames_ctx, &result);
+    CHECK_STATUS;
+  }
+
+  return result;
+}
+
+napi_value setFrameHWFramesCtx(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result, contextExt;
+  napi_valuetype type;
+  frameData* f;
+  AVBufferRef* contextRef;
+
+  size_t argc = 1;
+  napi_value args[1];
+  status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &f);
+  CHECK_STATUS;
+  if (argc < 1) {
+    NAPI_THROW_ERROR("A value is required to set the hw_frames_context property.");
+  }
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
+  if (type != napi_object) {
+    NAPI_THROW_ERROR("An object is required to set the hw_frames_context property.");
+  }
+  status = napi_get_named_property(env, args[0], "_framesContext", &contextExt);
+  CHECK_STATUS;
+  status = napi_get_value_external(env, contextExt, (void**) &contextRef);
+  CHECK_STATUS;
+  f->frame->hw_frames_ctx = av_buffer_ref(contextRef);
+
+  status = napi_get_undefined(env, &result);
+  CHECK_STATUS;
+  return result;
+}
+
 napi_value getFrameCropTop(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
@@ -2534,20 +2585,22 @@ napi_status fromAVFrame(napi_env env, frameData* f, napi_value* result) {
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
     { "pkt_size", nullptr, nullptr, getFramePktSize, setFramePktSize, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
+    { "hw_frames_ctx", nullptr, nullptr, getFrameHWFramesCtx, setFrameHWFramesCtx, nullptr,
+      (napi_property_attributes) (napi_writable | napi_enumerable), f},
     { "crop_top", nullptr, nullptr, getFrameCropTop, setFrameCropTop, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
     { "crop_bottom", nullptr, nullptr, getFrameCropBottom, setFrameCropBottom, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
+    // 40
     { "crop_left", nullptr, nullptr, getFrameCropLeft, setFrameCropLeft, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
-    // 40
     { "crop_right", nullptr, nullptr, getFrameCropRight, setFrameCropRight, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), f },
     { "alloc", nullptr, alloc, nullptr, nullptr, nullptr, napi_enumerable, nullptr },
     { "toJSON", nullptr, frameToJSON, nullptr, nullptr, nullptr, napi_default, f },
     { "_frame", nullptr, nullptr, nullptr, nullptr, extFrame, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsFrame, 43, desc);
+  status = napi_define_properties(env, jsFrame, 44, desc);
   PASS_STATUS;
 
   for ( int x = 0 ; x < AV_NUM_DATA_POINTERS ; x++ ) {

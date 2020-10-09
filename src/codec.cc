@@ -20,6 +20,7 @@
 */
 
 #include "codec.h"
+#include "hwcontext.h"
 
 napi_value getCodecCtxCodecID(napi_env env, napi_callback_info info) {
   napi_status status;
@@ -6495,6 +6496,56 @@ napi_value getCodecCtxCodedSideData(napi_env env, napi_callback_info info) {
   return result;
 }
 
+napi_value getCodecHWFramesCtx(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVCodecContext* codec;
+
+  size_t argc = 0;
+  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
+  CHECK_STATUS;
+
+  if (codec->hw_frames_ctx == nullptr) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+  } else {
+    status = fromHWFramesContext(env, codec->hw_frames_ctx, &result);
+    CHECK_STATUS;
+  }
+
+  return result;
+}
+
+napi_value setCodecHWFramesCtx(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result, contextExt;
+  napi_valuetype type;
+  AVCodecContext* codec;
+  AVBufferRef* contextRef;
+
+  size_t argc = 1;
+  napi_value args[1];
+  status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &codec);
+  CHECK_STATUS;
+  if (argc < 1) {
+    NAPI_THROW_ERROR("A value is required to set the hw_frames_context property.");
+  }
+  status = napi_typeof(env, args[0], &type);
+  CHECK_STATUS;
+  if (type != napi_object) {
+    NAPI_THROW_ERROR("An object is required to set the hw_frames_context property.");
+  }
+  status = napi_get_named_property(env, args[0], "_framesContext", &contextExt);
+  CHECK_STATUS;
+  status = napi_get_value_external(env, contextExt, (void**) &contextRef);
+  CHECK_STATUS;
+  codec->hw_frames_ctx = av_buffer_ref(contextRef);
+
+  status = napi_get_undefined(env, &result);
+  CHECK_STATUS;
+  return result;
+}
+
 napi_value getCodecCtxSubTextFmt(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
@@ -6615,6 +6666,26 @@ napi_value setCodecCtxMaxPixels(napi_env env, napi_callback_info info) {
 
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
+  return result;
+}
+
+napi_value getCodecHWDeviceCtx(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result;
+  AVCodecContext* codec;
+
+  size_t argc = 0;
+  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
+  CHECK_STATUS;
+
+  if (codec->hw_device_ctx == nullptr) {
+    status = napi_get_null(env, &result);
+    CHECK_STATUS;
+  } else {
+    status = fromHWDeviceContext(env, codec->hw_device_ctx, &result);
+    CHECK_STATUS;
+  }
+
   return result;
 }
 
@@ -7227,17 +7298,20 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
     { "coded_side_data", nullptr, nullptr,
       encoding ? getCodecCtxCodedSideData : nullptr, failBoth, nullptr,
       encoding ? napi_enumerable : napi_default, codec},
-    // TODO hw_frames_ctx
+    { "hw_frames_ctx", nullptr, nullptr,
+      getCodecHWFramesCtx,
+      encoding ? setCodecHWFramesCtx : failDecoding, nullptr,
+      encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
+    // 130
     { "sub_text_format", nullptr, nullptr,
       encoding ? nullptr : getCodecCtxSubTextFmt,
       encoding ? failEncoding : setCodecCtxSubTextFmt, nullptr,
       encoding ? napi_default : (napi_property_attributes) (napi_writable | napi_enumerable), codec},
-    // 130
     { "trailing_padding", nullptr, nullptr, getCodecCtxTrailPad, setCodecCtxTrailPad, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), codec},
     { "max_pixels", nullptr, nullptr, getCodecCtxMaxPixels, setCodecCtxMaxPixels, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), codec},
-    // TODO hw_device_ctx
+    { "hw_device_ctx", nullptr, nullptr, getCodecHWDeviceCtx, nullptr, nullptr, napi_enumerable, codec},
     { "hwaccel_flags", nullptr, nullptr,
       encoding ? nullptr : getCodecCtxHwAccelFlags,
       encoding ? failEncoding : setCodecCtxHwAccelFlags, nullptr,
@@ -7256,15 +7330,15 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? flushEnc : flushDec, nullptr, nullptr, nullptr, napi_enumerable, codec},
     { "extractParams", nullptr, extractParams, nullptr, nullptr, nullptr, napi_enumerable, nullptr},
     { "useParams", nullptr, useParams, nullptr, nullptr, nullptr, napi_enumerable, nullptr},
+    // 140
     // Hidden values - to allow Object.assign to work
     { "params", nullptr, nullptr, nullptr, nop, undef, // Set for muxing
       napi_writable, nullptr},
     { "stream_index", nullptr, nullptr, nullptr, nop, undef, napi_writable, nullptr },
-    // 140
     { "demuxer", nullptr, nullptr, nullptr, nop, undef, napi_writable, nullptr},
     { "_CodecContext", nullptr, nullptr, nullptr, nullptr, extCodec, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsCodec, 142, desc);
+  status = napi_define_properties(env, jsCodec, 144, desc);
   PASS_STATUS;
 
   *result = jsCodec;
