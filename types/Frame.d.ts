@@ -1,3 +1,5 @@
+import { HWFramesContext } from "./HWContext";
+
 /**
  * This object describes decoded (raw) audio or video data.
  */
@@ -145,7 +147,11 @@ export interface Frame {
    * It is set to a negative value if unknown.
 	 */
 	pkt_size: number
-
+  /**
+	 * For hwaccel-format frames, this should be a reference to the
+	 * HWFramesContext describing the frame.
+	 */
+	hw_frames_ctx: HWFramesContext
 	/**
 	* Video frames only. The number of pixels to discard from the the
 	* top/bottom/left/right border of the frame to obtain the sub-rectangle of

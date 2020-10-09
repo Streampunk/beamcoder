@@ -1,3 +1,5 @@
+import { HWDeviceContext, HWFramesContext } from "./HWContext"
+
 export type MotionEstimationString = 'sad' | 'sse' | 'satd' | 'dct' | 'psnr' | 'bit' | 'rd' | 'zero' | 'vsad' |
                                      'vsse' | 'nsse' | 'w53' | 'w97' | 'dctmax' | 'dct264' | 'median_sad' | 'chroma'
 export type FrameSkipString = 'none' | 'default' | 'nonref' | 'bidir' | 'nonintra' | 'nonkey' | 'all'
@@ -451,6 +453,29 @@ export interface CodecContext {
 		type: 'PacketSideData'
 		[key: string]: Buffer | string
 	}
+	/**
+	 * A reference to the AVHWFramesContext describing the input (for encoding)
+	 * or output (decoding) frames. The reference is set by the caller and
+	 * afterwards owned (and freed) by libavcodec - it should never be read by
+	 * the caller after being set.
+	 *
+	 * - decoding: This field should be set by the caller from the get_format()
+	 *             callback. The previous reference (if any) will always be
+	 *             unreffed by libavcodec before the get_format() call.
+	 *
+	 *             If the default get_buffer2() is used with a hwaccel pixel
+	 *             format, then this AVHWFramesContext will be used for
+	 *             allocating the frame buffers.
+	 *
+	 * - encoding: For hardware encoders configured to use a hwaccel pixel
+	 *             format, this field should be set by the caller to a reference
+	 *             to the AVHWFramesContext describing input frames.
+	 *             AVHWFramesContext.format must be equal to
+	 *             AVCodecContext.pix_fmt.
+	 *
+	 *             This field should be set before avcodec_open2() is called.
+	 */
+	hw_frames_ctx: HWFramesContext
 	/** Control the form of AVSubtitle.rects[N]->ass */
 	sub_text_format: number
 	/**
@@ -462,6 +487,27 @@ export interface CodecContext {
 	trailing_padding: number
   /** The number of pixels per image to maximally accept. */
 	max_pixels: number
+	/**
+	 * A reference to the HWDeviceContext describing the device which will
+	 * be used by a hardware encoder/decoder.  The reference is set by the
+	 * caller and afterwards owned (and freed) by libavcodec.
+	 *
+	 * This should be used if either the codec device does not require
+	 * hardware frames or any that are used are to be allocated internally by
+	 * libavcodec.  If the user wishes to supply any of the frames used as
+	 * encoder input or decoder output then hw_frames_ctx should be used
+	 * instead.  When hw_frames_ctx is set in get_format() for a decoder, this
+	 * field will be ignored while decoding the associated stream segment, but
+	 * may again be used on a following one after another get_format() call.
+	 *
+	 * For both encoders and decoders this field should be set before
+	 * avcodec_open2() is called and must not be written to thereafter.
+	 *
+	 * Note that some decoders may require this field to be set initially in
+	 * order to support hw_frames_ctx at all - in that case, all frames
+	 * contexts used must be created on the same device.
+	 */
+	hw_device_ctx: HWDeviceContext
 	/**
 	 * Bit set of AV_HWACCEL_FLAG_* flags, which affect hardware accelerated
 	 * decoding (if active).
