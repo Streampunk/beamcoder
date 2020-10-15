@@ -472,6 +472,8 @@ let demuxer = demuxerStream.demuxer({
 });
 ```
 
+To abandon the demuxing process and forcibly close the input file or stream, call the synchronous `forceClose()` method of the demuxer.
+
 ### Decoding
 
 Decoding is the process of taking a stream of compressed data in the form of _packets_ and converting it into uncompressed _frames_. In general, to decode an interleaved (multiplexed) media file, you need a decoder for each of the video and the audio streams. For the purpose of keeping the examples simple in this section, only a single stream is decoded. However, it is possible to set up more than one decoder - say for related video and audio streams - and run them asynchronously and in parallel, i.e. to decode the video and audio required to present a frame.

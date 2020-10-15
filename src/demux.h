@@ -52,6 +52,8 @@ napi_value seekFrame(napi_env env, napi_callback_info info);
 void demuxerFinalizer(napi_env env, void* data, void* hint);
 void readBufferFinalizer(napi_env env, void* data, void* hint);
 
+napi_value forceCloseInput(napi_env env, napi_callback_info info);
+
 struct demuxerCarrier : carrier {
   const char* filename = nullptr;
   Adaptor *adaptor = nullptr;

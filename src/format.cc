@@ -3850,7 +3850,9 @@ void formatContextFinalizer(napi_env env, void* data, void* hint) {
   if (fc->protocol_blacklist != nullptr) {
     av_freep(fc->protocol_blacklist);
   } */
-  if (!adaptor) // crashes otherwise...
+  if (fc->iformat != nullptr)
+    avformat_close_input(&fc);
+  else if (!adaptor) // crashes otherwise...
     avformat_free_context(fc);
 }
 
