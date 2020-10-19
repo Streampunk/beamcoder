@@ -3850,9 +3850,13 @@ void formatContextFinalizer(napi_env env, void* data, void* hint) {
   if (fc->protocol_blacklist != nullptr) {
     av_freep(fc->protocol_blacklist);
   } */
-  if (fc->iformat != nullptr)
-    avformat_close_input(&fc);
-  else if (!adaptor) // crashes otherwise...
+  if (fc->iformat != nullptr) {
+    // The format context we get here is copy so the close_input call won't clear the JS format context
+    // Hence copy the formatContext pointer to null the iformat after close to avoid a double delete
+    AVFormatContext* closeFc = fc;
+    avformat_close_input(&closeFc);
+    fc->iformat = nullptr;
+  } else if (fc->oformat != nullptr && !adaptor) // crashes otherwise...
     avformat_free_context(fc);
 }
 

@@ -531,7 +531,6 @@ napi_value forceCloseInput(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, formatJS, formatExt;
   AVFormatContext* format;
-  int ret;
 
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, &formatJS, nullptr);
@@ -541,15 +540,7 @@ napi_value forceCloseInput(napi_env env, napi_callback_info info) {
   status = napi_get_value_external(env, formatExt, (void**) &format);
   CHECK_STATUS;
 
-  if (format->pb != nullptr) {
-    ret = avio_closep(&format->pb);
-    if (ret < 0) {
-      NAPI_THROW_ERROR(avErrorMsg("Failed to force close demuxer resource: ", ret));
-    }
-  } else {
-    printf("DEBUG: Demuxer IO resource '%s' already closed or not managed by AVIO.\n",
-      (format->url != nullptr) ? format->url : "unknown");
-  }
+  formatContextFinalizer(env, format, format->pb);
 
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
