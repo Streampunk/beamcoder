@@ -186,6 +186,7 @@ extern const beamEnum* beam_avoid_neg_ts;
 extern const beamEnum* beam_avfmt_duration2;
 extern const beamEnum* beam_packet_side_data_type;
 extern const beamEnum* beam_frame_side_data_type;
+extern const beamEnum* beam_logging_level;
 
 napi_value makeFrame(napi_env env, napi_callback_info info);
 
