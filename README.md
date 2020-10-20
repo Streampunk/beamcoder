@@ -267,6 +267,20 @@ Property value mappings from C to Javascript and vice versa are as follows:
 * Binary data blobs of type `uint8_t *`, such as `extradata` or `AVPacketSideData.data` are assumed to be small and easy to copy. Javascript getters make a copy of the underlying data and return a Buffer. The setters create a copy of the data in a buffer and use it to set the underlying value. Therefore, to modify the data, it must be read via the getter, modified and written back via the setter.
 * `AVDictionary` metadata and private data values have a natural mapping to Javascript objects as keys to property names and their value pair. Always set dictionary-based and private data values using an object. Dictionary values are replaced in their entirety. For private data, only the properties contained in the update object will be modified.
 
+#### Logging
+
+To control the level of logging from FFmpeg you can use the `beamcoder.logging()` function. With no parameter it will return the current logging level, to set the logging level pass one of the following strings:
+
+* `quiet` - print no output.
+* `panic` - something went really wrong - crash will follow
+* `fatal` - recovery not possible
+* `error` - lossless recovery not possible
+* `warning` - something doesn't look correct
+* `info` - standard information - the default
+* `verbose` - detailed information
+* `debug` - stuff which is only useful for libav* developers
+* `trace` - extremely verbose debugging for libav* developers
+
 ### Demuxing
 
 The process of demuxing (de-multiplexing) extracts time-labelled packets of data contained in a media stream or file. FFmpeg provides a diverse range of demuxing capability with support for a wide range of input formats and protocols (`beamcoder.protocols()`).
