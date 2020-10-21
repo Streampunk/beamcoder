@@ -234,7 +234,14 @@ void readFrameExecute(napi_env env, void* data) {
   readFrameCarrier* c = (readFrameCarrier*) data;
   int ret;
 
-  ret = av_read_frame(c->format, c->packet);
+  AVFormatContext* fmtCtx = c->formatRef->fmtCtx;
+  if (fmtCtx == nullptr) {
+    c->status = BEAMCODER_ERROR_READ_FRAME;
+    c->errorMsg = "Format context has been deleted.";
+    return;
+  }
+
+  ret = av_read_frame(fmtCtx, c->packet);
   if (ret == AVERROR_EOF) {
     av_packet_free(&c->packet);
   } else if (ret < 0) {
@@ -280,7 +287,7 @@ void readFrameComplete(napi_env env, napi_status asyncStatus, void* data) {
 }
 
 napi_value readFrame(napi_env env, napi_callback_info info) {
-  napi_value resourceName, promise, formatJS, formatExt, adaptorExt;
+  napi_value resourceName, promise, formatJS, formatRefExt, adaptorExt;
   readFrameCarrier* c = new readFrameCarrier;
 
   c->status = napi_create_promise(env, &c->_deferred, &promise);
@@ -289,9 +296,9 @@ napi_value readFrame(napi_env env, napi_callback_info info) {
   size_t argc = 0;
   c->status = napi_get_cb_info(env, info, &argc, nullptr, &formatJS, nullptr);
   REJECT_RETURN;
-  c->status = napi_get_named_property(env, formatJS, "_formatContext", &formatExt);
+  c->status = napi_get_named_property(env, formatJS, "_formatContextRef", &formatRefExt);
   REJECT_RETURN;
-  c->status = napi_get_value_external(env, formatExt, (void**) &c->format);
+  c->status = napi_get_value_external(env, formatRefExt, (void**) &c->formatRef);
   REJECT_RETURN;
 
   c->status = napi_get_named_property(env, formatJS, "_adaptor", &adaptorExt);
@@ -328,7 +335,14 @@ void seekFrameExecute(napi_env env, void *data) {
   seekFrameCarrier* c = (seekFrameCarrier*) data;
   int ret;
 
-  ret = av_seek_frame(c->format, c->streamIndex, c->timestamp, c->flags);
+  AVFormatContext* fmtCtx = c->formatRef->fmtCtx;
+  if (fmtCtx == nullptr) {
+    c->status = BEAMCODER_ERROR_READ_FRAME;
+    c->errorMsg = "Format context has been deleted.";
+    return;
+  }
+
+  ret = av_seek_frame(fmtCtx, c->streamIndex, c->timestamp, c->flags);
   // printf("Seek and ye shall %i, streamIndex = %i, timestamp = %i, flags = %i\n",
   //   ret, c->streamIndex, c->timestamp, c->flags );
   if (ret < 0) {
@@ -369,7 +383,7 @@ void seekFrameComplete(napi_env env, napi_status asyncStatus, void *data) {
 */
 
 napi_value seekFrame(napi_env env, napi_callback_info info) {
-  napi_value resourceName, promise, formatJS, formatExt, value;
+  napi_value resourceName, promise, formatJS, formatRefExt, value;
   napi_valuetype type;
   seekFrameCarrier* c = new seekFrameCarrier;
   bool isArray, bValue;
@@ -383,9 +397,9 @@ napi_value seekFrame(napi_env env, napi_callback_info info) {
 
   c->status = napi_get_cb_info(env, info, &argc, argv, &formatJS, nullptr);
   REJECT_RETURN;
-  c->status = napi_get_named_property(env, formatJS, "_formatContext", &formatExt);
+  c->status = napi_get_named_property(env, formatJS, "_formatContextRef", &formatRefExt);
   REJECT_RETURN;
-  c->status = napi_get_value_external(env, formatExt, (void**) &c->format);
+  c->status = napi_get_value_external(env, formatRefExt, (void**) &c->formatRef);
   REJECT_RETURN;
 
   c->status = napi_create_reference(env, formatJS, 1, &c->passthru);
@@ -529,18 +543,40 @@ flags:
 
 napi_value forceCloseInput(napi_env env, napi_callback_info info) {
   napi_status status;
-  napi_value result, formatJS, formatExt;
-  AVFormatContext* format;
+  napi_value result, formatJS, formatRefExt, adaptorExt;
+  fmtCtxRef* fmtRef;
+  AVFormatContext* fc;
+  Adaptor *adaptor;
+  int ret;
 
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, &formatJS, nullptr);
   CHECK_STATUS;
-  status = napi_get_named_property(env, formatJS, "_formatContext", &formatExt);
+  status = napi_get_named_property(env, formatJS, "_formatContextRef", &formatRefExt);
   CHECK_STATUS;
-  status = napi_get_value_external(env, formatExt, (void**) &format);
+  status = napi_get_value_external(env, formatRefExt, (void**) &fmtRef);
+  CHECK_STATUS;
+  status = napi_get_named_property(env, formatJS, "_adaptor", &adaptorExt);
+  CHECK_STATUS;
+  status = napi_get_value_external(env, adaptorExt, (void**) &adaptor);
   CHECK_STATUS;
 
-  formatContextFinalizer(env, format, format->pb);
+  if (fmtRef->fmtCtx != nullptr) {
+    fc = fmtRef->fmtCtx;
+    if (fc->pb != nullptr) {
+      if (adaptor)
+        avio_context_free(&fc->pb);
+      else {
+        ret = avio_closep(&fc->pb);
+        if (ret < 0) {
+          printf("DEBUG: For url '%s', %s", (fc->url != nullptr) ? fc->url : "unknown",
+            avErrorMsg("error closing IO: ", ret));
+        }
+      }
+    }
+
+    avformat_close_input(&fmtRef->fmtCtx);
+  }
 
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;

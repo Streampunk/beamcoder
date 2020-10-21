@@ -33,6 +33,11 @@ extern "C" {
   #include <libavutil/avstring.h>
 }
 
+// Indirection required to avoid double delete after demuxer forceClose 
+struct fmtCtxRef {
+  AVFormatContext* fmtCtx = nullptr;
+};
+
 napi_value muxers(napi_env env, napi_callback_info info);
 napi_value demuxers(napi_env env, napi_callback_info info);
 napi_value guessFormat(napi_env env, napi_callback_info info);

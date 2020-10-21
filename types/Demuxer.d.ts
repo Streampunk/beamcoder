@@ -72,6 +72,10 @@ export interface Demuxer extends Omit<FormatContext,
    * @returns a promise that resolves to a Packet when the read has completed
 	 */
 	read(): Promise<Packet>
+	/**
+	 * Abandon the demuxing process and forcibly close the file or stream without waiting for it to finish
+	 */
+	forceClose(): undefined
 }
 
 /**
