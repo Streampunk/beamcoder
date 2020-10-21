@@ -3869,6 +3869,8 @@ void formatContextFinalizer(napi_env env, void* data, void* hint) {
     if (adaptor != nullptr) // crashes otherwise...
       avformat_free_context(fc);
   }
+
+  delete fmtRef;
 }
 
 napi_value newStream(napi_env env, napi_callback_info info) {
