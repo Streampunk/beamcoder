@@ -76,6 +76,11 @@ export interface Demuxer extends Omit<FormatContext,
 	 * Abandon the demuxing process and forcibly close the file or stream without waiting for it to finish
 	 */
 	forceClose(): undefined
+
+	/**
+	  * This causes any currently blocking IO to be interrupted and raise an "Immediate exit requested" error.
+	  */
+	interrupt(): undefined;
 }
 
 /**
