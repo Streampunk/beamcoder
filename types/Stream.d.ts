@@ -104,7 +104,7 @@ export interface Stream {
    */
   sample_aspect_ratio: Array<number>
 
-  metadata: Array<string>
+  metadata: { [key: string]: string }
   /**
    * Average framerate
    *
