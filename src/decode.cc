@@ -81,6 +81,7 @@ napi_value decoder(napi_env env, napi_callback_info info) {
       NAPI_THROW_ERROR("Stream index is out of bounds for the given format.");
     }
     params = format->streams[streamIdx]->codecpar;
+    codecID = params->codec_id;
     codecName = (char*) avcodec_get_name(params->codec_id);
     codecNameLen = strlen(codecName);
     goto create;
@@ -98,6 +99,7 @@ napi_value decoder(napi_env env, napi_callback_info info) {
     }
     status = napi_get_value_external(env, jsParams, (void**) &params);
     CHECK_STATUS;
+    codecID = params->codec_id;
     codecName = (char*) avcodec_get_name(params->codec_id);
     codecNameLen = strlen(codecName);
     goto create;
