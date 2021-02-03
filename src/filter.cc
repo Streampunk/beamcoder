@@ -1453,8 +1453,8 @@ napi_value filterer(napi_env env, napi_callback_info info) {
 struct filterCarrier : carrier {
   filtContexts *srcCtxs = nullptr;
   filtContexts *sinkCtxs = nullptr;
-  std::map<std::string, std::deque<AVFrame *> > srcFrames;
-  std::map<std::string, std::vector<AVFrame *> > dstFrames;
+  std::unordered_map<std::string, std::deque<AVFrame *> > srcFrames;
+  std::unordered_map<std::string, std::vector<AVFrame *> > dstFrames;
   std::vector<napi_ref> frameRefs;
   ~filterCarrier() {}
 };
