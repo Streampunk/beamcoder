@@ -9,8 +9,8 @@
                 "C:/Program Files (x86)/Windows Kits/8.1/Include/shared",
                 "C:/Program Files (x86)/Windows Kits/8.1/Include/winrt",
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/ffmpeg/ffmpeg-4.3.1-win64-shared/include/**",
-                "${env:USERPROFILE}/AppData/Local/node-gyp/Cache/12.18.2/include/node"
+                "${workspaceFolder}/ffmpeg/ffmpeg-4.x-win64-shared/include/**",
+                "${env:USERPROFILE}/AppData/Local/node-gyp/Cache/12.21.0/include/node"
             ],
             "defines": [
                 "_DEBUG",

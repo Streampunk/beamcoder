@@ -4871,12 +4871,6 @@ napi_value getCodecCtxDebug(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
   status = beam_set_bool(env, result, "BUGS", codec->debug & FF_DEBUG_BUGS);
   CHECK_STATUS;
-  #if FF_API_DEBUG_MV
-  // status = beam_set_bool(env, result, "VIS_QP", codec->debug & FF_DEBUG_VIS_QP);
-  // CHECK_STATUS;
-  // status = beam_set_bool(env, result, "VIS_MB_TYPE", codec->debug & FF_DEBUG_VIS_MB_TYPE);
-  // CHECK_STATUS;
-  #endif
   status = beam_set_bool(env, result, "BUFFERS", codec->debug & FF_DEBUG_BUFFERS);
   CHECK_STATUS;
   status = beam_set_bool(env, result, "THREADS", codec->debug & FF_DEBUG_THREADS);
@@ -4963,18 +4957,6 @@ napi_value setCodecCtxDebug(napi_env env, napi_callback_info info) {
   if (present) { codec->debug = (flag) ?
     codec->debug | FF_DEBUG_BUGS :
     codec->debug & ~FF_DEBUG_BUGS; }
-#if FF_API_DEBUG_MV
-  // status = beam_get_bool(env, args[0], "VIS_QP", &present, &flag);
-  // CHECK_STATUS;
-  // if (present) { codec->debug = (flag) ?
-  //   codec->debug | FF_DEBUG_VIS_QP :
-  //   codec->debug & ~FF_DEBUG_VIS_QP; }
-  // status = beam_get_bool(env, args[0], "VIS_MB_TYPE", &present, &flag);
-  // CHECK_STATUS;
-  // if (present) { codec->debug = (flag) ?
-  //   codec->debug | FF_DEBUG_VIS_MB_TYPE :
-  //   codec->debug & ~FF_DEBUG_VIS_MB_TYPE; }
-#endif
   status = beam_get_bool(env, args[0], "BUFFERS", &present, &flag);
   CHECK_STATUS;
   if (present) { codec->debug = (flag) ?
@@ -5468,47 +5450,6 @@ napi_value getCodecCtxActThreadType(napi_env env, napi_callback_info info) {
   status = beam_set_bool(env, result, "SLICE", codec->active_thread_type & FF_THREAD_SLICE);
   CHECK_STATUS;
 
-  return result;
-}
-
-napi_value getCodecCtxThreadSafeCBs(napi_env env, napi_callback_info info) {
-  napi_status status;
-  napi_value result;
-  AVCodecContext* codec;
-
-  size_t argc = 0;
-  status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
-  CHECK_STATUS;
-  status = napi_create_int32(env, codec->thread_safe_callbacks, &result);
-  CHECK_STATUS;
-
-  return result;
-}
-
-napi_value setCodecCtxThreadSafeCBs(napi_env env, napi_callback_info info) {
-  napi_status status;
-  napi_value result;
-  napi_valuetype type;
-  AVCodecContext* codec;
-
-  size_t argc = 1;
-  napi_value args[1];
-  status = napi_get_cb_info(env, info, &argc, args, nullptr, (void**) &codec);
-  CHECK_STATUS;
-  if (argc < 1) {
-    NAPI_THROW_ERROR("A value is required to set the thread_safe_callbacks property.");
-  }
-  status = napi_typeof(env, args[0], &type);
-  CHECK_STATUS;
-  if (type != napi_number) {
-    NAPI_THROW_ERROR("A number is required to set the thread_safe_callbacks property.");
-  }
-
-  status = napi_get_value_int32(env, args[0], &codec->thread_safe_callbacks);
-  CHECK_STATUS;
-
-  status = napi_get_undefined(env, &result);
-  CHECK_STATUS;
   return result;
 }
 
@@ -7221,8 +7162,6 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
     { "active_thread_type", nullptr, nullptr, getCodecCtxActThreadType, failBoth, nullptr,
       napi_enumerable, codec},
     // TODO find a way of exposing a custom getBuffer?
-    { "thread_safe_callbacks", nullptr, nullptr, getCodecCtxThreadSafeCBs, setCodecCtxThreadSafeCBs, nullptr,
-      (napi_property_attributes) (napi_writable | napi_enumerable), codec},
     { "nsse_weight", nullptr, nullptr,
       encoding ? getCodecCtxNsseWeight : nullptr,
       encoding ? setCodecCtxNsseWeight : failDecoding, nullptr,
@@ -7230,10 +7169,10 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
     { "profile", nullptr, nullptr, getCodecCtxProfile,
       encoding ? setCodecCtxProfile : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
-    // 110
     { "level", nullptr, nullptr, getCodecCtxLevel,
       encoding ? setCodecCtxLevel : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
+    // 110
     { "skip_loop_filter", nullptr, nullptr,
       encoding ? nullptr : getCodecCtxSkipLpFilter,
       encoding ? failEncoding : setCodecCtxSkipLpFilter, nullptr,
@@ -7267,11 +7206,11 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? napi_default : napi_enumerable, codec},
     // TODO not exposing lowres ... it's on its way out
     // not exposing PTS correct stats - "not intended to be used by user apps"
-    // 120
     { "sub_charenc", nullptr, nullptr,
       encoding ? nullptr : getCodecCtxSubCharenc,
       encoding ? failEncoding : setCodecCtxSubCharenc, nullptr,
       encoding ? napi_default : (napi_property_attributes) (napi_writable | napi_enumerable), codec},
+    // 120
     { "sub_charenc_mode", nullptr, nullptr,
       encoding ? nullptr : getCodecCtxSubCharencMode, failBoth, nullptr,
       encoding ? napi_default : napi_enumerable, codec},
@@ -7302,11 +7241,11 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       getCodecHWFramesCtx,
       encoding ? setCodecHWFramesCtx : failDecoding, nullptr,
       encoding ? (napi_property_attributes) (napi_writable | napi_enumerable) : napi_enumerable, codec},
-    // 130
     { "sub_text_format", nullptr, nullptr,
       encoding ? nullptr : getCodecCtxSubTextFmt,
       encoding ? failEncoding : setCodecCtxSubTextFmt, nullptr,
       encoding ? napi_default : (napi_property_attributes) (napi_writable | napi_enumerable), codec},
+    // 130
     { "trailing_padding", nullptr, nullptr, getCodecCtxTrailPad, setCodecCtxTrailPad, nullptr,
       (napi_property_attributes) (napi_writable | napi_enumerable), codec},
     { "max_pixels", nullptr, nullptr, getCodecCtxMaxPixels, setCodecCtxMaxPixels, nullptr,
@@ -7330,15 +7269,15 @@ napi_status fromAVCodecContext(napi_env env, AVCodecContext* codec,
       encoding ? flushEnc : flushDec, nullptr, nullptr, nullptr, napi_enumerable, codec},
     { "extractParams", nullptr, extractParams, nullptr, nullptr, nullptr, napi_enumerable, nullptr},
     { "useParams", nullptr, useParams, nullptr, nullptr, nullptr, napi_enumerable, nullptr},
-    // 140
     // Hidden values - to allow Object.assign to work
     { "params", nullptr, nullptr, nullptr, nop, undef, // Set for muxing
       napi_writable, nullptr},
+    // 140
     { "stream_index", nullptr, nullptr, nullptr, nop, undef, napi_writable, nullptr },
     { "demuxer", nullptr, nullptr, nullptr, nop, undef, napi_writable, nullptr},
     { "_CodecContext", nullptr, nullptr, nullptr, nullptr, extCodec, napi_default, nullptr }
   };
-  status = napi_define_properties(env, jsCodec, 144, desc);
+  status = napi_define_properties(env, jsCodec, 143, desc);
   PASS_STATUS;
 
   *result = jsCodec;

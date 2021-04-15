@@ -100,14 +100,16 @@ async function win32() {
     else throw e;
   });
   
-  const ffmpegFilename = 'ffmpeg-4.4-win64-shared';
+  const ffmpegFilename = 'ffmpeg-4.x-win64-shared';
   await access(`ffmpeg/${ffmpegFilename}`, fs.constants.R_OK).catch(async () => {
     const html = await getHTML('https://github.com/BtbN/FFmpeg-Builds/wiki/Latest', 'latest autobuilds');
     const htmlStr = html.toString('utf-8');
     const autoPos = htmlStr.indexOf('<p><a href=');
     const endPos = htmlStr.indexOf('</div>', autoPos);
     const autoStr = htmlStr.substring(autoPos, endPos);
-    const sharedEndPos = autoStr.lastIndexOf('">win64-gpl-shared-4.4');
+    const sharedEndPos = autoStr.lastIndexOf('">win64-gpl-shared-4.');
+    if (sharedEndPos === -1)
+      throw new Error('Failed to find latest v4.x autobuild from "https://github.com/BtbN/FFmpeg-Builds/wiki/Latest"');
     const startStr = '<p><a href="';
     const sharedStartPos = autoStr.lastIndexOf(startStr, sharedEndPos) + startStr.length;
     const downloadSource = autoStr.substring(sharedStartPos, sharedEndPos);
@@ -212,7 +214,7 @@ case 'win32':
     console.error('Only 64-bit platforms are supported.');
     process.exit(1);
   } else {
-    win32();
+    win32().catch(console.error);
   }
   break;
 case 'linux':
