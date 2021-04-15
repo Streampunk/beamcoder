@@ -100,14 +100,14 @@ async function win32() {
     else throw e;
   });
   
-  const ffmpegFilename = 'ffmpeg-4.3-win64-shared';
+  const ffmpegFilename = 'ffmpeg-4.4-win64-shared';
   await access(`ffmpeg/${ffmpegFilename}`, fs.constants.R_OK).catch(async () => {
     const html = await getHTML('https://github.com/BtbN/FFmpeg-Builds/wiki/Latest', 'latest autobuilds');
     const htmlStr = html.toString('utf-8');
     const autoPos = htmlStr.indexOf('<p><a href=');
     const endPos = htmlStr.indexOf('</div>', autoPos);
     const autoStr = htmlStr.substring(autoPos, endPos);
-    const sharedEndPos = autoStr.lastIndexOf('">win64-gpl-shared-4.3');
+    const sharedEndPos = autoStr.lastIndexOf('">win64-gpl-shared-4.4');
     const startStr = '<p><a href="';
     const sharedStartPos = autoStr.lastIndexOf(startStr, sharedEndPos) + startStr.length;
     const downloadSource = autoStr.substring(sharedStartPos, sharedEndPos);

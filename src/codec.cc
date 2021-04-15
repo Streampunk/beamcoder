@@ -4872,10 +4872,10 @@ napi_value getCodecCtxDebug(napi_env env, napi_callback_info info) {
   status = beam_set_bool(env, result, "BUGS", codec->debug & FF_DEBUG_BUGS);
   CHECK_STATUS;
   #if FF_API_DEBUG_MV
-  status = beam_set_bool(env, result, "VIS_QP", codec->debug & FF_DEBUG_VIS_QP);
-  CHECK_STATUS;
-  status = beam_set_bool(env, result, "VIS_MB_TYPE", codec->debug & FF_DEBUG_VIS_MB_TYPE);
-  CHECK_STATUS;
+  // status = beam_set_bool(env, result, "VIS_QP", codec->debug & FF_DEBUG_VIS_QP);
+  // CHECK_STATUS;
+  // status = beam_set_bool(env, result, "VIS_MB_TYPE", codec->debug & FF_DEBUG_VIS_MB_TYPE);
+  // CHECK_STATUS;
   #endif
   status = beam_set_bool(env, result, "BUFFERS", codec->debug & FF_DEBUG_BUFFERS);
   CHECK_STATUS;
@@ -4964,16 +4964,16 @@ napi_value setCodecCtxDebug(napi_env env, napi_callback_info info) {
     codec->debug | FF_DEBUG_BUGS :
     codec->debug & ~FF_DEBUG_BUGS; }
 #if FF_API_DEBUG_MV
-  status = beam_get_bool(env, args[0], "VIS_QP", &present, &flag);
-  CHECK_STATUS;
-  if (present) { codec->debug = (flag) ?
-    codec->debug | FF_DEBUG_VIS_QP :
-    codec->debug & ~FF_DEBUG_VIS_QP; }
-  status = beam_get_bool(env, args[0], "VIS_MB_TYPE", &present, &flag);
-  CHECK_STATUS;
-  if (present) { codec->debug = (flag) ?
-    codec->debug | FF_DEBUG_VIS_MB_TYPE :
-    codec->debug & ~FF_DEBUG_VIS_MB_TYPE; }
+  // status = beam_get_bool(env, args[0], "VIS_QP", &present, &flag);
+  // CHECK_STATUS;
+  // if (present) { codec->debug = (flag) ?
+  //   codec->debug | FF_DEBUG_VIS_QP :
+  //   codec->debug & ~FF_DEBUG_VIS_QP; }
+  // status = beam_get_bool(env, args[0], "VIS_MB_TYPE", &present, &flag);
+  // CHECK_STATUS;
+  // if (present) { codec->debug = (flag) ?
+  //   codec->debug | FF_DEBUG_VIS_MB_TYPE :
+  //   codec->debug & ~FF_DEBUG_VIS_MB_TYPE; }
 #endif
   status = beam_get_bool(env, args[0], "BUFFERS", &present, &flag);
   CHECK_STATUS;
