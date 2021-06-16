@@ -42,6 +42,12 @@ void demuxerExecute(napi_env env, void* data) {
     return;
   }
 
+  // Use the user-defined opaque field as a boolean flag to signal if blocking I/O should
+  // be stopped. ffmpeg will periodically poll this value through the interrupt_callback.
+  c->format->opaque = 0;
+  c->format->interrupt_callback.callback = interrupt_callback;
+  c->format->interrupt_callback.opaque = &c->format->opaque;
+
   if (c->adaptor) {
     AVIOContext* avio_ctx = avio_alloc_context(nullptr, 0, 0, c->adaptor, &read_packet, nullptr, nullptr);
     if (!avio_ctx) {
@@ -106,6 +112,12 @@ void demuxerComplete(napi_env env,  napi_status asyncStatus, void* data) {
     nullptr, &prop);
   REJECT_STATUS;
   c->status = napi_set_named_property(env, result, "forceClose", prop);
+  REJECT_STATUS;
+
+  c->status = napi_create_function(env, "interrupt", NAPI_AUTO_LENGTH, interrupt,
+    c, &prop);
+  REJECT_STATUS;
+  c->status = napi_set_named_property(env, result, "interrupt", prop);
   REJECT_STATUS;
 
   napi_status status;
@@ -581,4 +593,30 @@ napi_value forceCloseInput(napi_env env, napi_callback_info info) {
   status = napi_get_undefined(env, &result);
   CHECK_STATUS;
   return result;
+}
+
+napi_value interrupt(napi_env env, napi_callback_info info) {
+  napi_status status;
+  napi_value result, formatJS, formatRefExt;
+  fmtCtxRef* fmtRef;
+  size_t argc = 0;
+
+  status = napi_get_cb_info(env, info, &argc, nullptr, &formatJS, nullptr);
+  CHECK_STATUS;
+  status = napi_get_named_property(env, formatJS, "_formatContextRef", &formatRefExt);
+  CHECK_STATUS;
+  status = napi_get_value_external(env, formatRefExt, (void**) &fmtRef);
+  CHECK_STATUS;
+
+  fmtRef->fmtCtx->opaque = (void *)1;
+
+  status = napi_get_undefined(env, &result);
+  CHECK_STATUS;
+
+  return result;
+}
+
+int interrupt_callback(void *opaque) {
+  int* i = (int*) opaque;
+  return *i;
 }
