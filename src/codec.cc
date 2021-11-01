@@ -5391,9 +5391,9 @@ napi_value getCodecCtxThreadType(napi_env env, napi_callback_info info) {
 
   status = napi_create_object(env, &result);
   CHECK_STATUS;
-  status = beam_set_bool(env, result, "FRAME", codec->thread_type & FF_THREAD_FRAME);
+  status = beam_set_bool(env, result, "FRAME", (codec->thread_type & FF_THREAD_FRAME) == FF_THREAD_FRAME);
   CHECK_STATUS;
-  status = beam_set_bool(env, result, "SLICE", codec->thread_type & FF_THREAD_SLICE);
+  status = beam_set_bool(env, result, "SLICE", (codec->thread_type & FF_THREAD_SLICE) == FF_THREAD_SLICE);
   CHECK_STATUS;
 
   return result;
@@ -5445,9 +5445,9 @@ napi_value getCodecCtxActThreadType(napi_env env, napi_callback_info info) {
 
   status = napi_create_object(env, &result);
   CHECK_STATUS;
-  status = beam_set_bool(env, result, "FRAME", codec->active_thread_type & FF_THREAD_FRAME);
+  status = beam_set_bool(env, result, "FRAME", (codec->active_thread_type & FF_THREAD_FRAME) == FF_THREAD_FRAME);
   CHECK_STATUS;
-  status = beam_set_bool(env, result, "SLICE", codec->active_thread_type & FF_THREAD_SLICE);
+  status = beam_set_bool(env, result, "SLICE", (codec->active_thread_type & FF_THREAD_SLICE) == FF_THREAD_SLICE);
   CHECK_STATUS;
 
   return result;
@@ -5945,15 +5945,22 @@ napi_value getCodecCtxSwPixFmt(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
   AVCodecContext* codec;
+  AVBufferRef* hwFramesContextRef;
+  AVHWFramesContext* hwFramesContext = nullptr;
+  AVPixelFormat sw_pix_fmt;
   const char* pixFmtName;
 
   size_t argc = 0;
   status = napi_get_cb_info(env, info, &argc, nullptr, nullptr, (void**) &codec);
   CHECK_STATUS;
 
-  pixFmtName = av_get_pix_fmt_name(codec->sw_pix_fmt);
+  hwFramesContextRef = codec->hw_frames_ctx;
+  if (hwFramesContextRef)
+    hwFramesContext = (AVHWFramesContext*)hwFramesContextRef->data;
+  sw_pix_fmt = hwFramesContext ? hwFramesContext->sw_format : codec->sw_pix_fmt;
+  pixFmtName = av_get_pix_fmt_name(sw_pix_fmt);
   if (pixFmtName != nullptr) {
-    status = napi_create_string_utf8(env, (char*) pixFmtName, NAPI_AUTO_LENGTH, &result);
+    status = napi_create_string_utf8(env, pixFmtName, NAPI_AUTO_LENGTH, &result);
     CHECK_STATUS;
   } else {
     status = napi_get_null(env, &result);
