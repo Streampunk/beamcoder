@@ -1063,8 +1063,8 @@ napi_value getFrameData(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
 
   data = f->frame->data[0];
-  ref = av_buffer_ref(f->frame->buf[0]);
-  size = ref->size;
+  ref = f->frame->buf[0] ? av_buffer_ref(f->frame->buf[0]) : nullptr;
+  size = ref ? ref->size : 0;
   curElem = 0;
   // work through frame bufs checking whether allocation refcounts are shared
   for ( int x = 1 ; x < AV_NUM_DATA_POINTERS ; x++ ) {
