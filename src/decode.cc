@@ -21,55 +21,40 @@
 
 #include "decode.h"
 
-char* req_hw_type = nullptr;
-AVPixelFormat req_hw_pix_fmt = AV_PIX_FMT_NONE;
-
 AVPixelFormat get_format(AVCodecContext *s, const AVPixelFormat *pix_fmts)
 {
-  AVPixelFormat result = AV_PIX_FMT_NONE;
   const AVPixelFormat *p;
   int i, err;
 
-  if (0 == strcmp("auto", req_hw_type)) {
-    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
-      const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(*p);
-      const AVCodecHWConfig  *config = NULL;
+  for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(*p);
+    const AVCodecHWConfig  *config = NULL;
 
-      if (!(desc->flags & AV_PIX_FMT_FLAG_HWACCEL))
+    if (!(desc->flags & AV_PIX_FMT_FLAG_HWACCEL))
+      break;
+
+    for (i = 0;; i++) {
+      config = avcodec_get_hw_config(s->codec, i);
+      if (!config)
         break;
-
-      for (i = 0;; i++) {
-        config = avcodec_get_hw_config(s->codec, i);
-        if (!config)
-          break;
-        if (!(config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX))
-          continue;
-        if (config->pix_fmt == *p)
-          break;
-      }
-
-      if (config) {
-        err = av_hwdevice_ctx_create(&s->hw_device_ctx, config->device_type, NULL, NULL, 0);
-        if (err < 0) {
-          char errstr[128];
-          av_make_error_string(errstr, 128, err);
-          printf("Error in get_format \'auto\' av_hwdevice_ctx_create: %s\n", errstr);
-        }
+      if (!(config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX))
+        continue;
+      if (config->pix_fmt == *p)
         break;
+    }
+
+    if (config) {
+      err = av_hwdevice_ctx_create(&s->hw_device_ctx, config->device_type, NULL, NULL, 0);
+      if (err < 0) {
+        char errstr[128];
+        av_make_error_string(errstr, 128, err);
+        printf("Error in get_format av_hwdevice_ctx_create: %s\n", errstr);
       }
+      break;
     }
-    result = *p;
-  } else {
-    err = av_hwdevice_ctx_create(&s->hw_device_ctx, av_hwdevice_find_type_by_name(req_hw_type), NULL, NULL, 0);
-    if (err < 0) {
-      char errstr[128];
-      av_make_error_string(errstr, 128, err);
-      printf("Error in get_format \'%s\' av_hwdevice_ctx_create: %s\n", req_hw_type, errstr);
-    }
-    result = req_hw_pix_fmt;
   }
 
-  return result;
+  return *p;
 }
 
 napi_value decoder(napi_env env, napi_callback_info info) {
@@ -85,8 +70,8 @@ napi_value decoder(napi_env env, napi_callback_info info) {
   AVCodecParameters* params = nullptr;
   char* codecName = nullptr;
   size_t codecNameLen = 0;
-  size_t hwTypeLen = 0;
   int32_t codecID = -1;
+  bool hwaccel = false;
 
   size_t argc = 1;
   napi_value args[1];
@@ -205,16 +190,9 @@ create:
   if (hasHWaccel) {
     status = napi_get_named_property(env, args[0], "hwaccel", &value);
     CHECK_STATUS;
-    hwTypeLen = 64;
-    req_hw_type = (char*) malloc(sizeof(char) * (hwTypeLen + 1));
-    status = napi_get_value_string_utf8(env, value, req_hw_type,
-      64, &hwTypeLen);
+    status = napi_get_value_bool(env, value, &hwaccel);
     CHECK_STATUS;
-    req_hw_pix_fmt = av_get_pix_fmt(req_hw_type);
-
-    if (0 != strcmp("auto", req_hw_type) && req_hw_pix_fmt == AV_PIX_FMT_NONE)
-      printf("Decoder hwaccel name \'%s\' not recognised\n", req_hw_type);
-    else
+    if (hwaccel)
       decoder->get_format = get_format;
   }
 

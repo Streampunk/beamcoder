@@ -28,7 +28,7 @@ async function run() {
   // let demuxer = await beamcoder.demuxer('M:/dpp/AS11.mxf');
   demuxer.streams.forEach(s => s.discard = (0 == s.index) ? 'default' : 'all');
   // let decoder = beamcoder.decoder({ name: 'h264', thread_count: 4, thread_type: { FRAME: false, SLICE: true } });
-  let decoder = beamcoder.decoder({ name: 'h264', thread_count: 1, hwaccel: 'auto' });
+  let decoder = beamcoder.decoder({ name: 'h264', thread_count: 1, hwaccel: true });
   // console.dir(decoder, { getters: true, depth: 3 });
   let packet = {};
   for ( let x = 0 ; x < 2000 && packet != null; x++ ) {
