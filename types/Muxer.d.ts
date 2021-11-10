@@ -1,6 +1,5 @@
 import { Packet } from "./Packet"
 import { Frame } from "./Frame"
-import { Stream } from "./Stream"
 import { OutputFormat, FormatContext } from "./FormatContext"
 
 export interface Muxer extends Omit<FormatContext,

@@ -92,8 +92,7 @@ This will install all necessary dependencies, download the FFmpeg shared and dev
 
 Note that if you want to use a local version of FFmpeg then, before the install, symbolic link or copy appropriate folders to:
 
-    ./node_modules/beamcoder/ffmpeg/ffmpeg-4.1-win64-shared
-    ./node_modules/beamcoder/ffmpeg/ffmpeg-4.1-win64-dev
+    ./node_modules/beamcoder/ffmpeg/ffmpeg-4.x-win64-shared
 
 To ensure that sufficient threads are available to process several requests in parallel, set the `UV_THREADPOOL_SIZE` environment variable, e.g.:
 

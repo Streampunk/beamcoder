@@ -21,11 +21,47 @@
 
 #include "decode.h"
 
+AVPixelFormat get_format(AVCodecContext *s, const AVPixelFormat *pix_fmts)
+{
+  const AVPixelFormat *p;
+  int i, err;
+
+  for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(*p);
+    const AVCodecHWConfig  *config = NULL;
+
+    if (!(desc->flags & AV_PIX_FMT_FLAG_HWACCEL))
+      break;
+
+    for (i = 0;; i++) {
+      config = avcodec_get_hw_config(s->codec, i);
+      if (!config)
+        break;
+      if (!(config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX))
+        continue;
+      if (config->pix_fmt == *p)
+        break;
+    }
+
+    if (config) {
+      err = av_hwdevice_ctx_create(&s->hw_device_ctx, config->device_type, NULL, NULL, 0);
+      if (err < 0) {
+        char errstr[128];
+        av_make_error_string(errstr, 128, err);
+        printf("Error in get_format av_hwdevice_ctx_create: %s\n", errstr);
+      }
+      break;
+    }
+  }
+
+  return *p;
+}
+
 napi_value decoder(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result, value, formatJS, formatExt, global, jsObject, assign, jsParams;
   napi_valuetype type;
-  bool isArray, hasName, hasID, hasFormat, hasStream, hasParams;
+  bool isArray, hasName, hasID, hasFormat, hasStream, hasParams, hasHWaccel;
   AVCodecContext* decoder = nullptr;
   AVFormatContext* format = nullptr;
   const AVCodec* codec = nullptr;
@@ -35,6 +71,7 @@ napi_value decoder(napi_env env, napi_callback_info info) {
   char* codecName = nullptr;
   size_t codecNameLen = 0;
   int32_t codecID = -1;
+  bool hwaccel = false;
 
   size_t argc = 1;
   napi_value args[1];
@@ -81,6 +118,7 @@ napi_value decoder(napi_env env, napi_callback_info info) {
       NAPI_THROW_ERROR("Stream index is out of bounds for the given format.");
     }
     params = format->streams[streamIdx]->codecpar;
+    codecID = params->codec_id;
     codecName = (char*) avcodec_get_name(params->codec_id);
     codecNameLen = strlen(codecName);
     goto create;
@@ -98,6 +136,7 @@ napi_value decoder(napi_env env, napi_callback_info info) {
     }
     status = napi_get_value_external(env, jsParams, (void**) &params);
     CHECK_STATUS;
+    codecID = params->codec_id;
     codecName = (char*) avcodec_get_name(params->codec_id);
     codecNameLen = strlen(codecName);
     goto create;
@@ -146,6 +185,17 @@ create:
     }
   }
 
+  status = napi_has_named_property(env, args[0], "hwaccel", &hasHWaccel);
+  CHECK_STATUS;
+  if (hasHWaccel) {
+    status = napi_get_named_property(env, args[0], "hwaccel", &value);
+    CHECK_STATUS;
+    status = napi_get_value_bool(env, value, &hwaccel);
+    CHECK_STATUS;
+    if (hwaccel)
+      decoder->get_format = get_format;
+  }
+
   status = fromAVCodecContext(env, decoder, &result, false);
   const napi_value fargs[2] = { result, args[0] };
   CHECK_BAIL;
@@ -180,6 +230,7 @@ void decodeExecute(napi_env env, void* data) {
   decodeCarrier* c = (decodeCarrier*) data;
   int ret = 0;
   AVFrame* frame = nullptr;
+  AVFrame *sw_frame = nullptr;
   HR_TIME_POINT decodeStart = NOW;
 
   for ( auto it = c->packets.cbegin() ; it != c->packets.cend() ; it++ ) {
@@ -217,15 +268,30 @@ void decodeExecute(napi_env env, void* data) {
     }
   } // loop through input packets
 
+  AVPixelFormat frame_hw_pix_fmt = AV_PIX_FMT_NONE;
+  if (c->decoder->hw_frames_ctx)
+    frame_hw_pix_fmt = ((AVHWFramesContext*)c->decoder->hw_frames_ctx->data)->format;
+
+  frame = av_frame_alloc();
+  sw_frame = av_frame_alloc();
   do {
-    frame = av_frame_alloc();
     ret = avcodec_receive_frame(c->decoder, frame);
     if (ret == 0) {
-      c->frames.push_back(frame);
+      if (frame->format == frame_hw_pix_fmt) {
+        if ((ret = av_hwframe_transfer_data(sw_frame, frame, 0)) < 0) {
+          printf("Error transferring hw data to system memory\n");
+        }
+        c->frames.push_back(sw_frame);
+        av_frame_free(&frame);
+      } else
+        c->frames.push_back(frame);
+
       frame = av_frame_alloc();
+      sw_frame = av_frame_alloc();
     }
   } while (ret == 0);
   av_frame_free(&frame);
+  av_frame_free(&sw_frame);
 
   c->totalTime = microTime(decodeStart);
 };

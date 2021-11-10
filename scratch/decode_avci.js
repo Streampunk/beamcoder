@@ -22,25 +22,29 @@
 const beamcoder = require('../index.js');
 
 async function run() {
-  let demuxer = await beamcoder.demuxer('../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
-  console.log(JSON.stringify(demuxer, null, 2));
+  // let demuxer = await beamcoder.demuxer('../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
+  // console.log(JSON.stringify(demuxer, null, 2));
+  let demuxer = await beamcoder.demuxer('M:/dpp/AS11_4K_8.mxf');
+  // let demuxer = await beamcoder.demuxer('M:/dpp/AS11.mxf');
   demuxer.streams.forEach(s => s.discard = (0 == s.index) ? 'default' : 'all');
-  let decoder = beamcoder.decoder({ name: 'h264' });
-  //console.log(JSON.stringify(decoder, null, 2));
+  // let decoder = beamcoder.decoder({ name: 'h264', thread_count: 4, thread_type: { FRAME: false, SLICE: true } });
+  let decoder = beamcoder.decoder({ name: 'h264', thread_count: 1, hwaccel: true });
+  // console.dir(decoder, { getters: true, depth: 3 });
   let packet = {};
-  for ( let x = 0 ; x < 200 && packet != null; x++ ) {
-    let packet = await demuxer.read();
-    if (packet.stream_index === 0) {
+  for ( let x = 0 ; x < 2000 && packet != null; x++ ) {
+    packet = await demuxer.read();
+    if (packet && packet.stream_index === 0) {
       //console.log(JSON.stringify(packet, null, 2));
       let frames = await decoder.decode(packet);
-      console.log(JSON.stringify(frames.frames[0], null, 2));
+      // console.log(JSON.stringify(frames.frames[0], null, 2));
+      if (frames.frames[0]) {
+        console.log(frames.frames[0].data);
+      }
       console.log(x, frames.total_time);
     }
   }
   let frames = await decoder.flush();
   console.log('flush', frames.total_time, frames.length);
-  console.log(await demuxer.seek({ pos: 79389000 }));
-  console.log(await demuxer.read());
 }
 
 run();

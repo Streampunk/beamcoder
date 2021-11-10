@@ -208,7 +208,7 @@ napi_value getHWFramesCtxSwPixFmt(napi_env env, napi_callback_info info) {
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &frames_context);
   CHECK_STATUS;
 
-  AVPixelFormat pixFmt = frames_context->format;
+  AVPixelFormat pixFmt = frames_context->sw_format;
   status = napi_create_string_utf8(env, av_get_pix_fmt_name(pixFmt), NAPI_AUTO_LENGTH, &result);
   CHECK_STATUS;
 

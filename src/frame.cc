@@ -1051,21 +1051,46 @@ napi_value getFrameData(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value array, element;
   frameData* f;
-  AVBufferRef* hintRef;
+  uint8_t* data;
+  AVBufferRef* ref;
+  size_t size;
+  int curElem;
 
   status = napi_get_cb_info(env, info, 0, nullptr, nullptr, (void**) &f);
   CHECK_STATUS;
 
   status = napi_create_array(env, &array);
   CHECK_STATUS;
-  for ( int x = 0 ; x < AV_NUM_DATA_POINTERS ; x++ ) {
-  //  printf("Buffer %i is %p\n", x, f->frame->buf[x]);
-    if (f->frame->buf[x] == nullptr) continue;
-    hintRef = av_buffer_ref(f->frame->buf[x]);
-    status = napi_create_external_buffer(env, hintRef->size, hintRef->data,
-      frameBufferFinalizer, hintRef, &element);
+
+  data = f->frame->data[0];
+  ref = f->frame->buf[0] ? av_buffer_ref(f->frame->buf[0]) : nullptr;
+  size = ref ? ref->size : 0;
+  curElem = 0;
+  // work through frame bufs checking whether allocation refcounts are shared
+  for ( int x = 1 ; x < AV_NUM_DATA_POINTERS ; x++ ) {
+    // printf("Buffer %i is %p\n", x, f->frame->data[x]);
+    if (f->frame->data[x] == nullptr) continue;
+    size_t bufSize = size;
+    if (f->frame->buf[x] == nullptr)
+      bufSize = f->frame->data[x] - f->frame->data[x-1];
+    status = napi_create_external_buffer(env, bufSize, data, frameBufferFinalizer, ref, &element);
     CHECK_STATUS;
-    status = napi_set_element(env, array, x, element);
+    status = napi_set_element(env, array, curElem, element);
+    CHECK_STATUS;
+    data = f->frame->data[x];
+    if (f->frame->buf[x]) {
+      ref = av_buffer_ref(f->frame->buf[x]);
+      size = ref->size;
+    } else {
+      ref = nullptr;
+      size -= f->frame->data[x] - f->frame->data[x-1];
+    }
+    curElem++;
+  }
+  if (data) {
+    status = napi_create_external_buffer(env, size, data, frameBufferFinalizer, ref, &element);
+    CHECK_STATUS;
+    status = napi_set_element(env, array, curElem, element);
     CHECK_STATUS;
   }
 

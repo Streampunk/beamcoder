@@ -992,13 +992,7 @@ void filtererExecute(napi_env env, void* data) {
       }
       p = c->outParams[i].find("channel_layouts");
       if (p != c->outParams[i].end()) {
-        const int64_t out_channel_layout = av_get_channel_layout(p->second.c_str());
-        int out_channel_counts[] = { av_get_channel_layout_nb_channels(out_channel_layout), -1 };
-        ret = av_opt_set_int_list(sinkCtx, "channel_counts", out_channel_counts, -1,
-                                  AV_OPT_SEARCH_CHILDREN);
-        if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output channel count\n"); }
-
-        const int64_t out_channel_layouts[] = { out_channel_layout, -1 };
+        const int64_t out_channel_layouts[] = { (int64_t)av_get_channel_layout(p->second.c_str()), -1 };
         ret = av_opt_set_int_list(sinkCtx, "channel_layouts", out_channel_layouts, -1,
                                   AV_OPT_SEARCH_CHILDREN);
         if (ret < 0) { av_log(NULL, AV_LOG_ERROR, "Cannot set output channel layout\n"); }
@@ -1453,8 +1447,8 @@ napi_value filterer(napi_env env, napi_callback_info info) {
 struct filterCarrier : carrier {
   filtContexts *srcCtxs = nullptr;
   filtContexts *sinkCtxs = nullptr;
-  std::map<std::string, std::deque<AVFrame *> > srcFrames;
-  std::map<std::string, std::vector<AVFrame *> > dstFrames;
+  std::unordered_map<std::string, std::deque<AVFrame *> > srcFrames;
+  std::unordered_map<std::string, std::vector<AVFrame *> > dstFrames;
   std::vector<napi_ref> frameRefs;
   ~filterCarrier() {}
 };

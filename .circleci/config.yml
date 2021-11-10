@@ -9,22 +9,22 @@ jobs:
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
       UV_THREADPOOL_SIZE: 16
     docker:
-    - image: streampunkmedia/testbeam:10-4.1
+    - image: streampunkmedia/testbeam:16-4.4
     steps:
     - checkout
     - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
     - restore_cache:
         keys:
         # This branch if available
-        - v1-dep-{{ .Branch }}-
+        - v2-dep-{{ .Branch }}-
         # Default branch if not
-        - v1-dep-master-
+        - v2-dep-master-
         # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
-        - v1-dep-
+        - v2-dep-
     - run: npm install tap-xunit
     - run: npm install --unsafe-perm
     - save_cache:
-        key: v1-dep-{{ .Branch }}-{{ epoch }}
+        key: v2-dep-{{ .Branch }}-{{ epoch }}
         paths:
         - ./node_modules
     - run: echo 'export PATH="~/Streampunk/beamcoder/node_modules/.bin:$PATH"' >> $BASH_ENV
