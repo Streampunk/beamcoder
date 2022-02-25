@@ -100,14 +100,14 @@ async function win32() {
     else throw e;
   });
   
-  const ffmpegFilename = 'ffmpeg-4.x-win64-shared';
+  const ffmpegFilename = 'ffmpeg-5.x-win64-shared';
   await access(`ffmpeg/${ffmpegFilename}`, fs.constants.R_OK).catch(async () => {
     const html = await getHTML('https://github.com/BtbN/FFmpeg-Builds/wiki/Latest', 'latest autobuilds');
     const htmlStr = html.toString('utf-8');
     const autoPos = htmlStr.indexOf('<p><a href=');
     const endPos = htmlStr.indexOf('</div>', autoPos);
     const autoStr = htmlStr.substring(autoPos, endPos);
-    const sharedEndPos = autoStr.lastIndexOf('">win64-gpl-shared-4.');
+    const sharedEndPos = autoStr.lastIndexOf('">win64-gpl-shared-5.');
     if (sharedEndPos === -1)
       throw new Error('Failed to find latest v4.x autobuild from "https://github.com/BtbN/FFmpeg-Builds/wiki/Latest"');
     const startStr = '<p><a href="';

@@ -492,7 +492,7 @@ napi_value guessFormat(napi_env env, napi_callback_info info) {
   napi_valuetype type;
   char* testName;
   size_t strLen;
-  AVOutputFormat* oformat;
+  const AVOutputFormat* oformat;
 
   size_t argc = 1;
   napi_value args[1];
@@ -3884,7 +3884,7 @@ napi_value newStream(napi_env env, napi_callback_info info) {
   const AVStream* inputStream;
   char* codecName = nullptr;
   size_t strLen;
-  AVCodec* codec = nullptr;
+  const AVCodec* codec = nullptr;
   const AVCodecDescriptor* codecDesc = nullptr;
   uint32_t streamCount;
   int ret;

@@ -32,6 +32,7 @@
 extern "C" {
   #include <libavutil/error.h>
   #include <libavutil/pixdesc.h>
+  #include <libavutil/channel_layout.h>
   #include <libavutil/opt.h>
   #include <libavcodec/avcodec.h>
   #include <libavformat/avformat.h>

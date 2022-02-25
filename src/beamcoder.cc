@@ -42,6 +42,7 @@ extern "C" {
   #include <libpostproc/postprocess.h>
   #include <libswresample/swresample.h>
   #include <libswscale/swscale.h>
+  #include <libavcodec/bsf.h>
 }
 
 napi_value versions(napi_env env, napi_callback_info info) {
@@ -648,8 +649,6 @@ napi_value pix_fmts(napi_env env, napi_callback_info info) {
     CHECK_STATUS;
     status = beam_set_bool(env, flags, "RGB", desc->flags & AV_PIX_FMT_FLAG_RGB);
     CHECK_STATUS;
-    status = beam_set_bool(env, flags, "PSEUDOPAL", desc->flags & AV_PIX_FMT_FLAG_PSEUDOPAL);
-    CHECK_STATUS;
     status = beam_set_bool(env, flags, "ALPHA", desc->flags & AV_PIX_FMT_FLAG_ALPHA);
     CHECK_STATUS;
     status = beam_set_bool(env, flags, "BAYER", desc->flags & AV_PIX_FMT_FLAG_BAYER);
@@ -769,7 +768,7 @@ napi_value filters(napi_env env, napi_callback_info info) {
 
     status = napi_create_array(env, &pads);
     CHECK_STATUS;
-    padCount = avfilter_pad_count(filter->inputs);
+    padCount = avfilter_filter_pad_count(filter, false);
     for ( int x = 0 ; x < padCount ; x++ ) {
       status = napi_create_object(env, &pad);
       CHECK_STATUS;
@@ -787,7 +786,7 @@ napi_value filters(napi_env env, napi_callback_info info) {
 
     status = napi_create_array(env, &pads);
     CHECK_STATUS;
-    padCount = avfilter_pad_count(filter->outputs);
+    padCount = avfilter_filter_pad_count(filter, true);
     for ( int x = 0 ; x < padCount ; x++ ) {
       status = napi_create_object(env, &pad);
       CHECK_STATUS;

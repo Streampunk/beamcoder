@@ -23,7 +23,7 @@ const test = require('tape');
 const beamcoder = require('../index.js');
 
 test('Version information', t => {
-  const verPos = beamcoder.avVersionInfo().indexOf('4.');
+  const verPos = beamcoder.avVersionInfo().indexOf('5.');
   t.ok(verPos === 0 || verPos === 1, 'has expected version number.');
   t.equals(typeof beamcoder.versions(), 'object', 'versions is an object.');
   t.equals(Object.keys(beamcoder.versions()).length, 8, 'versions has 8 entries.');

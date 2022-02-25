@@ -1124,8 +1124,6 @@ std::unordered_map<int, std::string> beam_frame_side_data_type_fmap = {
   { AV_FRAME_DATA_SPHERICAL, "spherical" },
   { AV_FRAME_DATA_CONTENT_LIGHT_LEVEL, "light_level" },
   { AV_FRAME_DATA_ICC_PROFILE, "icc_profile" },
-  { AV_FRAME_DATA_QP_TABLE_PROPERTIES, "qp_table_properties" },
-  { AV_FRAME_DATA_QP_TABLE_DATA, "qp_table_data" },
   { AV_FRAME_DATA_S12M_TIMECODE, "s12m_timecode" }
 };
 const beamEnum* beam_frame_side_data_type = new beamEnum(beam_frame_side_data_type_fmap);

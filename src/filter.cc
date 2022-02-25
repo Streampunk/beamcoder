@@ -244,20 +244,18 @@ napi_value getFilterDesc(napi_env env, napi_callback_info info) {
   return result;
 }
 
-napi_value getFilterPads(napi_env env, napi_callback_info info) {
+napi_value getFilterPads(napi_env env, AVFilter* filter, bool isOutput) {
   napi_status status;
   napi_value pad, result;
-  AVFilterPad* filterPads;
+  const AVFilterPad* filterPads;
   int padCount;
 
-  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterPads);
-  CHECK_STATUS;
-
-  padCount = avfilter_pad_count(filterPads);
+  padCount = avfilter_filter_pad_count(filter, isOutput);
   if (0 == padCount) {
     status = napi_get_null(env, &result);
     CHECK_STATUS;
   } else {
+    filterPads = isOutput ? filter->outputs : filter->inputs;
     status = napi_create_array(env, &result);
     CHECK_STATUS;
     for ( int x = 0 ; x < padCount ; x++ ) {
@@ -274,6 +272,26 @@ napi_value getFilterPads(napi_env env, napi_callback_info info) {
     }
   }
   return result;
+}
+
+napi_value getFilterInputPads(napi_env env, napi_callback_info info) {
+  napi_status status;
+  AVFilter* filter;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filter);
+  CHECK_STATUS;
+
+  return getFilterPads(env, filter, false);
+}
+
+napi_value getFilterOutputPads(napi_env env, napi_callback_info info) {
+  napi_status status;
+  AVFilter* filter;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filter);
+  CHECK_STATUS;
+
+  return getFilterPads(env, filter, true);
 }
 
 napi_value getFilterPrivData(napi_env env, napi_callback_info info) {
@@ -340,8 +358,8 @@ napi_status fromAVFilter(napi_env env, const AVFilter* filter, napi_value* resul
     { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
     { "name", nullptr, nullptr, getFilterName, nullptr, nullptr, napi_enumerable, (void*)filter },
     { "description", nullptr, nullptr, getFilterDesc, nullptr, nullptr, napi_enumerable, (void*)filter },
-    { "inputs", nullptr, nullptr, getFilterPads, nullptr, nullptr, napi_enumerable, (void*)filter->inputs },
-    { "outputs", nullptr, nullptr, getFilterPads, nullptr, nullptr, napi_enumerable, (void*)filter->outputs },
+    { "inputs", nullptr, nullptr, getFilterInputPads, nullptr, nullptr, napi_enumerable, (void*)filter },
+    { "outputs", nullptr, nullptr, getFilterOutputPads, nullptr, nullptr, napi_enumerable, (void*)filter },
     { "priv_class", nullptr, nullptr, getFilterPrivData, nullptr, nullptr, napi_enumerable, (void*)filter },
     { "flags", nullptr, nullptr, getFilterFlags, nullptr, nullptr, napi_enumerable, (void*)filter }
   };
