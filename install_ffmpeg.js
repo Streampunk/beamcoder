@@ -226,7 +226,7 @@ case 'linux':
   }
   break;
 case 'darwin':
-  if (os.arch() != 'x64') {
+  if (os.arch() != 'x64' && os.arch() != 'arm64') {
     console.error('Only 64-bit platforms are supported.');
     process.exit(1);
   } else {
