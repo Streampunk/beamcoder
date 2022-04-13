@@ -3837,37 +3837,34 @@ void formatContextFinalizer(napi_env env, void* data, void* hint) {
   if (fmtRef->fmtCtx != nullptr) {
     fc = fmtRef->fmtCtx;
     if (fc->pb != nullptr) {
-      if (adaptor)
-        avio_context_free(&fc->pb);
-      else {
+      if (adaptor) {
+        avformat_free_context(fc);
+      } else {
         ret = avio_closep(&fc->pb);
         if (ret < 0) {
           printf("DEBUG: For url '%s', %s", (fc->url != nullptr) ? fc->url : "unknown",
             avErrorMsg("error closing IO: ", ret));
         }
+
+        if (fc->iformat != nullptr) {
+          avformat_close_input(&fc);
+        } else {
+          // FIXME this is segfaulting ... why
+          /* if (fc->codec_whitelist != nullptr) {
+            av_freep(fc->codec_whitelist);
+          }
+          if (fc->format_whitelist != nullptr) {
+            av_freep(fc->format_whitelist);
+          }
+          if (fc->protocol_whitelist != nullptr) {
+            av_freep(fc->protocol_whitelist);
+          }
+          if (fc->protocol_blacklist != nullptr) {
+            av_freep(fc->protocol_blacklist);
+          } */
+        }
       }
     }
-
-    if (fc->iformat != nullptr) {
-      avformat_close_input(&fc);
-    } else {
-      // FIXME this is segfaulting ... why
-      /* if (fc->codec_whitelist != nullptr) {
-        av_freep(fc->codec_whitelist);
-      }
-      if (fc->format_whitelist != nullptr) {
-        av_freep(fc->format_whitelist);
-      }
-      if (fc->protocol_whitelist != nullptr) {
-        av_freep(fc->protocol_whitelist);
-      }
-      if (fc->protocol_blacklist != nullptr) {
-        av_freep(fc->protocol_blacklist);
-      } */
-    }
-
-    if (adaptor != nullptr) // crashes otherwise...
-      avformat_free_context(fc);
   }
 
   delete fmtRef;
