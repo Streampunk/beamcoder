@@ -19,28 +19,39 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const beamcoder = require('bindings')('beamcoder');
-const { Writable, Readable, Transform } = require('stream');
+import bindings from 'bindings';
+import { Frame, Stream, Muxer, Codec, CodecPar } from '.'; // CodecContext, 
+const beamcoder = bindings('beamcoder');
+import { Writable, Readable, Transform } from 'stream';
 
 const doTimings = false;
 const timings = [];
 
-function frameDicer(encoder, isAudio) {
+
+type FrameJSONable = Frame & { toJSON(): string };
+
+class frameDicer {
+
+  private addFrame: (srcFrm: FrameJSONable) => any[];
+  private getLast: () => any[];
+  private doDice: boolean;
+
+  constructor (encoder: CodecPar, private isAudio: boolean) {
   let sampleBytes = 4; // Assume floating point 4 byte samples for now...
   const numChannels = encoder.channels;
   const dstNumSamples = encoder.frame_size;
   let dstFrmBytes = dstNumSamples * sampleBytes;
-  const doDice = false === beamcoder.encoders()[encoder.name].capabilities.VARIABLE_FRAME_SIZE;
+  this.doDice = false === beamcoder.encoders()[encoder.name].capabilities.VARIABLE_FRAME_SIZE;
 
-  let lastFrm = null;
-  let lastBuf = [];
-  const nullBuf = [];
+  let lastFrm: FrameJSONable = null as any as FrameJSONable;
+  let lastBuf: Buffer[] = [];
+  const nullBuf: Buffer[] = [];
   for (let b = 0; b < numChannels; ++b)
     nullBuf.push(Buffer.alloc(0));
 
-  const addFrame = srcFrm => {
+  this.addFrame = (srcFrm: FrameJSONable): any[] => {
     let result = [];
-    let dstFrm;
+    let dstFrm: Frame;
     let curStart = 0;
     if (!lastFrm) {
       lastFrm = beamcoder.frame(srcFrm.toJSON());
@@ -56,7 +67,7 @@ function frameDicer(encoder, isAudio) {
     dstFrm.pkt_duration = dstNumSamples;
 
     while (curStart + dstFrmBytes - lastBuf[0].length <= srcFrm.nb_samples * sampleBytes) {
-      const resFrm = beamcoder.frame(dstFrm.toJSON());
+      const resFrm = beamcoder.frame((dstFrm as any as Stream).toJSON());
       resFrm.data = lastBuf.map((d, i) => 
         Buffer.concat([
           d, srcFrm.data[i].slice(curStart, curStart + dstFrmBytes - d.length)],
@@ -66,19 +77,19 @@ function frameDicer(encoder, isAudio) {
       dstFrm.pts += dstNumSamples;
       dstFrm.pkt_dts += dstNumSamples;
       curStart += dstFrmBytes - lastBuf[0].length;
-      lastFrm.pts = 0;
-      lastFrm.pkt_dts = 0;
+      (lastFrm as Frame).pts = 0;
+      (lastFrm as Frame).pkt_dts = 0;
       lastBuf = nullBuf;
     }
 
-    lastFrm.pts = dstFrm.pts;
-    lastFrm.pkt_dts = dstFrm.pkt_dts;
+    (lastFrm as Frame).pts = dstFrm.pts;
+    (lastFrm as Frame).pkt_dts = dstFrm.pkt_dts;
     lastBuf = srcFrm.data.map(d => d.slice(curStart, srcFrm.nb_samples * sampleBytes));
 
     return result;
   };
 
-  const getLast = () => {
+  this.getLast = (): any[] => {
     let result = [];
     if (lastBuf[0].length > 0) {
       const resFrm = beamcoder.frame(lastFrm.toJSON());
@@ -91,17 +102,16 @@ function frameDicer(encoder, isAudio) {
     }
     return result;
   };
-
-  this.dice = (frames, flush = false) => {
-    if (isAudio && doDice) {
+  }
+  public dice(frames: FrameJSONable[], flush = false): any {
+    if (this.isAudio && this.doDice) {
       let result = frames.reduce((muxFrms, frm) => {
-        addFrame(frm).forEach(f => muxFrms.push(f));
+        this.addFrame(frm).forEach(f => muxFrms.push(f));
         return muxFrms;
       }, []);
   
       if (flush)
-        getLast().forEach(f => result.push(f));
-  
+        this.getLast().forEach(f => result.push(f));
       return result;
     }
   
@@ -109,46 +119,63 @@ function frameDicer(encoder, isAudio) {
   };
 }
 
-function serialBalancer(numStreams) {
-  let pending = [];
+
+
+
+
+
+
+
+class serialBalancer {
+  pending = [];
+
+  constructor(numStreams: any) {
   // initialise with negative ts and no pkt
   // - there should be no output until each stream has sent its first packet
   for (let s = 0; s < numStreams; ++s)
-    pending.push({ ts: -Number.MAX_VALUE, streamIndex: s });
+    this.pending.push({ ts: -Number.MAX_VALUE, streamIndex: s });
+  }
 
-  const adjustTS = (pkt, srcTB, dstTB) => {
+  adjustTS(pkt, srcTB, dstTB) {
     const adj = (srcTB[0] * dstTB[1]) / (srcTB[1] * dstTB[0]);
     pkt.pts = Math.round(pkt.pts * adj);
     pkt.dts = Math.round(pkt.dts * adj);
     pkt.duration > 0 ? Math.round(pkt.duration * adj) : Math.round(adj);
   };
     
-  const pullPkts = (pkt, streamIndex, ts) => {
-    return new Promise(resolve => {
-      Object.assign(pending[streamIndex], { pkt: pkt, ts: ts, resolve: resolve });
-      const minTS = pending.reduce((acc, pend) => Math.min(acc, pend.ts), Number.MAX_VALUE);
+
+  pullPkts(pkt, streamIndex, ts): Promise<void> {
+    return new Promise<void>(resolve => {
+      Object.assign(this.pending[streamIndex], { pkt: pkt, ts: ts, resolve: resolve });
+      const minTS = this.pending.reduce((acc, pend) => Math.min(acc, pend.ts), Number.MAX_VALUE);
       // console.log(streamIndex, pending.map(p => p.ts), minTS);
-      const nextPend = pending.find(pend => pend.pkt && (pend.ts === minTS));
+      const nextPend = this.pending.find(pend => pend.pkt && (pend.ts === minTS));
       if (nextPend) nextPend.resolve(nextPend.pkt);
       if (!pkt) resolve();
     });
   };
 
-  this.writePkts = (packets, srcStream, dstStream, writeFn, final = false) => {
+  writePkts(packets, srcStream, dstStream, writeFn, final = false) {
     if (packets && packets.packets.length) {
       return packets.packets.reduce(async (promise, pkt) => {
         await promise;
         pkt.stream_index = dstStream.index;
-        adjustTS(pkt, srcStream.time_base, dstStream.time_base);
+        this.adjustTS(pkt, srcStream.time_base, dstStream.time_base);
         const pktTS = pkt.pts * dstStream.time_base[0] / dstStream.time_base[1];
-        return writeFn(await pullPkts(pkt, dstStream.index, pktTS));
+        return writeFn(await this.pullPkts(pkt, dstStream.index, pktTS));
       }, Promise.resolve());
     } else if (final)
-      return pullPkts(null, dstStream.index, Number.MAX_VALUE);
+      return this.pullPkts(null, dstStream.index, Number.MAX_VALUE);
   };
 }
 
-function parallelBalancer(params, streamType, numStreams) {
+
+
+
+
+
+
+function parallelBalancer(params: {name: string, highWaterMark: number}, streamType, numStreams) {
   let resolveGet = null;
   const tag = 'video' === streamType ? 'v' : 'a';
   const pending = [];
@@ -291,7 +318,7 @@ function teeBalancer(params, numStreams) {
   return readStreams;
 }
 
-function transformStream(params, processFn, flushFn, reject) {
+function transformStream(params: { name: 'decode'| 'filter', highWaterMark : number }, processFn, flushFn, reject) {
   return new Transform({
     objectMode: true,
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
@@ -417,7 +444,7 @@ function createBeamWritableStream(params, governor) {
   return beamStream;
 }
 
-function demuxerStream(params) {
+export function demuxerStream(params) {
   const governor = new beamcoder.governor({});
   const stream = createBeamWritableStream(params, governor);
   stream.on('finish', () => governor.finish());
@@ -446,7 +473,7 @@ function createBeamReadableStream(params, governor) {
   return beamStream;
 }
 
-function muxerStream(params) {
+export function muxerStream(params) {
   const governor = new beamcoder.governor({ highWaterMark: 1 });
   const stream = createBeamReadableStream(params, governor);
   stream.on('end', () => governor.finish());
@@ -458,7 +485,7 @@ function muxerStream(params) {
   return stream;
 }
 
-async function makeSources(params) {
+export async function makeSources(params) {
   if (!params.video) params.video = [];
   if (!params.audio) params.audio = [];
 
@@ -507,7 +534,7 @@ async function makeSources(params) {
 }
 
 function runStreams(streamType, sources, filterer, streams, mux, muxBalancer) {
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     if (!sources.length)
       return resolve();
 
@@ -534,7 +561,7 @@ function runStreams(streamType, sources, filterer, streams, mux, muxBalancer) {
 
     filterBalancer.pipe(filtStream).pipe(streamSource);
 
-    streams.forEach((str, i) => {
+    streams.forEach((str: Codec, i) => {
       const dicer = new frameDicer(str.encoder, 'audio' === streamType);
       const diceStream = transformStream({ name: 'dice', highWaterMark : 1 },
         frms => dicer.dice(frms), () => dicer.dice([], true), reject);
@@ -550,7 +577,7 @@ function runStreams(streamType, sources, filterer, streams, mux, muxBalancer) {
   });
 }
 
-async function makeStreams(params) {
+export async function makeStreams(params) {
   params.video.forEach(p => {
     p.sources.forEach(src =>
       src.decoder = beamcoder.decoder({ demuxer: src.format, stream_index: src.streamIndex }));
@@ -604,7 +631,7 @@ async function makeStreams(params) {
   params.audio.forEach((p, i) => p.filter = audFilts[i]);
   // params.audio.forEach(p => console.log(p.filter.graph.dump()));
 
-  let mux;
+  let mux: Muxer;
   if (params.out.output_stream) {
     let muxerStream = beamcoder.muxerStream({ highwaterMark: 1024 });
     muxerStream.pipe(params.out.output_stream);
@@ -683,10 +710,3 @@ async function makeStreams(params) {
     }
   };
 }
-
-module.exports = {
-  demuxerStream,
-  muxerStream,
-  makeSources,
-  makeStreams
-};

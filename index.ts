@@ -19,11 +19,12 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const beamcoder = require('bindings')('beamcoder');
-const beamstreams = require('./beamstreams.js');
+import bindings from 'bindings';
+const beamcoder = bindings('beamcoder')
+// import * as beamstreams from './beamstreams.js';
 
 // Provide useful debug on segfault-related crash
-const SegfaultHandler = require('segfault-handler');
+import SegfaultHandler from 'segfault-handler';
 SegfaultHandler.registerHandler('crash.log');
 
 const splash = `Aerostat Beam Coder  Copyright (C) 2019  Streampunk Media Ltd
@@ -35,10 +36,16 @@ https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
 console.log(splash);
 console.log('Using FFmpeg version', beamcoder.avVersionInfo());
 
-beamcoder.demuxerStream = beamstreams.demuxerStream;
-beamcoder.muxerStream = beamstreams.muxerStream;
+import {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams.js';
 
-beamcoder.makeSources = beamstreams.makeSources;
-beamcoder.makeStreams = beamstreams.makeStreams;
+// export {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams.js';
+
+beamcoder.demuxerStream = demuxerStream;
+beamcoder.muxerStream = muxerStream;
+
+beamcoder.makeSources = makeSources;
+beamcoder.makeStreams = makeStreams;
+
+// export default beamcoder;
 
 module.exports = beamcoder;
