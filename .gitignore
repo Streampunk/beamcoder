@@ -73,3 +73,6 @@ ffmpeg/
 # Editors and IDE's
 *.swp
 .vscode/
+beamstreams.js
+index.js
+install_ffmpeg.js
