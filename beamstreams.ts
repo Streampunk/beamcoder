@@ -20,13 +20,12 @@
 */
 
 import bindings from 'bindings';
-import { Frame, Stream, Muxer, Codec, CodecPar } from '.'; // CodecContext, 
+import { Frame, Stream, Muxer, CodecPar } from '.'; // Codec, CodecContext, 
 const beamcoder = bindings('beamcoder');
 import { Writable, Readable, Transform } from 'stream';
 
 const doTimings = false;
 const timings = [];
-
 
 type FrameJSONable = Frame & { toJSON(): string };
 
@@ -119,17 +118,10 @@ class frameDicer {
   };
 }
 
-
-
-
-
-
-
-
 class serialBalancer {
   pending = [];
 
-  constructor(numStreams: any) {
+  constructor(numStreams: number) {
   // initialise with negative ts and no pkt
   // - there should be no output until each stream has sent its first packet
   for (let s = 0; s < numStreams; ++s)
@@ -170,12 +162,11 @@ class serialBalancer {
 }
 
 
+type parallelBalancerType = Readable & {
+  pushPkts: (packets, stream, streamIndex, final?: boolean) =>  any
+};
 
-
-
-
-
-function parallelBalancer(params: {name: string, highWaterMark: number}, streamType, numStreams) {
+function parallelBalancer(params: {name: string, highWaterMark: number}, streamType, numStreams): parallelBalancerType {
   let resolveGet = null;
   const tag = 'video' === streamType ? 'v' : 'a';
   const pending = [];
@@ -212,9 +203,9 @@ function parallelBalancer(params: {name: string, highWaterMark: number}, streamT
       makeSet(resolveGet);
     });
 
-  const pullSet = async () => new Promise(resolve => makeSet(resolve));
+  const pullSet = async () => new Promise<{done: any, value: {timings: any}}>(resolve => makeSet(resolve));
 
-  const readStream = new Readable({
+  const readStream: parallelBalancerType = new Readable({
     objectMode: true,
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
     read() {
@@ -231,9 +222,9 @@ function parallelBalancer(params: {name: string, highWaterMark: number}, streamT
         }
       })();
     },
-  });
+  }) as parallelBalancerType;
 
-  readStream.pushPkts = (packets, stream, streamIndex, final = false) => {
+  readStream.pushPkts = (packets, stream, streamIndex, final = false): any => {
     if (packets && packets.frames.length) {
       return packets.frames.reduce(async (promise, pkt) => {
         await promise;
@@ -249,14 +240,16 @@ function parallelBalancer(params: {name: string, highWaterMark: number}, streamT
   return readStream;
 }
 
-function teeBalancer(params, numStreams) {
+ type teeBalancerType = Readable[] & {pushFrames: (frames: any, unusedFlag?: boolean) => any};
+
+function teeBalancer(params: {name: 'streamTee', highWaterMark?: number}, numStreams: number): teeBalancerType {
   let resolvePush = null;
   const pending = [];
   for (let s = 0; s < numStreams; ++s)
     pending.push({ frames: null, resolve: null, final: false });
   
   const pullFrame = async index => {
-    return new Promise(resolve => {
+    return new Promise<{done: boolean, value?: any}>(resolve => {
       if (pending[index].frames) {
         resolve({ value: pending[index].frames, done: false });
         Object.assign(pending[index], { frames: null, resolve: null });
@@ -272,7 +265,7 @@ function teeBalancer(params, numStreams) {
     });
   };
 
-  const readStreams = [];
+  const readStreams: teeBalancerType = [] as teeBalancerType;
   for (let s = 0; s < numStreams; ++s)
     readStreams.push(new Readable({
       objectMode: true,
@@ -293,7 +286,7 @@ function teeBalancer(params, numStreams) {
     }));
 
   readStreams.pushFrames = frames => {
-    return new Promise(resolve => {
+    return new Promise<{value: {timings: any}, done: boolean }>(resolve => {
       pending.forEach((p, index) => {
         if (frames.length)
           p.frames = frames[index].frames;
@@ -318,7 +311,7 @@ function teeBalancer(params, numStreams) {
   return readStreams;
 }
 
-function transformStream(params: { name: 'decode'| 'filter', highWaterMark : number }, processFn, flushFn, reject) {
+function transformStream(params: { name: 'encode' | 'dice' | 'decode'| 'filter', highWaterMark : number }, processFn, flushFn, reject) {
   return new Transform({
     objectMode: true,
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
@@ -351,11 +344,11 @@ const calcStats = (arr, elem, prop) => {
   return { mean: mean, stdDev: stdDev, max: max, min: min };
 };
 
-function writeStream(params, processFn, finalFn, reject) {
+function writeStream(params: {name: string, highWaterMark?: number}, processFn: (val: {timings: any}) => Promise<any>, finalFn: ()=> Promise<any>, reject: (err: Error) => void) {
   return new Writable({
     objectMode: true,
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
-    write(val, encoding, cb) {
+    write(val: {timings: any}, encoding: BufferEncoding, cb: (error?: Error | null, result?: any) => void) {
       (async () => {
         const start = process.hrtime();
         const reqTime = start[0] * 1e3 + start[1] / 1e6;
@@ -369,7 +362,7 @@ function writeStream(params, processFn, finalFn, reject) {
         cb(null, result);
       })().catch(cb);
     },
-    final(cb) {
+    final(cb: (error?: Error | null, result?: any) => void) {
       (async () => {
         const result = finalFn ? await finalFn() : null;
         if (doTimings && ('mux' === params.name)) {
@@ -431,7 +424,7 @@ function readStream(params, demuxer, ms, index) {
   });
 }
 
-function createBeamWritableStream(params, governor) {
+function createBeamWritableStream(params: {highwaterMark?: number}, governor: governorType): Writable {
   const beamStream = new Writable({
     highWaterMark: params.highwaterMark || 16384,
     write: (chunk, encoding, cb) => {
@@ -443,13 +436,14 @@ function createBeamWritableStream(params, governor) {
   });
   return beamStream;
 }
+type demuxerStreamType = Writable & {demuxer: (options: {governor: governorType})=> Promise<any> };
 
 export function demuxerStream(params) {
   const governor = new beamcoder.governor({});
-  const stream = createBeamWritableStream(params, governor);
+  const stream: demuxerStreamType = createBeamWritableStream(params, governor) as demuxerStreamType;
   stream.on('finish', () => governor.finish());
   stream.on('error', console.error);
-  stream.demuxer = options => {
+  stream.demuxer = (options: {governor: governorType}) => {
     options.governor = governor;
     // delay initialisation of demuxer until stream has been written to - avoids lock-up
     return new Promise(resolve => setTimeout(async () => resolve(await beamcoder.demuxer(options)), 20));
@@ -457,7 +451,8 @@ export function demuxerStream(params) {
   return stream;
 }
 
-function createBeamReadableStream(params, governor) {
+
+function createBeamReadableStream(params: {highwaterMark: number}, governor: governorType) {
   const beamStream = new Readable({
     highWaterMark: params.highwaterMark || 16384,
     read: size => {
@@ -473,19 +468,27 @@ function createBeamReadableStream(params, governor) {
   return beamStream;
 }
 
-export function muxerStream(params) {
+type governorType = { 
+  read(len: number): Promise<Buffer>;
+  write(data: Buffer): Promise<null>;
+  finish(): undefined;
+};
+
+type muxerStreamType = Readable & {muxer: (options: {governor: governorType}) => any};
+
+export function muxerStream(params: {highwaterMark: number}): muxerStreamType {
   const governor = new beamcoder.governor({ highWaterMark: 1 });
-  const stream = createBeamReadableStream(params, governor);
+  const stream: muxerStreamType = createBeamReadableStream(params, governor) as muxerStreamType;
   stream.on('end', () => governor.finish());
   stream.on('error', console.error);
-  stream.muxer = options => {
+  stream.muxer = (options) => {
     options.governor = governor;
     return beamcoder.muxer(options);
   };
   return stream;
 }
 
-export async function makeSources(params) {
+export async function makeSources(params: {video?: any[], audio?: any[]}) {
   if (!params.video) params.video = [];
   if (!params.audio) params.audio = [];
 
@@ -533,7 +536,7 @@ export async function makeSources(params) {
     src.stream = readStream({ highWaterMark : 1 }, src.format, src.ms, src.streamIndex)));
 }
 
-function runStreams(streamType, sources, filterer, streams, mux, muxBalancer) {
+function runStreams(streamType, sources: {decoder: any, format: any, streamIndex: any, stream: any}[], filterer, streams, mux, muxBalancer) {
   return new Promise<void>((resolve, reject) => {
     if (!sources.length)
       return resolve();
@@ -541,7 +544,7 @@ function runStreams(streamType, sources, filterer, streams, mux, muxBalancer) {
     const timeBaseStream = sources[0].format.streams[sources[0].streamIndex];
     const filterBalancer = parallelBalancer({ name: 'filterBalance', highWaterMark : 1 }, streamType, sources.length);
 
-    sources.forEach((src, srcIndex) => {
+    sources.forEach((src: {decoder: any, format: any, streamIndex: any, stream: any}, srcIndex: number) => {
       const decStream = transformStream({ name: 'decode', highWaterMark : 1 },
         pkts => src.decoder.decode(pkts), () => src.decoder.flush(), reject);
       const filterSource = writeStream({ name: 'filterSource', highWaterMark : 1 },
@@ -561,7 +564,7 @@ function runStreams(streamType, sources, filterer, streams, mux, muxBalancer) {
 
     filterBalancer.pipe(filtStream).pipe(streamSource);
 
-    streams.forEach((str: Codec, i) => {
+    streams.forEach((str: {encoder: any, stream: any}, i) => {
       const dicer = new frameDicer(str.encoder, 'audio' === streamType);
       const diceStream = transformStream({ name: 'dice', highWaterMark : 1 },
         frms => dicer.dice(frms), () => dicer.dice([], true), reject);
