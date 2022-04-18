@@ -20,7 +20,7 @@
 */
 
 const test = require('tape');
-const beamcoder = require('../index.js');
+const beamcoder = require('../ts/index.js');
 
 test('Version information', t => {
   const verPos = beamcoder.avVersionInfo().indexOf('5.');

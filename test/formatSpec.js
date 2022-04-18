@@ -20,7 +20,7 @@
 */
 
 const test = require('tape');
-const beamcoder = require('../index.js');
+const beamcoder = require('../ts/index.js');
 
 const isExternal = o => Object.toString(o).indexOf('native code') >= 0;
 

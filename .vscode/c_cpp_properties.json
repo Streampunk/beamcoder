@@ -3,13 +3,13 @@
         {
             "name": "Win32",
             "includePath": [
-                "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/include/*",
-                "C:/Program Files (x86)/Windows Kits/8.1/Include/um",
-                "C:/Program Files (x86)/Windows Kits/10/Include/10.0.10240.0/ucrt",
-                "C:/Program Files (x86)/Windows Kits/8.1/Include/shared",
-                "C:/Program Files (x86)/Windows Kits/8.1/Include/winrt",
+                // "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/include/*",
+                "C:/Program Files (x86)/Windows Kits/10/Include/10.0.17763.0/um",
+                "C:/Program Files (x86)/Windows Kits/10/Include/10.0.17763.0/ucrt",
+                "C:/Program Files (x86)/Windows Kits/10/Include/10.0.17763.0/shared",
+                "C:/Program Files (x86)/Windows Kits/10/Include/10.0.17763.0/winrt",
                 "${workspaceFolder}/ffmpeg/ffmpeg-5.x-win64-shared/include/**",
-                "${env:USERPROFILE}/AppData/Local/node-gyp/Cache/16.14.0/include/node"
+                "${env:USERPROFILE}/AppData/Local/node-gyp/Cache/16.13.1/include/node"
             ],
             "defines": [
                 "_DEBUG",
@@ -17,7 +17,7 @@
                 "_UNICODE"
             ],
             "windowsSdkVersion": "8.1",
-            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/bin/cl.exe",
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30133/bin/Hostx86/x64/cl.exe",
             "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "msvc-x64"

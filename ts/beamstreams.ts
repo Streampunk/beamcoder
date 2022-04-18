@@ -19,7 +19,7 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 import bindings from 'bindings';
-import { Frame, Stream, Muxer, CodecPar, Codec, Governor, WritableDemuxerStream, ReadableMuxerStream, FiltererVideoOptions, FiltererAudioOptions, Filterer, Decoder, Demuxer, Encoder, InputFormat } from '.'; // Codec, CodecContext, 
+import { Frame, Stream, Muxer, CodecPar, Codec, Governor, WritableDemuxerStream, ReadableMuxerStream, FiltererVideoOptions, FiltererAudioOptions, Filterer, Decoder, Demuxer, Encoder, InputFormat } from '..'; // Codec, CodecContext, 
 import { Writable, Readable, Transform } from 'stream';
 
 type governorType = {
