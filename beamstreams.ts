@@ -273,7 +273,7 @@ type parallelBalancerType = Readable & {
   pushPkts: (packets, stream, streamIndex: number, final?: boolean) => any
 };
 
-function parallelBalancer(params: { name: string, highWaterMark: number }, streamType: 'video', numStreams: number): parallelBalancerType {
+function parallelBalancer(params: { name: string, highWaterMark: number }, streamType: 'video' | 'audio', numStreams: number): parallelBalancerType {
   let resolveGet = null;
   const tag = 'video' === streamType ? 'v' : 'a';
   const pending = [];
@@ -333,7 +333,7 @@ function parallelBalancer(params: { name: string, highWaterMark: number }, strea
     },
   }) as parallelBalancerType;
 
-  readStream.pushPkts = (packets, stream, streamIndex: number, final = false): any => {
+  readStream.pushPkts = (packets: {frames: Array<any>, timings: [number, number]}, stream: {time_base: [number, number]}, streamIndex: number, final = false): any => {
     if (packets && packets.frames.length) {
       return packets.frames.reduce(async (promise, pkt) => {
         await promise;
@@ -640,11 +640,11 @@ export async function makeSources(params: { video?: Array<{ sources: any[] }>, a
 }
 
 function runStreams(
-  streamType,
+  streamType: 'video' | 'audio',
   sources: Array<{ decoder: { decode: (pkts: any) => void, flush: () => void }, format: { streams: Array<{}> }, streamIndex: any, stream: any }>,
   filterer: { cb?: (result: any) => void, filter: (stream: any) => any },
-  streams,
-  mux,
+  streams : Array<{}>,
+  mux: {writeFrame: (pkts: any)=> void},
   muxBalancer: { writePkts: (packets, srcStream, dstStream, writeFn, final?: boolean) => any }) {
   return new Promise<void>((resolve, reject) => {
     if (!sources.length)
