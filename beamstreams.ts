@@ -32,7 +32,6 @@ interface BeamcoderType extends ReadableMuxerStream {
   /** Create object for AVIOContext based buffered I/O */
   governor: typeof Governor;
 
-
   /**
    * Create a demuxer for this source
    * @param options a DemuxerCreateOptions object
@@ -689,17 +688,36 @@ function runStreams(
   });
 }
 
+export interface BeamstreamStream {
+  name: string;
+  time_base: any;
+  encoder: any;
+  stream: any;
+  codecpar: {
+    sample_rate: number;
+    frame_size: number;
+    format: any,
+    channel_layout: any;
+  };
+}
+export interface BeamstreamSource {
+  decoder: any;
+  format: any;
+  streamIndex: number;
+  stream: any;
+}
+
 export async function makeStreams(params: {
   video: Array<{
     filter?: any;
-    streams: any[],
-    sources: any[],
+    sources: Array<BeamstreamSource>,
+    streams: Array<BeamstreamStream>,
     filterSpec: string,
   }>,
   audio: Array<{
     filter?: any;
-    sources: any[],
-    streams: any[],
+    sources: Array<BeamstreamSource>,
+    streams: Array<BeamstreamStream>,
     filterSpec: string,
   }>,
   out: { output_stream: any, formatName: string, url?: string, flags: any, options: any }
