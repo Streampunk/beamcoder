@@ -120,3 +120,14 @@ export interface BeamstreamSource {
     stream: any;
 }
 
+export interface Timing {
+    reqTime: number;
+    elapsed: number;
+}
+
+export interface ffStats {
+    mean: number;
+    stdDev: number;
+    max: number;
+    min: number;
+}
