@@ -25,13 +25,9 @@ import util from 'util';
 import https from 'https';
 import cp from 'child_process';
 
-//const [ mkdir, access, rename, execFile, exec ] = // eslint-disable-line
-//  [ fs.mkdir, fs.access, fs.rename, cp.execFile, cp.exec ].map(util.promisify);
-
 const { mkdir, access, rename } = fs.promises;
 
 const [ execFile, exec ] = [ cp.execFile, cp.exec ].map(util.promisify);
-
 
 async function get(ws: NodeJS.WritableStream, url: string, name: string): Promise<void> {
   let received = 0;

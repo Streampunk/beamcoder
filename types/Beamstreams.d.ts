@@ -14,7 +14,7 @@ export interface WritableDemuxerStream extends NodeJS.WritableStream {
 	 * format details by consuming data from the source. The promise will wait indefinitely 
 	 * until sufficient source data has been read.
 	 */
-	demuxer(options: DemuxerCreateOptions): Promise<Demuxer>
+	demuxer(options: DemuxerCreateOptions | string): Promise<Demuxer>
 }
 /**
  * Create a WritableDemuxerStream to allow streaming to a Demuxer
@@ -31,7 +31,7 @@ export interface ReadableMuxerStream extends NodeJS.ReadableStream {
 	/**
 	 * Create a muxer for this source
 	 * @param options a MuxerCreateOptions object
-   * @returns A Muxer object
+     * @returns A Muxer object
 	 */
 	muxer(options: MuxerCreateOptions): Muxer
 }
@@ -43,11 +43,19 @@ export interface ReadableMuxerStream extends NodeJS.ReadableStream {
 export function muxerStream(options: { highwaterMark?: number }): ReadableMuxerStream
 
 /** Create object for AVIOContext based buffered I/O */
-export function governor(options: { highWaterMark: number }): {
-  read(len: number): Promise<Buffer>
-  write(data: Buffer): Promise<null>
-  finish(): undefined
+// export function governor(options: { highWaterMark: number }): {
+//   read(len: number): Promise<Buffer>
+//   write(data: Buffer): Promise<null>
+//   finish(): undefined
+// }
+export class Governor {
+	constructor(options: { highWaterMark?: number });
+	read(len: number): Promise<Buffer>
+	write(data: Buffer): Promise<null>
+	finish(): undefined
+	private _adaptor: unknown;
 }
+
 
 /** Source definition for a beamstream channel, from either a file or NodeJS ReadableStream */
 export interface BeamstreamSource {

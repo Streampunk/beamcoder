@@ -175,6 +175,9 @@ export interface Frame {
 	 * `let f = beamcoder.frame({ width: 1920, height: 1080, format: 'yuv422p' }).alloc()`
 	 */
 	alloc(): Frame
+
+    /** Retun a JSON string containing the object properties. */
+	toJSON(): string
 }
 
 /**
