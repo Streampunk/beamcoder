@@ -1,5 +1,7 @@
 import { Packet } from "./Packet"
-import { InputFormat, FormatContext, FormatContextBase } from "./FormatContext"
+import { InputFormat, FormatContextBase } from "./FormatContext"
+import { FormatContextIn } from "./FormatContextIn"
+import { FormatContextOut } from "./FormatContextOut"
 
 export interface SeekOptions {
 	/**
@@ -43,7 +45,7 @@ export interface SeekOptions {
  * The process of demuxing (de-multiplexing) extracts time-labelled packets of data 
  * contained in a media stream or file.
  */
-export interface Demuxer extends FormatContextBase {
+export interface Demuxer extends FormatContextBase, FormatContextOut , FormatContextIn {
 	// { read: () => Promise<Packet | null>, streams: Array<{time_base: [number, number]}> }
 	/** Object name. */
 	// readonly type: 'demuxer'

@@ -1,8 +1,7 @@
 import { CodecPar } from "./CodecPar"
 import { Packet } from "./Packet";
 import { Frame } from "./Frame";
-import { Codec } from "./Codec"
-import { CodecContext, CodecContextBaseMin } from "./CodecContext"
+import { CodecContextBaseMin } from "./CodecContext"
 
 /** The EncodedPackets object is returned as the result of a encode operation */
 export interface EncodedPackets {

@@ -11,7 +11,7 @@ import { WritableDemuxerStream, ReadableMuxerStream, BeamstreamParams } from './
 import { Filter, Filterer, FiltererAudioOptions, FiltererVideoOptions } from "./Filter";
 import { commonEncoderParms } from './params';
 import { Muxer, MuxerCreateOptions } from "./Muxer";
-import type { Governor } from './type/Governor';
+import type { Governor } from './Governor';
 
 export interface BeamcoderType extends ReadableMuxerStream {
     /** Create object for AVIOContext based buffered I/O */
@@ -271,5 +271,74 @@ export interface BeamcoderType extends ReadableMuxerStream {
      * @returns Promise that resolve to a Filterer on success
      */
     filterer(options: FiltererVideoOptions | FiltererAudioOptions): Promise<Filterer>
+
+
+    AV_NOPTS_VALUE: number
+
+    /** The LIBAV**_VERSION_INT for each FFmpeg library */
+    versions(): {
+      avcodec: number
+      avdevice: number
+      avfilter: number
+      avformat: number
+      avutil: number
+      postproc: number
+      swresample: number
+      swscale: number
+    }
+    /**
+     * FFmpeg version string. This usually is the actual release
+     * version number or a git commit description. This string has no fixed format
+     * and can change any time. It should never be parsed by code.
+     */
+    avVersionInfo(): string
+    /** Informative version strings for each FFmpeg library */
+    versionStrings(): {
+      avcodec: string
+      avdevice: string
+      avfilter: string
+      avformat: string
+      avutil: string
+      postproc: string
+      swresample: string
+      swscale: string
+    }
+    /** Build configuration strings for each FFmpeg library */
+    configurations(): {
+      avcodec: string
+      avdevice: string
+      avfilter: string
+      avformat: string
+      avutil: string
+      postproc: string
+      swresample: string
+      swscale: string
+    }
+    /** License strings for each FFmpeg library */
+    licenses(): {
+      avcodec: string
+      avdevice: string
+      avfilter: string
+      avformat: string
+      avutil: string
+      postproc: string
+      swresample: string
+      swscale: string
+    }
+    /** List the available protocols */
+    protocols(): { inputs: Array<string>, outputs: Array<string> }
+    
+    /** Read or set the logging level
+     * `quiet` - print no output.
+     * `panic` - something went really wrong - crash will follow
+     * `fatal` - recovery not possible
+     * `error` - lossless recovery not possible
+     * `warning` - something doesn't look correct
+     * `info` - standard information - the default
+     * `verbose` - detailed information
+     * `debug` - stuff which is only useful for libav* developers
+     * `trace` - extremely verbose debugging for libav* developers
+     */
+    logging(level?: string): string | undefined
 }
 

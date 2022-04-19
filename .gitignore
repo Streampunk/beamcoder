@@ -77,3 +77,4 @@ beamstreams.js
 index.js
 install_ffmpeg.js
 ts/*.js
+ts/*.d.ts

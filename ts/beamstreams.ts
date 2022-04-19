@@ -21,20 +21,20 @@
 import bindings from 'bindings';
 // import { Frame, Stream, Muxer, CodecPar, WritableDemuxerStream, BeamstreamParams, Demuxer, Packet, Filterer, BeamstreamSource } from ''; // Codec, CodecContext, 
 import { Writable, Readable, Transform } from 'stream';
-import type { BeamstreamStream, ffStats } from './types';
+import type { ffStats } from './types';
 
 import { teeBalancer } from './teeBalancer';
 import { parallelBalancer } from './parallelBalancer';
 import { serialBalancer } from './serialBalancer';
 
-import { BeamcoderType } from './models/BeamcoderType';
-import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, FilterContext, Filterer, FilterLink, Frame, Packet, Timing, WritableDemuxerStream } from '../types';
-import { CodecPar } from './models/CodecPar';
-import { Demuxer } from './models/Demuxer';
-import { Muxer } from './models/Muxer';
-import { Stream } from './models/Stream';
-import { DecodedFrames } from './models/Decoder';
-import type { Governor } from './models/type/Governor';
+import { BeamcoderType } from './types/BeamcoderType';
+import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, BeamstreamStream, Filterer, FilterLink, Frame, Packet, Timing, WritableDemuxerStream } from '../types';
+import { CodecPar } from './types/CodecPar';
+import { Demuxer } from './types/Demuxer';
+import { Muxer } from './types/Muxer';
+import { Stream } from './types/Stream';
+import { DecodedFrames } from './types/Decoder';
+import type { Governor } from './types/Governor';
 
 const beamcoder = bindings('beamcoder') as BeamcoderType;
 

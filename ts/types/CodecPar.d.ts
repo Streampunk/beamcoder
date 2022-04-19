@@ -24,7 +24,7 @@ export interface CodecPar {
 	 * - video: the pixel format.
 	 * - audio: the sample format.
 	 */
-	format: 'video' | 'audio' | null
+	format: string | null
 
 	/** The average bitrate of the encoded data (in bits per second). */
 	bit_rate: number

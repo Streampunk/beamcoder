@@ -1,15 +1,10 @@
 import { Packet } from "./Packet"
 import { Frame } from "./Frame"
-import { OutputFormat, FormatContext } from "./FormatContext"
+import { OutputFormat } from "./FormatContext"
+import { FormatContextBase } from "./FormatContext"
+import { FormatContextOut } from "./FormatContextOut"
 
-export interface Muxer extends Omit<FormatContext,
-	'iformat' | 'start_time' | 'probesize' | 'max_analyze_duration' | 'max_index_size' |
-	'fps_probe_size' | 'error_recognition' | 'max_ts_probe' | 'use_wallclock_as_timestamps' |
-	'avio_flags' | 'duration_estimation_method' | 'skip_initial_bytes' | 'correct_ts_overflow' |
-	'seek2any' | 'probe_score' | 'format_probesize' | 'codec_whitelist' | 'format_whitelist' |
-	'io_repositioned' | 'output_ts_offset' | 'protocol_whitelist' | 'protocol_blacklist' |
-	'max_streams' | 'skip_estimate_duration_from_pts'
-> {
+export interface Muxer extends FormatContextBase, FormatContextOut {
 	/** Object name. */
 	type: 'muxer'
 

@@ -19,7 +19,10 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
+import {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams';
+import { BeamcoderType } from './types/BeamcoderType';
 import bindings from 'bindings';
+
 const beamcoder = bindings('beamcoder') as BeamcoderType;
 // import * as beamstreams from './beamstreams.js';
 
@@ -36,9 +39,6 @@ https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
 console.log(splash);
 console.log('Using FFmpeg version', beamcoder.avVersionInfo());
 
-import {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams';
-import { BeamcoderType } from './models/BeamcoderType';
-
 // export {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams.js';
 
 beamcoder.demuxerStream = demuxerStream;
@@ -49,4 +49,12 @@ beamcoder.makeStreams = makeStreams;
 
 export default beamcoder;
 
-// module.exports = beamcoder;
+export { CodecPar } from './types/CodecPar';
+export { Decoder } from './types/Decoder';
+export { Demuxer } from './types/Demuxer';
+export { Muxer } from './types/Muxer';
+export { Stream } from './types/Stream';
+export { Encoder } from './types/Encoder';
+export { Filterer, Filter } from './types/Filter';
+export { FormatContext } from './types/FormatContext';
+export { Frame } from './types/Frame';
