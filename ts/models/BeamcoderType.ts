@@ -38,7 +38,6 @@ export interface BeamcoderType extends ReadableMuxerStream {
      * @returns A WritableDemuxerStream that can be streamed to.
      */
     demuxerStream(options: { highwaterMark?: number }): WritableDemuxerStream;
-
     /**
      * Initialise the sources for the beamstream process.
      * Note - the params object is updated by the function.

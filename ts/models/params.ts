@@ -15,5 +15,4 @@ export interface commonEncoderParms {
     priv_data?: any; // { preset?: 'slow' };
     flags?: any;
     // [key: string]: any 
-
 }

@@ -1,4 +1,6 @@
-
+/**
+ * Type only definition for Governor class
+ */
 export class Governor {
     constructor(options: { highWaterMark?: number });
     read(len: number): Promise<Buffer>
