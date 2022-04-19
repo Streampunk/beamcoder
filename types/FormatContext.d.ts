@@ -132,9 +132,12 @@ export interface FormatContext {
 	/** Object name. */
 	readonly type: string
 	/** The input format description. */
-	iformat: InputFormat
+	set iformat(string: format): string;
+	get iformat(): InputFormat
+	
 	/** The output format description. */
-	oformat: OutputFormat
+	set oformat(string: format): string;
+	get oformat(): OutputFormat
 	/** Format private data. */
 	priv_data: {
 		[key: string]: any

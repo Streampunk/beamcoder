@@ -334,16 +334,12 @@ test('Can set IO formats on construction', t => {
   t.equal(ofmt.type, 'muxer', 'has turned into a muxer.');
   t.equal(ofmt.oformat.name, 'hevc', 'oformat has the expected name.');
 
-  debugger;
-  // @ts-ignore
   ofmt.oformat = 'wav';
   t.equal(ofmt.oformat.name, 'wav', 'oformat has the expected name.');
   t.ok(ofmt.priv_data, 'has private data.');
   t.equal(typeof ofmt.priv_data.write_bext, 'boolean', 'private data appears as expected.');
 
-  // @ts-expect-error:next-line
   t.throws(() => { ifmt.iformat = 'wibble'; }, /Unable/, 'bad iformat name throws.');
-  // @ts-expect-error:next-line
   t.throws(() => { ofmt.oformat = 'wibble'; }, /Unable/, 'bad oformat name throws.');
   t.end();
 });
