@@ -32,11 +32,9 @@ import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, FilterContext, F
 import { CodecPar } from './models/CodecPar';
 import { Demuxer } from './models/Demuxer';
 import { Muxer } from './models/Muxer';
-import { Governor } from './models/Governor';
 import { Stream } from './models/Stream';
 import { DecodedFrames } from './models/Decoder';
-
-// import { Governor } from './models/BeamcoderType';
+import type { Governor } from './models/type/Governor';
 
 const beamcoder = bindings('beamcoder') as BeamcoderType;
 

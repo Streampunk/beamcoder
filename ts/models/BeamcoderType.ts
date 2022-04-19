@@ -11,11 +11,11 @@ import { WritableDemuxerStream, ReadableMuxerStream, BeamstreamParams } from './
 import { Filter, Filterer, FiltererAudioOptions, FiltererVideoOptions } from "./Filter";
 import { commonEncoderParms } from './params';
 import { Muxer, MuxerCreateOptions } from "./Muxer";
-import { Governor } from './Governor';
+import type { Governor } from './type/Governor';
 
 export interface BeamcoderType extends ReadableMuxerStream {
     /** Create object for AVIOContext based buffered I/O */
-    governor: Governor;
+    governor: typeof Governor;
     /**
      * FFmpeg version string. This usually is the actual release
      * version number or a git commit description. This string has no fixed format

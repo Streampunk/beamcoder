@@ -37,7 +37,7 @@ console.log(splash);
 console.log('Using FFmpeg version', beamcoder.avVersionInfo());
 
 import {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams';
-import { BeamcoderType } from './types';
+import { BeamcoderType } from './models/BeamcoderType';
 
 // export {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams.js';
 
