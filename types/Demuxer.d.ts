@@ -47,6 +47,9 @@ export interface Demuxer extends Omit<FormatContext,
 	'oformat' | 'max_interleave_delta' | 'avoid_negative_ts' | 'audio_preload' |
   'max_chunk_duration' | 'max_chunk_size' | 'flush_packets' | 'metadata_header_padding'
 > {
+	// { read: () => Promise<Packet | null>, streams: Array<{time_base: [number, number]}> }
+
+
 	/** Object name. */
 	readonly type: 'demuxer'
 	readonly iformat: InputFormat

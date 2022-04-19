@@ -8,6 +8,12 @@
  * packets, with no compressed data, containing only side data
  * (e.g. to update some stream parameters at the end of encoding).
  */
+
+ export interface Timing {
+    reqTime: number;
+    elapsed: number;
+}
+
 export interface Packet {
 	/** Object name. */
 	readonly type: 'Packet'
@@ -32,22 +38,22 @@ export interface Packet {
 	 * Packet data buffers are shared between C and Javascript so can be written to and modified without having to write the buffer back into the packet
 	 */
 	data: Buffer
-  /** The size in bytes of the raw data */
+    /** The size in bytes of the raw data */
 	size: number
 	/** The index in the format's stream array that this packet belongs to */
 	stream_index: number
-  /** A combination of AV_PKT_FLAG values */
+    /** A combination of AV_PKT_FLAG values */
 	flags: {
-		/** The packet contains a keyframe */
-		KEY: boolean
-		/** The packet content is corrupted */
-		CORRUPT: boolean
-		/**
-		 * Flag is used to discard packets which are required to maintain valid
-		 * decoder state but are not required for output and should be dropped
-		 * after decoding.
-		 **/
-    DISCARD: boolean
+	    /** The packet contains a keyframe */
+	    KEY: boolean
+	    /** The packet content is corrupted */
+	    CORRUPT: boolean
+	    /**
+	     * Flag is used to discard packets which are required to maintain valid
+	     * decoder state but are not required for output and should be dropped
+	     * after decoding.
+	     **/
+        DISCARD: boolean
 		/**
 		 * The packet comes from a trusted source.
 		 *
@@ -72,7 +78,10 @@ export interface Packet {
 	 */
 	duration: number
 	/** byte position in stream, -1 if unknown */
-	pos: number
+	pos: number,
+	timings: {
+	     read?: Timing;
+	};
 }
 
 /**

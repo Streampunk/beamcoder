@@ -19,9 +19,9 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 import bindings from 'bindings';
-import { Frame, Stream, Muxer, CodecPar } from '..'; // Codec, CodecContext, 
+import { Frame, Stream, Muxer, CodecPar, WritableDemuxerStream, BeamstreamParams, Demuxer, Packet, Filterer, BeamstreamSource } from '..'; // Codec, CodecContext, 
 import { Writable, Readable, Transform } from 'stream';
-import type { BeamcoderType, governorType, BeamstreamStream, BeamstreamSource, Timing, ffStats } from './types';
+import type { BeamcoderType, governorType, Timing, ffStats } from './types';
 
 import { teeBalancer } from './teeBalancer';
 import { parallelBalancer } from './parallelBalancer';
@@ -209,16 +209,16 @@ function writeStream(params: { name: string, highWaterMark?: number }, processFn
   }).on('error', err => reject(err));
 }
 
-interface Packet {
-  stream_index: number;
-  pts: number;
-  timings: {
-    read?: Timing;
-  };
-}
+// interface Packet {
+//   stream_index: number;
+//   pts: number;
+//   timings: {
+//     read?: Timing;
+//   };
+// }
 
 
-function readStream(params: {highWaterMark?: number}, demuxer: { read: () => Promise<Packet | null>, streams: Array<{time_base: [number, number]}> }, ms: { end: number }, index: number) {
+function readStream(params: {highWaterMark?: number}, demuxer: Demuxer, ms: { end: number }, index: number) {
   const time_base = demuxer.streams[index].time_base;
   const end_pts = ms ? ms.end * time_base[1] / time_base[0] : Number.MAX_SAFE_INTEGER;
   async function getPacket(): Promise<Packet | null> {
@@ -261,7 +261,7 @@ function createBeamWritableStream(params: { highwaterMark?: number }, governor: 
 }
 type demuxerStreamType = Writable & { demuxer: (options: { governor: governorType }) => Promise<any> };
 
-export function demuxerStream(params: { highwaterMark?: number }) {
+export function demuxerStream(params: { highwaterMark?: number }): WritableDemuxerStream {
   const governor = new beamcoder.governor({});
   const stream: demuxerStreamType = createBeamWritableStream(params, governor) as demuxerStreamType;
   stream.on('finish', () => governor.finish());
@@ -271,7 +271,7 @@ export function demuxerStream(params: { highwaterMark?: number }) {
     // delay initialisation of demuxer until stream has been written to - avoids lock-up
     return new Promise(resolve => setTimeout(async () => resolve(await beamcoder.demuxer(options)), 20));
   };
-  return stream;
+  return stream as WritableDemuxerStream;
 }
 
 
@@ -304,18 +304,18 @@ export function muxerStream(params: { highwaterMark: number }): muxerStreamType 
   };
   return stream;
 }
-
-export async function makeSources(params: { video?: Array<{ sources: any[] }>, audio?: Array<{ sources: any[] }> }) {
+// params: { video?: Array<{ sources: any[] }>, audio?: Array<{ sources: any[] }> }
+export async function makeSources(params: BeamstreamParams): Promise<void> {
   if (!params.video) params.video = [];
   if (!params.audio) params.audio = [];
-
+  debugger;
   params.video.forEach(p => p.sources.forEach(src => {
     if (src.input_stream) {
       const demuxerStream = beamcoder.demuxerStream({ highwaterMark: 1024 });
       src.input_stream.pipe(demuxerStream);
       src.format = demuxerStream.demuxer({ iformat: src.iformat, options: src.options });
     } else
-      src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options });
+      src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options as any }); // FIXME
   }));
   params.audio.forEach(p => p.sources.forEach(src => {
     if (src.input_stream) {
@@ -323,10 +323,10 @@ export async function makeSources(params: { video?: Array<{ sources: any[] }>, a
       src.input_stream.pipe(demuxerStream);
       src.format = demuxerStream.demuxer({ iformat: src.iformat, options: src.options });
     } else
-      src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options });
+      src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options as any }); // FIXME
   }));
 
-  await params.video.reduce(async (promise, p) => {
+  await (params.video.reduce as any)(async (promise, p) => { // FIXME
     await promise;
     return p.sources.reduce(async (promise, src) => {
       await promise;
@@ -336,7 +336,8 @@ export async function makeSources(params: { video?: Array<{ sources: any[] }>, a
       return src.format;
     }, Promise.resolve());
   }, Promise.resolve());
-  await params.audio.reduce(async (promise, p) => {
+  
+  await (params.audio.reduce as any)(async (promise, p) => {
     await promise;
     return p.sources.reduce(async (promise, src) => {
       await promise;
@@ -348,17 +349,15 @@ export async function makeSources(params: { video?: Array<{ sources: any[] }>, a
   }, Promise.resolve());
 
   params.video.forEach(p => p.sources.forEach(src =>
-    src.stream = readStream({ highWaterMark: 1 }, src.format, src.ms, src.streamIndex)));
+    src.stream = readStream({ highWaterMark: 1 }, src.format as Demuxer, src.ms, src.streamIndex)));
   params.audio.forEach(p => p.sources.forEach(src =>
-    src.stream = readStream({ highWaterMark: 1 }, src.format, src.ms, src.streamIndex)));
+    src.stream = readStream({ highWaterMark: 1 }, src.format as Demuxer, src.ms, src.streamIndex)));
 }
 
 function runStreams(
   streamType: 'video' | 'audio',
-  sources: Array<{ decoder: {
-    decode: (pkts: any) => any,
-    flush: () => any
-  }, format: { streams: Array<{}> }, streamIndex: any, stream: any }>,
+  // sources: Array<{ decoder: { decode: (pkts: any) => any, flush: () => any }, format: { streams: Array<{}> }, streamIndex: any, stream: any }>, 
+  sources: Array<BeamstreamSource>,
   filterer: { cb?: (result: any) => void, filter: (stream: any) => any },
   streams : Array<{}>,
   mux: {writeFrame: (pkts: any)=> void},
@@ -368,15 +367,15 @@ function runStreams(
     if (!sources.length)
       return resolve();
 
-    const timeBaseStream: any = sources[0].format.streams[sources[0].streamIndex];
+    const timeBaseStream: any = (sources[0].format as Demuxer).streams[sources[0].streamIndex];
     const filterBalancer = parallelBalancer({ name: 'filterBalance', highWaterMark: 1 }, streamType, sources.length);
 
     sources.forEach((src, srcIndex: number) => {
       const decStream = transformStream({ name: 'decode', highWaterMark: 1 },
         pkts => src.decoder.decode(pkts), () => src.decoder.flush(), reject);
       const filterSource = writeStream({ name: 'filterSource', highWaterMark: 1 },
-        pkts => filterBalancer.pushPkts(pkts, src.format.streams[src.streamIndex], srcIndex),
-        () => filterBalancer.pushPkts(null, src.format.streams[src.streamIndex], srcIndex, true), reject);
+        pkts => filterBalancer.pushPkts(pkts, (src.format as Demuxer).streams[src.streamIndex], srcIndex),
+        () => filterBalancer.pushPkts(null, (src.format as Demuxer).streams[src.streamIndex], srcIndex, true), reject);
 
       src.stream.pipe(decStream).pipe(filterSource);
     });
@@ -407,22 +406,7 @@ function runStreams(
   });
 }
 
-export async function makeStreams(params: {
-  video: Array<{
-    filter?: any;
-    sources: Array<BeamstreamSource>,
-    streams: Array<BeamstreamStream>,
-    filterSpec: string,
-  }>,
-  audio: Array<{
-    filter?: any;
-    sources: Array<BeamstreamSource>,
-    streams: Array<BeamstreamStream>,
-    filterSpec: string,
-  }>,
-  out: { output_stream: any, formatName: string, url?: string, flags: any, options: any }
-}
-) {
+export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Promise<void> }> {
   params.video.forEach(p => {
     p.sources.forEach(src =>
       src.decoder = beamcoder.decoder({ demuxer: src.format, stream_index: src.streamIndex }));
@@ -430,6 +414,7 @@ export async function makeStreams(params: {
   params.audio.forEach(p => {
     p.sources.forEach(src =>
       src.decoder = beamcoder.decoder({ demuxer: src.format, stream_index: src.streamIndex }));
+      //  {demuxer: Demuxer | Promise<Demuxer>, stream_index: number}
   });
 
   params.video.forEach(p => {
@@ -437,7 +422,7 @@ export async function makeStreams(params: {
       // FiltererVideoOptions
       filterType: 'video',
       inputParams: p.sources.map((src, i) => {
-        const stream = src.format.streams[src.streamIndex];
+        const stream = (src.format as Demuxer).streams[src.streamIndex];
         return {
           name: `in${i}:v`,
           width: stream.codecpar.width,
@@ -459,7 +444,7 @@ export async function makeStreams(params: {
     p.filter = beamcoder.filterer({
       filterType: 'audio',
       inputParams: p.sources.map((src, i) => {
-        const stream = src.format.streams[src.streamIndex];
+        const stream = (src.format as Demuxer).streams[src.streamIndex];
         return {
           name: `in${i}:a`,
           sampleRate: src.decoder.sample_rate,
@@ -493,14 +478,14 @@ export async function makeStreams(params: {
 
   params.video.forEach(p => {
     p.streams.forEach((str, i) => {
-      const encParams = p.filter.graph.filters.find(f => f.name === `out${i}:v`).inputs[0];
+      const encParams = (p.filter as Filterer).graph.filters.find(f => f.name === `out${i}:v`).inputs[0];
       str.encoder = beamcoder.encoder({
         name: str.name,
         width: encParams.w,
         height: encParams.h,
         pix_fmt: encParams.format,
         sample_aspect_ratio: encParams.sample_aspect_ratio,
-        time_base: encParams.time_base,
+        time_base: encParams.time_base as [number, number],
         // framerate: [encParams.time_base[1], encParams.time_base[0]],
         // bit_rate: 2000000,
         // gop_size: 10,
@@ -513,7 +498,7 @@ export async function makeStreams(params: {
 
   params.audio.forEach(p => {
     p.streams.forEach((str, i) => {
-      const encParams = p.filter.graph.filters.find(f => f.name === `out${i}:a`).inputs[0];
+      const encParams: { format : string, sample_rate: number, channel_layout: string} = p.filter.graph.filters.find(f => f.name === `out${i}:a`).inputs[0];
       str.encoder = beamcoder.encoder({
         name: str.name,
         sample_fmt: encParams.format,

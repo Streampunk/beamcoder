@@ -24,13 +24,37 @@
    Only supports 8-bit YUV 4:2:2 or 4:2:0 pixel formats.
 */
 
-const beamcoder = require('../index.js'); // Use require('beamcoder') externally
-const Koa = require('koa'); // Add koa to package.json dependencies
+import beamcoder from '../ts/index'; // Use require('beamcoder') externally
+import Koa from 'koa'; // Add koa to package.json dependencies
+import fs from 'fs'; // Add koa to package.json dependencies
+
+// const beamcoder = require('../index.js'); // Use require('beamcoder') externally
+// const Koa = require('koa'); // Add koa to package.json dependencies
 const app = new Koa();
 
 app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
+
+  if (ctx.path === '/') {
+    let list = await fs.promises.readdir('.')
+    list = list.filter(a=> a.toLowerCase().endsWith('.mp4'));
+    ctx.type = 'text/html';
+    ctx.body = `<html><body>
+    currenty available files: <ul>${list.map(f => `<li><a href="${f}/1">${f}</a></li>`).join(' ')}</ul>
+    </body></html>`;
+    return;
+  }
+
   let parts = ctx.path.split('/'); // Split the path into filename and time
-  if ((parts.length < 3) || (isNaN(+parts[2]))) return; // Ignore favicon etc..
+  if ((parts.length < 3) || (isNaN(+parts[2]))) {
+    ctx.status = 404;
+    ctx.type = 'text/html';
+    ctx.body = `<html><body>
+    expected path: /<file_name>/<time_in_s>
+    </body></html>`;
+    return; // Ignore favicon etc..
+  }
+
+  try {
   let dm = await beamcoder.demuxer('file:' + parts[1]); // Probe the file
   await dm.seek({ time: +parts[2] }); // Seek to the closest keyframe to time
   let packet = await dm.read(); // Find the next video packet (assumes stream 0)
@@ -50,6 +74,11 @@ app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
   await enc.flush(); // Tidy the encoder
   ctx.type = 'image/jpeg'; // Set the Content-Type of the data
   ctx.body = jpegResult.packets[0].data; // Return the JPEG image data
+  } catch (e) {
+    ctx.type = 'application/json';
+    ctx.status = 500;
+    ctx.body = JSON.stringify(e);
+  }
 });
 
 app.listen(3000); // Start the server on port 3000

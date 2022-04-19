@@ -114,9 +114,20 @@ napi_value decoder(napi_env env, napi_callback_info info) {
     CHECK_STATUS;
     status = napi_get_value_int32(env, value, &streamIdx);
     CHECK_STATUS;
-    if (streamIdx < 0 || streamIdx >= (int) format->nb_streams) {
-      NAPI_THROW_ERROR("Stream index is out of bounds for the given format.");
+    if (streamIdx < 0) {
+      char errorMsg[256];
+      sprintf(errorMsg, "Stream index:%d must be positif", streamIdx);
+      napi_throw_error(env, nullptr, errorMsg);
+      return nullptr;
     }
+
+    if (streamIdx >= (int) format->nb_streams) {
+      char errorMsg[256];
+      sprintf(errorMsg, "Stream index is out of bounds for the given format. %d must be < nb_streams(%d)", streamIdx, (int)format->nb_streams);
+      napi_throw_error(env, nullptr, errorMsg);
+      return nullptr;
+    }
+
     params = format->streams[streamIdx]->codecpar;
     codecID = params->codec_id;
     codecName = (char*) avcodec_get_name(params->codec_id);

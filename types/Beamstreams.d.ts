@@ -31,7 +31,7 @@ export interface ReadableMuxerStream extends NodeJS.ReadableStream {
 	/**
 	 * Create a muxer for this source
 	 * @param options a MuxerCreateOptions object
-     * @returns A Muxer object
+	 * @returns A Muxer object
 	 */
 	muxer(options: MuxerCreateOptions): Muxer
 }
@@ -64,19 +64,29 @@ export interface BeamstreamSource {
 	ms?: { start: number, end: number }
 	streamIndex?: number
 	iformat?: InputFormat
-  options?: { [key: string]: any }
+	options?: { [key: string]: any }
+	format?: Demuxer | Promise<Demuxer>;
+	stream: any; // FIXME
+	decoder?: Decoder; // FIXME
+
+
+
 }
 /** Codec definition for the destination channel */
 export interface BeamstreamStream {
 	name: string
 	time_base: Array<number>
 	codecpar: { [key: string]: any }
+	// added later
+	encoder?: Encoder;
+	stream?: Stream;
 }
 /** Definition for a channel of beamstream processing */
 export interface BeamstreamChannel {
 	sources: Array<BeamstreamSource>
 	filterSpec: string
 	streams: Array<BeamstreamStream>
+	filter?: Filterer | Promise<Filterer>;
 }
 /**
  * Definition for a beamstream process consisting of a number of audio and video sources
@@ -85,22 +95,29 @@ export interface BeamstreamChannel {
 export interface BeamstreamParams {
 	video?: Array<BeamstreamChannel>
 	audio?: Array<BeamstreamChannel>
-  /** Destination definition for the beamstream process, to either a file or NodeJS WritableStream */
-  out: {
+	/** Destination definition for the beamstream process, to either a file or NodeJS WritableStream */
+	out: {
 		formatName: string
 		url?: string
 		output_stream?: NodeJS.WritableStream
+		flags?: {
+			READ?: boolean
+			WRITE?: boolean
+			NONBLOCK?: boolean
+			DIRECT?: boolean
+		}
+		options?: { [key:string]: any }
 	}
 }
 /**
  * Initialise the sources for the beamstream process.
  * Note - the params object is updated by the function.
  */
-export function makeSources(params: BeamstreamParams): Promise<null>
+export function makeSources(params: BeamstreamParams): Promise<void>
 /**
  * Initialise the output streams for the beamstream process.
  * Note - the params object is updated by the function.
  * @returns Promise which resolves to an object with a run function that starts the processing
  */
-export function makeStreams(params: BeamstreamParams): Promise<{ run(): Promise<null>} >
+export function makeStreams(params: BeamstreamParams): Promise<{ run(): Promise<void> }>
 

@@ -11,7 +11,7 @@ export interface InputFormat {
 	readonly name: string
 	/** Descriptive name for the format, meant to be more human-readable */
 	readonly long_name: string
-  readonly flags: {
+    readonly flags: {
 		NOFILE: boolean
     /** Needs '%d' in filename. */
 		NEEDNUMBER: boolean

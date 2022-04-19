@@ -31,10 +31,10 @@ export interface Muxer extends Omit<FormatContext,
 		filename?: string
 		options?: { [key: string]: any }
 		flags?: {
-			READ: boolean
-			WRITE: boolean
-			NONBLOCK: boolean
-			DIRECT: boolean
+			READ?: boolean
+			WRITE?: boolean
+			NONBLOCK?: boolean
+			DIRECT?: boolean
 		}
 	}): Promise<undefined | { unset: {[key: string]: any}}>
 

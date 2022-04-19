@@ -20,7 +20,7 @@
 */
 
 import bindings from 'bindings';
-const beamcoder = bindings('beamcoder')
+const beamcoder = bindings('beamcoder') as BeamcoderType;
 // import * as beamstreams from './beamstreams.js';
 
 // Provide useful debug on segfault-related crash
@@ -36,7 +36,8 @@ https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
 console.log(splash);
 console.log('Using FFmpeg version', beamcoder.avVersionInfo());
 
-import {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams.js';
+import {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams';
+import { BeamcoderType } from './types';
 
 // export {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams.js';
 
@@ -46,6 +47,6 @@ beamcoder.muxerStream = muxerStream;
 beamcoder.makeSources = makeSources;
 beamcoder.makeStreams = makeStreams;
 
-// export default beamcoder;
+export default beamcoder;
 
-module.exports = beamcoder;
+// module.exports = beamcoder;

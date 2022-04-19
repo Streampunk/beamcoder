@@ -26,8 +26,8 @@
   Output can be viewed in VLC. Make sure "All Files" is selected to see the file.
 */
 
-const beamcoder = require('../index.js'); // Use require('beamcoder') externally
-const fs = require('fs');
+import beamcoder from '../ts/index'; // Use require('beamcoder') externally
+import fs from 'fs';
 
 let endcode = Buffer.from([0, 0, 1, 0xb7]);
 
@@ -38,32 +38,16 @@ async function run() {
     width: 1920,
     height: 1080,
     bit_rate: 2000000,
-    time_base: [1, 25],
-    framerate: [25, 1],
+    time_base: [1, 25] as [number, number],
+    framerate: [25, 1] as [number, number],
     gop_size: 10,
     max_b_frames: 1,
     pix_fmt: 'yuv420p',
     priv_data: { preset: 'slow' }
   };
 
-  let encoder = await beamcoder.encoder(encParams);
+  let encoder = beamcoder.encoder(encParams);
   console.log('Encoder', encoder);
-
-  const mux = beamcoder.muxer({ format_name: 'mp4' });
-  let vstr = mux.newStream({
-    name: 'h264',
-    time_base: [1, 90000],
-    interleaved: true }); // Set to false for manual interleaving, true for automatic
-  Object.assign(vstr.codecpar, {
-    width: 1920,
-    height: 1080,
-    format: 'yuv420p'
-  });
-  console.log(vstr);
-  await mux.openIO({
-    url: 'file:test.mp4'
-  });
-  await mux.writeHeader();
 
   let outFile = fs.createWriteStream(process.argv[2]);
 
@@ -76,7 +60,7 @@ async function run() {
 
     let linesize = frame.linesize;
     let [ ydata, bdata, cdata ] = frame.data;
-    frame.pts = i+100;
+    frame.pts = i;
 
     for ( let y = 0 ; y < frame.height ; y++ ) {
       for ( let x = 0 ; x < linesize[0] ; x++ ) {
@@ -93,27 +77,12 @@ async function run() {
 
     let packets = await encoder.encode(frame);
     if ( i % 10 === 0) console.log('Encoding frame', i);
-    for (const pkt of packets.packets) {
-      pkt.duration = 1;
-      pkt.stream_index = vstr.index;
-      pkt.pts = pkt.pts * 90000/25;
-      pkt.dts = pkt.dts * 90000/25;
-      await mux.writeFrame(pkt);
-      outFile.write(pkt.data);
-    }
+    packets.packets.forEach(x => outFile.write(x.data));
   }
 
   let p2 = await encoder.flush();
   console.log('Flushing', p2.packets.length, 'frames.');
-  for (const pkt of p2.packets) {
-    pkt.duration = 1;
-    pkt.stream_index = vstr.index;
-    pkt.pts = pkt.pts * 90000/25;
-    pkt.dts = pkt.dts * 90000/25;
-    await mux.writeFrame(pkt);
-    outFile.write(pkt.data);
-  }
-  await mux.writeTrailer();
+  p2.packets.forEach(x => outFile.write(x.data));
   outFile.end(endcode);
 
   console.log('Total time ', process.hrtime(start));

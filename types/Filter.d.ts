@@ -106,7 +106,7 @@ export interface FilterLink {
 	readonly format: string
 	/**
 	 * Define the time base used by the PTS of the frames/samples which will pass through this link.
-   * During the configuration stage, each filter is supposed to change only the output timebase,
+     * During the configuration stage, each filter is supposed to change only the output timebase,
 	 * while the timebase of the input link is assumed to be an unchangeable property.
 	*/
 	readonly time_base: ReadonlyArray<number>
@@ -231,7 +231,7 @@ export interface Filterer {
 	 * @param framesArr Array of objects with name and Frame array for each input pad
 	 * @returns Array of objects containing Frame arrays for each output pad of the filter
    */
-	filter(framesArr: Array<{ name: string, frames: Array<Frame> }>): Promise<Array<FiltererResult> & { total_time: number }>
+	filter(framesArr: Array<{ name?: string, frames: Array<Frame> }>): Promise<Array<FiltererResult> & { total_time: number }>
 }
 
 /**
