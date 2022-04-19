@@ -40,7 +40,7 @@ export interface FilterFlags {
 	 * Handy mask to test whether the filter supports or no the timeline feature
 	 * (internally or generically).
 	 */
-	SUPPORT_TIMELINE: boolean\
+	SUPPORT_TIMELINE: boolean;
 }
 
 export interface Filter {
@@ -236,20 +236,6 @@ export interface Filterer {
 	filter(framesArr: Array<{ name?: string, frames: Array<Frame> }>): Promise<Array<FiltererResult> & { total_time: number }>
 }
 
-/**
- * Provides a list and details of all the available filters
- * @returns an object with name and details of each of the available filters
- */
-export function filters(): { [key: string]: Filter }
-
-/** List the available bitstream filters */
-export function bsfs(): {
-	[key: string]: {
-		name: string
-		codec_ids: Array<string>
-		priv_class: PrivClass | null
-	}
-}
 
 /** The required parameters for setting up filter inputs */
 export interface InputParam {
@@ -316,9 +302,3 @@ export interface FiltererAudioOptions extends FiltererOptions {
 	outputParams: Array<AudioOutputParam>
 }
 
-/**
- * Create a filterer
- * @param options parameters to set up the type, inputs, outputs and spec of the filter
- * @returns Promise that resolve to a Filterer on success
- */
-export function filterer(options: FiltererVideoOptions | FiltererAudioOptions): Promise<Filterer>

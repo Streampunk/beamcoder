@@ -1,5 +1,5 @@
 import { CodecPar } from "./CodecPar"
-import { Packet } from "./Packet"
+import { Packet, Timing } from "./Packet"
 import { Frame } from "./Frame"
 import { Codec } from "./Codec"
 import { CodecContext, CodecContext_base } from "./CodecContext"
@@ -16,6 +16,12 @@ export interface DecodedFrames {
 	readonly frames: Array<Frame>
 	/** Total time in microseconds that the decode operation took to complete */
 	readonly total_time: number
+
+
+	timings?: { 
+		// "encode" | "dice" | "decode" | "filter"
+		[key: string]: Timing; };
+
 }
 
 export interface Decoder extends CodecContext_base {
@@ -87,38 +93,3 @@ export interface Decoder extends CodecContext_base {
      */
 	useParams(params: CodecPar): Decoder
 }
-
-/**
- * Provides a list and details of all the available decoders
- * @returns an object with name and details of each of the available decoders
- */
-export function decoders(): { [key: string]: Codec }
-/** 
- * Create a decoder by name
- * @param name The codec name required
- * @param ... Any non-readonly parameters from the Decoder object as required
- * @returns A Decoder object - note creation is synchronous
- */
-export function decoder(options: { name: string, [key: string]: any }): Decoder
-/**
- * Create a decoder by codec_id
- * @param codec_id The codec ID from AV_CODEC_ID_xxx
- * @param ... Any non-readonly parameters from the Decoder object as required
- * @returns A Decoder object - note creation is synchronous
- */
-export function decoder(options: { codec_id: number, [key: string]: any }): Decoder
-/**
- * Create a decoder from a demuxer and a stream_index
- * @param demuxer An initialised Demuxer object
- * @param stream_index The stream number of the demuxer object to be used to initialise the decoder
- * @param ... Any non-readonly parameters from the Decoder object as required
- * @returns A Decoder object - note creation is synchronous
- */
-export function decoder(options: { demuxer: Demuxer, stream_index: number, [key: string]: any }): Decoder
-/**
- * Create a decoder from a CodecPar object
- * @param params CodecPar object whose codec name or id will be used to initialise the decoder
- * @param ... Any non-readonly parameters from the Decoder object as required
- * @returns A Decoder object - note creation is synchronous
- */
-export function decoder(options: { params: CodecPar, [key: string]: any }): Decoder

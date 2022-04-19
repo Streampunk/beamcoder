@@ -19,13 +19,24 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 import bindings from 'bindings';
-import { Frame, Stream, Muxer, CodecPar, WritableDemuxerStream, BeamstreamParams, Demuxer, Packet, Filterer, BeamstreamSource } from '..'; // Codec, CodecContext, 
+// import { Frame, Stream, Muxer, CodecPar, WritableDemuxerStream, BeamstreamParams, Demuxer, Packet, Filterer, BeamstreamSource } from ''; // Codec, CodecContext, 
 import { Writable, Readable, Transform } from 'stream';
-import type { BeamcoderType, governorType, Timing, ffStats } from './types';
+import type { BeamstreamStream, ffStats } from './types';
 
 import { teeBalancer } from './teeBalancer';
 import { parallelBalancer } from './parallelBalancer';
 import { serialBalancer } from './serialBalancer';
+
+import { BeamcoderType } from './models/BeamcoderType';
+import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, FilterContext, Filterer, FilterLink, Frame, Packet, Timing, WritableDemuxerStream } from '../types';
+import { CodecPar } from './models/CodecPar';
+import { Demuxer } from './models/Demuxer';
+import { Muxer } from './models/Muxer';
+import { Governor } from './models/Governor';
+import { Stream } from './models/Stream';
+import { DecodedFrames } from './models/Decoder';
+
+// import { Governor } from './models/BeamcoderType';
 
 const beamcoder = bindings('beamcoder') as BeamcoderType;
 
@@ -123,13 +134,13 @@ class frameDicer {
 
 function transformStream(
   params: { name: 'encode' | 'dice' | 'decode' | 'filter', highWaterMark: number }, 
-  processFn: (val: { stream_index: number, pts: number, dts: number, duration: number, timings: any }) => Promise<{timings: {[key: string]: Timing}}>, 
-  flushFn: () => (Promise<{ timings: { [key: string]: Timing; }}>) | null | void, 
+  processFn: (val: Packet) => Promise<DecodedFrames>, 
+  flushFn: () => (Promise<DecodedFrames>) | null | void, 
   reject: (err?: Error) => void) {
   return new Transform({
     objectMode: true,
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
-    transform(val, encoding, cb) {
+    transform(val: Packet, encoding, cb) {
       (async () => {
         const start = process.hrtime();
         const reqTime = start[0] * 1e3 + start[1] / 1e6;
@@ -247,7 +258,7 @@ function readStream(params: {highWaterMark?: number}, demuxer: Demuxer, ms: { en
   });
 }
 
-function createBeamWritableStream(params: { highwaterMark?: number }, governor: governorType): Writable {
+function createBeamWritableStream(params: { highwaterMark?: number }, governor: Governor): Writable {
   const beamStream = new Writable({
     highWaterMark: params.highwaterMark || 16384,
     write: (chunk, encoding, cb) => {
@@ -259,14 +270,14 @@ function createBeamWritableStream(params: { highwaterMark?: number }, governor: 
   });
   return beamStream;
 }
-type demuxerStreamType = Writable & { demuxer: (options: { governor: governorType }) => Promise<any> };
+type demuxerStreamType = Writable & { demuxer: (options: { governor: Governor }) => Promise<any> };
 
 export function demuxerStream(params: { highwaterMark?: number }): WritableDemuxerStream {
   const governor = new beamcoder.governor({});
   const stream: demuxerStreamType = createBeamWritableStream(params, governor) as demuxerStreamType;
   stream.on('finish', () => governor.finish());
   stream.on('error', console.error);
-  stream.demuxer = (options: { governor: governorType }) => {
+  stream.demuxer = (options: { governor: Governor }) => {
     options.governor = governor;
     // delay initialisation of demuxer until stream has been written to - avoids lock-up
     return new Promise(resolve => setTimeout(async () => resolve(await beamcoder.demuxer(options)), 20));
@@ -275,7 +286,7 @@ export function demuxerStream(params: { highwaterMark?: number }): WritableDemux
 }
 
 
-function createBeamReadableStream(params: { highwaterMark?: number }, governor: governorType) {
+function createBeamReadableStream(params: { highwaterMark?: number }, governor: Governor) {
   const beamStream = new Readable({
     highWaterMark: params.highwaterMark || 16384,
     read: size => {
@@ -291,7 +302,7 @@ function createBeamReadableStream(params: { highwaterMark?: number }, governor: 
   return beamStream;
 }
 
-type muxerStreamType = Readable & { muxer: (options: { governor: governorType }) => any };
+type muxerStreamType = Readable & { muxer: (options: { governor: Governor }) => any };
 
 export function muxerStream(params: { highwaterMark: number }): muxerStreamType {
   const governor = new beamcoder.governor({ highWaterMark: 1 });
@@ -371,8 +382,10 @@ function runStreams(
     const filterBalancer = parallelBalancer({ name: 'filterBalance', highWaterMark: 1 }, streamType, sources.length);
 
     sources.forEach((src, srcIndex: number) => {
-      const decStream = transformStream({ name: 'decode', highWaterMark: 1 },
-        pkts => src.decoder.decode(pkts), () => src.decoder.flush(), reject);
+      const decStream = transformStream(
+        { name: 'decode', highWaterMark: 1 },
+        (pkts: Packet) => src.decoder.decode(pkts),
+        () => src.decoder.flush(), reject);
       const filterSource = writeStream({ name: 'filterSource', highWaterMark: 1 },
         pkts => filterBalancer.pushPkts(pkts, (src.format as Demuxer).streams[src.streamIndex], srcIndex),
         () => filterBalancer.pushPkts(null, (src.format as Demuxer).streams[src.streamIndex], srcIndex, true), reject);
@@ -407,13 +420,13 @@ function runStreams(
 }
 
 export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Promise<void> }> {
-  params.video.forEach(p => {
-    p.sources.forEach(src =>
-      src.decoder = beamcoder.decoder({ demuxer: src.format, stream_index: src.streamIndex }));
+  params.video.forEach((p: BeamstreamChannel) => {
+    p.sources.forEach((src: BeamstreamSource) =>
+      src.decoder = beamcoder.decoder({ demuxer: src.format as Demuxer, stream_index: src.streamIndex }));
   });
   params.audio.forEach(p => {
     p.sources.forEach(src =>
-      src.decoder = beamcoder.decoder({ demuxer: src.format, stream_index: src.streamIndex }));
+      src.decoder = beamcoder.decoder({ demuxer: src.format as Demuxer, stream_index: src.streamIndex }));
       //  {demuxer: Demuxer | Promise<Demuxer>, stream_index: number}
   });
 
@@ -476,8 +489,8 @@ export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Pr
   } else
     mux = beamcoder.muxer({ format_name: params.out.formatName });
 
-  params.video.forEach(p => {
-    p.streams.forEach((str, i) => {
+  params.video.forEach((p: BeamstreamChannel) => {
+    p.streams.forEach((str: BeamstreamStream, i: number) => {
       const encParams = (p.filter as Filterer).graph.filters.find(f => f.name === `out${i}:v`).inputs[0];
       str.encoder = beamcoder.encoder({
         name: str.name,
@@ -496,9 +509,9 @@ export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Pr
     });
   });
 
-  params.audio.forEach(p => {
-    p.streams.forEach((str, i) => {
-      const encParams: { format : string, sample_rate: number, channel_layout: string} = p.filter.graph.filters.find(f => f.name === `out${i}:a`).inputs[0];
+  params.audio.forEach((p: BeamstreamChannel) => {
+    p.streams.forEach((str: BeamstreamStream, i: number) => {
+      const encParams: FilterLink = (p.filter as Filterer).graph.filters.find(f => f.name === `out${i}:a`).inputs[0];
       str.encoder = beamcoder.encoder({
         name: str.name,
         sample_fmt: encParams.format,
@@ -506,13 +519,12 @@ export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Pr
         channel_layout: encParams.channel_layout,
         flags: { GLOBAL_HEADER: mux.oformat.flags.GLOBALHEADER }
       });
-
       str.codecpar.frame_size = str.encoder.frame_size;
     });
   });
 
-  params.video.forEach(p => {
-    p.streams.forEach(str => {
+  params.video.forEach((p: BeamstreamChannel) => {
+    p.streams.forEach((str: BeamstreamStream) => {
       str.stream = mux.newStream({
         name: str.name,
         time_base: str.time_base,
@@ -543,8 +555,8 @@ export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Pr
 
       const muxBalancer = new serialBalancer(mux.streams.length);
       const muxStreamPromises: Promise<any>[] = [];
-      params.video.forEach(p => muxStreamPromises.push(runStreams('video', p.sources, p.filter, p.streams, mux, muxBalancer)));
-      params.audio.forEach(p => muxStreamPromises.push(runStreams('audio', p.sources, p.filter, p.streams, mux, muxBalancer)));
+      params.video.forEach(p => muxStreamPromises.push(runStreams('video', p.sources, p.filter as Filterer, p.streams, mux, muxBalancer)));
+      params.audio.forEach(p => muxStreamPromises.push(runStreams('audio', p.sources, p.filter as Filterer, p.streams, mux, muxBalancer)));
       await Promise.all(muxStreamPromises);
 
       await mux.writeTrailer();

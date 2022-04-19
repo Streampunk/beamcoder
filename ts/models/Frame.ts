@@ -182,12 +182,6 @@ export interface Frame {
 	toJSON(): string
 }
 
-/**
- * Create a frame for encoding or filtering
- * Set parameters as required from the Frame object
- */
-export function frame(options?: string | { [key: string]: any, data?: Array<Buffer> }): Frame
-
 /** Pixel format description */
 export interface PixelFormat {
 	name: string
@@ -273,8 +267,6 @@ export interface PixelFormat {
 	/** Alternative comma-separated names. */
 	alias: string
 }
-/** Format details for all supported pixel format names */
-export function pix_fmts(): { [key: string]: PixelFormat }
 
 /** Audio sample formats */
 export interface SampleFormat {
@@ -289,12 +281,4 @@ export interface SampleFormat {
 	/** Whether the sample format is planar. */
 	is_planar: boolean
 }
-/** Format details for all supported sample format names */
-export function sample_fmts(): { [key: string]: SampleFormat }
 
-/**
- * Note that when creating buffers from Javascript,
- * FFmpeg recommends that a small amount of headroom is added to the minimum length of each buffer.
- * The minimum amount of padding is exposed to Javascript as constant
- */
-export const AV_INPUT_BUFFER_PADDING_SIZE: number

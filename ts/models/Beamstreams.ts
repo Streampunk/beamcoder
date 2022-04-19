@@ -1,6 +1,10 @@
 import { Demuxer, DemuxerCreateOptions } from "./Demuxer"
 import { Muxer, MuxerCreateOptions } from "./Muxer"
 import { InputFormat } from "./FormatContext"
+import { Stream } from "./Stream"
+import { Filterer } from "./Filter"
+import { Decoder } from "./Decoder"
+import { Encoder } from "./Encoder"
 
 /**
  * A [Node.js Writable stream](https://nodejs.org/docs/latest-v12.x/api/stream.html#stream_writable_streams)
@@ -16,12 +20,6 @@ export interface WritableDemuxerStream extends NodeJS.WritableStream {
 	 */
 	demuxer(options: DemuxerCreateOptions | string): Promise<Demuxer>
 }
-/**
- * Create a WritableDemuxerStream to allow streaming to a Demuxer
- * @param options.highwaterMark Buffer level when `stream.write()` starts returng false.
- * @returns A WritableDemuxerStream that can be streamed to.
- */
-export function demuxerStream(options: { highwaterMark?: number }): WritableDemuxerStream
 
 /**
  * A [Node.js Readable stream](https://nodejs.org/docs/latest-v12.x/api/stream.html#stream_readable_streams)
@@ -35,12 +33,6 @@ export interface ReadableMuxerStream extends NodeJS.ReadableStream {
 	 */
 	muxer(options: MuxerCreateOptions): Muxer
 }
-/**
- * Create a ReadableMuxerStream to allow streaming from a Muxer
- * @param options.highwaterMark The maximum number of bytes to store in the internal buffer before ceasing to read from the underlying resource.
- * @returns A ReadableMuxerStream that can be streamed from.
- */
-export function muxerStream(options: { highwaterMark?: number }): ReadableMuxerStream
 
 /** Create object for AVIOContext based buffered I/O */
 // export function governor(options: { highWaterMark: number }): {
@@ -48,13 +40,6 @@ export function muxerStream(options: { highwaterMark?: number }): ReadableMuxerS
 //   write(data: Buffer): Promise<null>
 //   finish(): undefined
 // }
-export class Governor {
-	constructor(options: { highWaterMark?: number });
-	read(len: number): Promise<Buffer>
-	write(data: Buffer): Promise<null>
-	finish(): undefined
-	private _adaptor: unknown;
-}
 
 
 /** Source definition for a beamstream channel, from either a file or NodeJS ReadableStream */
@@ -68,10 +53,8 @@ export interface BeamstreamSource {
 	format?: Demuxer | Promise<Demuxer>;
 	stream: any; // FIXME
 	decoder?: Decoder; // FIXME
-
-
-
 }
+
 /** Codec definition for the destination channel */
 export interface BeamstreamStream {
 	name: string
@@ -109,15 +92,3 @@ export interface BeamstreamParams {
 		options?: { [key:string]: any }
 	}
 }
-/**
- * Initialise the sources for the beamstream process.
- * Note - the params object is updated by the function.
- */
-export function makeSources(params: BeamstreamParams): Promise<void>
-/**
- * Initialise the output streams for the beamstream process.
- * Note - the params object is updated by the function.
- * @returns Promise which resolves to an object with a run function that starts the processing
- */
-export function makeStreams(params: BeamstreamParams): Promise<{ run(): Promise<void> }>
-

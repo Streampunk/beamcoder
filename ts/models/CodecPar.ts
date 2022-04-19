@@ -140,5 +140,3 @@ export interface CodecPar {
 	toJSON(): string
 }
 
-export function codecParameters(options?: string | Partial<Omit<CodecPar, 'type', '_codecPar', 'toJSON'>>): CodecPar;
-// { [key: string]: any }

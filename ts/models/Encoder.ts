@@ -67,22 +67,3 @@ export interface Encoder extends CodecContextBaseMin {
 	useParams(params: CodecPar): Encoder
 }
 
-/**
- * Provides a list and details of all the available encoders
- * @returns an object with name and details of each of the available encoders
- */
-export function encoders(): { [key: string]: Codec }
-/** 
- * Create an encoder by name
- * @param name The codec name required
- * @param ... Any non-readonly parameters from the Encoder object as required
- * @returns An Encoder object - note creation is synchronous
- */
-export function encoder(options: { name: string, [key: string]: any }): Encoder
-/**
- * Create an encoder by codec_id
- * @param codec_id The codec ID from AV_CODEC_ID_xxx
- * @param ... Any non-readonly parameters from the Encoder object as required
- * @returns An Encoder object - note creation is synchronous
- */
-export function encoder(options: { codec_id: number, [key: string]: any }): Encoder

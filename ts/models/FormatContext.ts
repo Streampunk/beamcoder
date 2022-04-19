@@ -119,11 +119,6 @@ export interface OutputFormat {
 	priv_data_size: number
 }
 
-/**
- * Return the output format in the list of registered output formats which best matches the provided name,
- * or return null if there is no match.
- */
-export function guessFormat(name: string): OutputFormat | null;
 
 
 
@@ -164,10 +159,11 @@ export interface FormatContextFlags {
 
 export interface FormatContextBase {
 	/** Object name. */
-	readonly type: 'demuxer'| 'format'
+	readonly type: 'demuxer'| 'format' | 'muxer'
 
 	/** The input format description. */
-	set iformat(string: format): string;
+	set iformat(format: string);
+	//@ts-ignore
 	get iformat(): InputFormat
 	/** Format private data. */
 	priv_data: {
@@ -350,7 +346,8 @@ export interface FormatContextBase {
 export interface FormatContext extends FormatContextBase {
 	readonly type: 'format';
 	/** The output format description. */
-	set oformat(string: format): string;
+	set oformat(format: string);
+	// @ts-ignore
 	get oformat(): OutputFormat
 	/**
 	 * Maximum buffering duration for interleaving.
@@ -392,4 +389,3 @@ export interface FormatContext extends FormatContextBase {
 	toJSON(): string
 }
 
-export function format(options?: string | { [key: string]: any }): FormatContext

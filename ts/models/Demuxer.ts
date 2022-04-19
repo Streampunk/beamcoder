@@ -77,20 +77,6 @@ export interface Demuxer extends FormatContextBase {
 	forceClose(): undefined
 }
 
-/**
- * Provides a list and details of all the available demuxer input formats
- * @returns an object with details of all the available demuxer input formats
- */
-export function demuxers(): { [key: string]: InputFormat }
-
-/**
- * Create a demuxer to read from a URL or filename
- * @param url a string describing the source to be read from (may contain %d for a sequence of numbered files).
- * @returns a promise that resolves to a Demuxer when it has determined sufficient 
- * format details by consuming data from the source. The promise will wait indefinitely 
- * until sufficient source data has been read.
- */
-export function demuxer(url: string): Promise<Demuxer>
 
 /** Object to provide additional metadata on Demuxer creation */
 export interface DemuxerCreateOptions {
@@ -101,12 +87,3 @@ export interface DemuxerCreateOptions {
 	/** Object allowing additional information to be provided */
 	options?: { [key: string]: any }
 }
-/**
- * For formats that require additional metadata, such as the rawvideo format,
- * it may be necessary to pass additional information such as image size or pixel format to Demuxer creation.
- * @param options a DemuxerCreateOptions object
- * @returns a promise that resolves to a Demuxer when it has determined sufficient 
- * format details by consuming data from the source. The promise will wait indefinitely 
- * until sufficient source data has been read.
- */
-export function demuxer(options: DemuxerCreateOptions): Promise<Demuxer>
