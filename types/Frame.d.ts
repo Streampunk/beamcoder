@@ -184,7 +184,7 @@ export interface Frame {
  * Create a frame for encoding or filtering
  * Set parameters as required from the Frame object
  */
-export function frame(options: { [key: string]: any, data?: Array<Buffer> }): Frame
+export function frame(options?: string | { [key: string]: any, data?: Array<Buffer> }): Frame
 
 /** Pixel format description */
 export interface PixelFormat {

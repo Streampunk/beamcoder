@@ -6,9 +6,11 @@ export type FrameSkipString = 'none' | 'default' | 'nonref' | 'bidir' | 'nonintr
 
 /** The CodecContext object */
 export interface CodecContext {
+	// private field
+	readonly _CodecContext: {};
 	/** Object name. */
 	readonly type: string
-  /** see AV_CODEC_ID_xxx */
+    /** see AV_CODEC_ID_xxx */
 	readonly codec_id: number
 	/**
 	 * Name of the codec implementation.

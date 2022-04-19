@@ -19,9 +19,9 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const test = require('tape');
-const beamcoder = require('../ts/index.js');
-const util = require('util');
+import test from 'tape';
+import beamcoder from '..';
+import util from 'util';
 
 test('Create a frame', t => {
   let fr = beamcoder.frame();

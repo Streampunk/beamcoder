@@ -8,7 +8,7 @@
     "preinstall": "node ts/install_ffmpeg.js",
     "install": "node-gyp rebuild",
     "clean": "rimraf ts/*.js",
-    "test": "tape test/*.js",
+    "test": "ts-node node_modules/tape/bin/tape test/*.ts",
     "lint": "eslint **/*.js",
     "lint-html": "eslint **/*.js -f html -o ./reports/lint-results.html",
     "lint-fix": "eslint --fix **/*.js"

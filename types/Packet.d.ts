@@ -14,9 +14,40 @@
     elapsed: number;
 }
 
+export interface PacketFlags {
+    /** The packet contains a keyframe */
+    KEY: boolean
+    /** The packet content is corrupted */
+    CORRUPT: boolean
+    /**
+     * Flag is used to discard packets which are required to maintain valid
+     * decoder state but are not required for output and should be dropped
+     * after decoding.
+     **/
+    DISCARD: boolean
+	/**
+	 * The packet comes from a trusted source.
+	 *
+	 * Otherwise-unsafe constructs such as arbitrary pointers to data
+	 * outside the packet may be followed.
+	 */
+	TRUSTED: boolean
+	/**
+	 * Flag is used to indicate packets that contain frames that can
+	 * be discarded by the decoder.  I.e. Non-reference frames.
+	 */
+	DISPOSABLE: boolean // Frames that can be discarded by the decoder
+}
+
 export interface Packet {
 	/** Object name. */
 	readonly type: 'Packet'
+
+	/** Retun a JSON string containing the object properties. */
+	toJSON(): string
+
+	// internal data
+	readonly _packet: {};
 	/**
 	 * Presentation timestamp in AVStream->time_base units the time at which
 	 * the decompressed packet will be presented to the user.
@@ -43,30 +74,7 @@ export interface Packet {
 	/** The index in the format's stream array that this packet belongs to */
 	stream_index: number
     /** A combination of AV_PKT_FLAG values */
-	flags: {
-	    /** The packet contains a keyframe */
-	    KEY: boolean
-	    /** The packet content is corrupted */
-	    CORRUPT: boolean
-	    /**
-	     * Flag is used to discard packets which are required to maintain valid
-	     * decoder state but are not required for output and should be dropped
-	     * after decoding.
-	     **/
-        DISCARD: boolean
-		/**
-		 * The packet comes from a trusted source.
-		 *
-		 * Otherwise-unsafe constructs such as arbitrary pointers to data
-		 * outside the packet may be followed.
-		 */
-		TRUSTED: boolean
-		/**
-		 * Flag is used to indicate packets that contain frames that can
-		 * be discarded by the decoder.  I.e. Non-reference frames.
-		 */
-		DISPOSABLE: boolean // Frames that can be discarded by the decoder
-	}
+	flags: PacketFlags;
 	/**
 	 * Additional packet data that can be provided by the container.
 	 * Packet can contain several types of side information.
@@ -88,4 +96,13 @@ export interface Packet {
  * Packets for decoding can be created without reading them from a demuxer
  * Set parameters as required from the Packet object, passing in a buffer and the required size in bytes
  */
-export function packet(options: { [key: string]: any, data: Buffer, size: number }): Packet
+export function packet(options?: string | {
+	flags?: Partial<PacketFlags>,
+	pts?: number,
+	dts?: number,
+	stream_index?: number,
+	data: Buffer,
+	size?: number,
+	side_data?: any,
+	[key: string]: any,
+}): Packet

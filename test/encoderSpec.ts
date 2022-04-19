@@ -19,8 +19,8 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const test = require('tape');
-const beamcoder = require('../ts/index.js');
+import test from 'tape';
+import beamcoder from '..';
 
 test('Creating a video encoder', t => {
   let enc = beamcoder.encoder({ name: 'h264' });
@@ -47,10 +47,12 @@ test('Checking the A properties:', t => {
 
   t.deepEqual(enc.active_thread_type, { FRAME: false, SLICE: false},
     'active_thread_type has expected default.');
+  // @ts-expect-error:next-line
   t.throws(() => { enc.active_thread_type = { FRAME: true }; }, /User cannot/,
     'active_thread_type cannot be set.');
-
+  // @ts-expect-error:next-line
   t.notOk(enc.apply_cropping, 'apply_cropping not defined for encoding.');
+  // @ts-expect-error:next-line
   t.throws(() => { enc.apply_cropping = 0; }, /encoding/,
     'apply_cropping setting does not throw.');
 
@@ -60,6 +62,7 @@ test('Checking the A properties:', t => {
     'audio_service_type can be updated.');
   t.equals(enc.audio_service_type, 'dialogue',
     'audio_service_type has been updated.');
+  // @ts-expect-error:next-line
   t.throws(() => { enc.audio_service_type = 'wibble'; },
     'audio_service_type throws with unknown value.');
 

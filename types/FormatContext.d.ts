@@ -11,23 +11,23 @@ export interface InputFormat {
 	readonly name: string
 	/** Descriptive name for the format, meant to be more human-readable */
 	readonly long_name: string
-    readonly flags: {
+	readonly flags: {
 		NOFILE: boolean
-    /** Needs '%d' in filename. */
+		/** Needs '%d' in filename. */
 		NEEDNUMBER: boolean
-    /** Show format stream IDs numbers. */
+		/** Show format stream IDs numbers. */
 		SHOW_IDS: boolean
-    /** Use generic index building code. */
-    GENERIC_INDEX: boolean
+		/** Use generic index building code. */
+		GENERIC_INDEX: boolean
 		/** Format allows timestamp discontinuities. Note, muxers always require valid (monotone) timestamps */
 		TS_DISCONT: boolean
-    /** Format does not allow to fall back on binary search via read_timestamp */
+		/** Format does not allow to fall back on binary search via read_timestamp */
 		NOBINSEARCH: boolean
-    /** Format does not allow to fall back on generic search */
+		/** Format does not allow to fall back on generic search */
 		NOGENSEARCH: boolean
-    /** Format does not allow seeking by bytes */
+		/** Format does not allow seeking by bytes */
 		NO_BYTE_SEEK: boolean
-    /** Seeking is based on PTS */
+		/** Seeking is based on PTS */
 		SEEK_TO_PTS: boolean
 	}
 	/**
@@ -36,11 +36,11 @@ export interface InputFormat {
 	 * reliable enough
 	 */
 	readonly extensions: string
-  /**
-   * List of supported codec_id-codec_tag pairs, ordered by "better
-   * choice first". The arrays are all terminated by AV_CODEC_ID_NONE.
-   */
-  readonly codec_tag: ReadonlyArray<{
+	/**
+	 * List of supported codec_id-codec_tag pairs, ordered by "better
+	 * choice first". The arrays are all terminated by AV_CODEC_ID_NONE.
+	 */
+	readonly codec_tag: ReadonlyArray<{
 		id: number
 		tag: string | number
 	}>
@@ -51,8 +51,8 @@ export interface InputFormat {
 	 * It is used check for matching mime types while probing.
 	 */
 	readonly mime_type: string
-  /** Raw demuxers store their codec ID here. */
-  readonly raw_codec_id: string
+	/** Raw demuxers store their codec ID here. */
+	readonly raw_codec_id: string
 	/** Size of private data so that it can be allocated. */
 	readonly priv_data_size: number
 }
@@ -72,19 +72,19 @@ export interface OutputFormat {
 	 * It is used check for matching mime types while probing.
 	 */
 	mime_type: string
-  /** comma-separated filename extensions */
+	/** comma-separated filename extensions */
 	extensions: string
-  /** default audio codec */
+	/** default audio codec */
 	audio_codec: string
-  /** default video codec */
+	/** default video codec */
 	video_codec: string
-  /** default subtitle codec */
-  subtitle_codec: string
+	/** default subtitle codec */
+	subtitle_codec: string
 	flags: {
 		NOFILE?: boolean
-    /** Needs '%d' in filename. */
+		/** Needs '%d' in filename. */
 		NEEDNUMBER?: boolean
-    /** Format wants global header. */
+		/** Format wants global header. */
 		GLOBALHEADER?: boolean
 		/** Format does not need / have any timestamps. */
 		NOTIMESTAMPS?: boolean
@@ -98,25 +98,25 @@ export interface OutputFormat {
 		ALLOW_FLUSH?: boolean
 		/** Format does not require strictly increasing timestamps, but they must still be monotonic */
 		TS_NONSTRICT?: boolean
-    /**
-		 * Format allows muxing negative timestamps. If not set the timestamp will be shifted in av_write_frame and
-     * av_interleaved_write_frame so they start from 0.
-		 * The user or muxer can override this through AVFormatContext.avoid_negative_ts
-     */		
+		/**
+			 * Format allows muxing negative timestamps. If not set the timestamp will be shifted in av_write_frame and
+		 * av_interleaved_write_frame so they start from 0.
+			 * The user or muxer can override this through AVFormatContext.avoid_negative_ts
+		 */
 		TS_NEGATIVE?: boolean
 	}
-  /**
-   * List of supported codec_id-codec_tag pairs, ordered by "better
-   * choice first". The arrays are all terminated by AV_CODEC_ID_NONE.
-   */
-  codec_tag: Array<{
+	/**
+	 * List of supported codec_id-codec_tag pairs, ordered by "better
+	 * choice first". The arrays are all terminated by AV_CODEC_ID_NONE.
+	 */
+	codec_tag: Array<{
 		id: number
 		tag: string | number
 	}>
 	/** Class for private context */
 	priv_class: PrivClass | null
-  /** size of private data so that it can be allocated */
-  priv_data_size: number
+	/** size of private data so that it can be allocated */
+	priv_data_size: number
 }
 
 /**
@@ -174,7 +174,7 @@ export interface FormatContext {
 	flags: {
 		/** Generate missing pts even if it requires parsing future frames. */
 		GENPTS?: boolean
-    /** Ignore index. */
+		/** Ignore index. */
 		IGNIDX?: boolean
 		/** Do not block when reading packets from input. */
 		NONBLOCK?: boolean
@@ -280,17 +280,17 @@ export interface FormatContext {
 	event_flags: { METADATA_UPDATED?: boolean }
 	/** Maximum number of packets to read while waiting for the first timestamp. */
 	max_ts_probe: number
-  /**
-	 * Avoid negative timestamps during muxing. Any value of the AVFMT_AVOID_NEG_TS_* constants.
-	 * Note, this only works when using av_interleaved_write_frame. (interleave_packet_per_dts is in use)
-	 */
+	/**
+	   * Avoid negative timestamps during muxing. Any value of the AVFMT_AVOID_NEG_TS_* constants.
+	   * Note, this only works when using av_interleaved_write_frame. (interleave_packet_per_dts is in use)
+	   */
 	avoid_negative_ts: 'auto' | 'make_non_negative' | 'make_zero'
-  /** Audio preload in microseconds. Note, not all formats support this and unpredictable things may happen if it is used when not supported. */
-  audio_preload: number
-  /** Max chunk time in microseconds. Note, not all formats support this and unpredictable things may happen if it is used when not supported. */
+	/** Audio preload in microseconds. Note, not all formats support this and unpredictable things may happen if it is used when not supported. */
+	audio_preload: number
+	/** Max chunk time in microseconds. Note, not all formats support this and unpredictable things may happen if it is used when not supported. */
 	max_chunk_duration: number
-  /** Max chunk size in bytes Note, not all formats support this and unpredictable things may happen if it is used when not supported. */
-  max_chunk_size: number
+	/** Max chunk size in bytes Note, not all formats support this and unpredictable things may happen if it is used when not supported. */
+	max_chunk_size: number
 	/**
 	 * forces the use of wallclock timestamps as pts/dts of packets
 	 * This has undefined results in the presence of B frames.
@@ -314,7 +314,7 @@ export interface FormatContext {
 	correct_ts_overflow: boolean
 	/** Force seeking to any (also non key) frames. */
 	seek2any: boolean
-  /** Flush the I/O context after each packet. */
+	/** Flush the I/O context after each packet. */
 	flush_packets: number
 	/**
 	 * format probing score.
@@ -341,10 +341,10 @@ export interface FormatContext {
 	 * Demuxers can use the flag to detect such changes.
 	 */
 	readonly io_repositioned: boolean
-  /** Number of bytes to be written as padding in a metadata header. */
+	/** Number of bytes to be written as padding in a metadata header. */
 	metadata_header_padding: number
 	// not exposing opaque
-  /** Output timestamp offset, in microseconds. */
+	/** Output timestamp offset, in microseconds. */
 	output_ts_offset: number
 	/**
 	 * dump format separator.
@@ -360,21 +360,21 @@ export interface FormatContext {
 	/** Skip duration calcuation in estimate_timings_from_pts. */
 	skip_estimate_duration_from_pts: boolean
 
-  /**
+	/**
 	 * Add a stream to the format with the next available stream index.
 	 * @param options Object including the codec name for the stream and any other parameters that need
 	 * to be initialised in the Stream object
 	 * @returns A Stream object
 	 */
-	newStream(options: { name: string, [key: string]: any	}): Stream
-  /**
+	newStream(options: string | { name: string, [key: string]: any }): Stream
+	/**
 	 * Add a stream to the format with the next available stream index.
 	 * @param stream Source stream from which to copy the parameters for the new stream
 	 * @returns A Stream object
 	 */
 	newStream(stream: Stream): Stream
-  /** Retun a JSON string containing the object properties. */
-  toJSON(): string
+	/** Retun a JSON string containing the object properties. */
+	toJSON(): string
 }
 
-export function format(options: { [key: string]: any }): FormatContext
+export function format(options?: string | { [key: string]: any }): FormatContext

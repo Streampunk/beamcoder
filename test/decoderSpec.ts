@@ -19,8 +19,8 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const test = require('tape');
-const beamcoder = require('../ts/index.js');
+import test from 'tape';
+import beamcoder from '..';
 
 test('Creating a decoder', t => {
   let dec = beamcoder.decoder({ name: 'h264' });
@@ -37,6 +37,7 @@ test('Checking the A properties:', t => {
 
   t.deepEqual(dec.active_thread_type, { FRAME: false, SLICE: false},
     'active_thread_type has expected default.');
+  // @ts-expect-error:next-line
   t.throws(() => { dec.active_thread_type = { FRAME: true }; }, /User cannot/,
     'active_thread_type cannot be set.');
 
@@ -47,6 +48,7 @@ test('Checking the A properties:', t => {
 
   t.equals(dec.audio_service_type, 'main',
     'audio_service_type has expected default value.');
+  // @ts-expect-error:next-line
   t.throws(() => { dec.audio_service_type = 'dialogue'; },
     /decoding/, 'cannot be updated when deocoding.');
 

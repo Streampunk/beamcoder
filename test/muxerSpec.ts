@@ -19,23 +19,17 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const test = require('tape');
-const beamcoder = require('../ts/index.js');
+import test from 'tape';
+import beamcoder from '..';
 
-test('Creating a demuxer', async t => {
-  let dm = await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
-  t.ok(dm, 'is truthy.');
-  t.equal(dm.type, 'demuxer', 'type name says demuxer.');
-  t.equal(typeof dm.oformat, 'undefined', 'output format is undefined.');
-  t.ok(dm.iformat, 'has an input format.');
-  t.equal(dm.iformat.name, 'mpegts', 'input format is mpegts.');
-  t.equal(dm.streams.length, 2, 'has 2 streams.');
-  try {
-    await beamcoder.demuxer('file:jaberwocky.junk');
-    t.fail('Did not throw when opening non-existant file.');
-  } catch(e) {
-    console.log(e.message);
-    t.ok(e.message.match(/Problem opening/), 'throws opening non-existant file.');
-  }
+test('Creating a muxer', t => {
+  let mx = beamcoder.muxer({ name: 'mpegts' });
+  t.ok(mx, 'is truthy.');
+  // @ts-expect-error:next-line
+  t.equal(typeof mx.iformat, 'undefined', 'input format is undefined.');
+  t.ok(mx.oformat, 'has output format.');
+  t.equal(mx.oformat.name, 'mpegts', 'output format is mpegts.');
+  t.equal(mx.type, 'muxer', 'type name is set to muxer.');
+  t.throws(() => beamcoder.muxer({ name: 'wibble' }), 'throws when unknown name.');
   t.end();
 });

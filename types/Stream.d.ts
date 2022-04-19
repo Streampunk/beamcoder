@@ -51,6 +51,8 @@ export interface EventFlags {
  * Stream describes the properties of a stream.
  */
 export interface Stream {
+  // native code;
+  readonly _stream: {};
 	/** Object name. */
   readonly type: 'Stream'
 	/** The stream index in the container. */

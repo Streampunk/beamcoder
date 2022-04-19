@@ -2,8 +2,11 @@
  * CodecPar describes the properties of an encoded stream.
  */
 export interface CodecPar {
+
+	// native code;
+	readonly _codecPar: {};
 	/** Object name. */
-  readonly type: 'CodecParameters'
+	readonly type: 'CodecParameters'
 	/** General type of the encoded data. */
 	codec_type: string
 	/** Specific type of the encoded data (the codec used). */
@@ -51,7 +54,7 @@ export interface CodecPar {
 	/** Video only. The video frame width in pixels. */
 	width: number
 	/** Video only. The video frame height in pixels. */
-  height: number
+	height: number
 	/**
 	 * Video only. The aspect ratio (width / height) which a single pixel
 	 * should have when displayed.
@@ -64,10 +67,10 @@ export interface CodecPar {
 	field_order: string
 	/** Video only. Additional colorspace characteristics. */
 	color_range: string
-  color_primaries: string
-  color_trc: string
-  color_space: string
-  chroma_location: string
+	color_primaries: string
+	color_trc: string
+	color_space: string
+	chroma_location: string
 	/** Video only. Number of delayed frames. */
 	video_delay: number
 	/** Audio only. A description of the channel layout. */
@@ -105,4 +108,4 @@ export interface CodecPar {
 	toJSON(): string
 }
 
-export function codecParameters(options?: { [key: string]: any }): CodecPar;
+export function codecParameters(options?: string | { [key: string]: any }): CodecPar;

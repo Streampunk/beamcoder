@@ -19,8 +19,8 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const test = require('tape');
-const beamcoder = require('../ts/index.js');
+import test from 'tape';
+import beamcoder from '..';
 
 test('Version information', t => {
   const verPos = beamcoder.avVersionInfo().indexOf('5.');
