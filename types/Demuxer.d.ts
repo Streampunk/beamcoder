@@ -1,5 +1,5 @@
 import { Packet } from "./Packet"
-import { InputFormat, FormatContext } from "./FormatContext"
+import { InputFormat, FormatContext, FormatContextBase } from "./FormatContext"
 
 export interface SeekOptions {
 	/**
@@ -43,19 +43,15 @@ export interface SeekOptions {
  * The process of demuxing (de-multiplexing) extracts time-labelled packets of data 
  * contained in a media stream or file.
  */
-export interface Demuxer extends Omit<FormatContext,
-	'oformat' | 'max_interleave_delta' | 'avoid_negative_ts' | 'audio_preload' |
-  'max_chunk_duration' | 'max_chunk_size' | 'flush_packets' | 'metadata_header_padding'
-> {
+export interface Demuxer extends FormatContextBase {
 	// { read: () => Promise<Packet | null>, streams: Array<{time_base: [number, number]}> }
-
-
 	/** Object name. */
-	readonly type: 'demuxer'
-	readonly iformat: InputFormat
-	readonly url: string
-	readonly duration: number
+	// readonly type: 'demuxer'
+	// readonly iformat: InputFormat
+	 // readonly url: string
+	// readonly duration: number
 
+	interleaved: boolean,
 	/**
 	 * Beam coder offers FFmpeg's many options for seeking a particular frame in a file,
 	 * either by time reference, frame count or file position.

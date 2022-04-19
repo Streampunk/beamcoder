@@ -20,10 +20,10 @@
 */
 
 import test from 'tape';
-import beamcoder from '..';
+import beamcoder, { Encoder } from '..';
 
 test('Creating a video encoder', t => {
-  let enc = beamcoder.encoder({ name: 'h264' });
+  let enc: Encoder = beamcoder.encoder({ name: 'h264' });
   t.ok(enc, 'is truthy.');
   t.equal(enc.name, 'libx264', 'has the expected name.');
   t.equal(enc.codec_id, 27, 'has the expected codec_id.');
@@ -43,7 +43,7 @@ test('Creating an audio encoder', t => {
 });
 
 test('Checking the A properties:', t => {
-  let enc = beamcoder.encoder({ name: 'h264' });
+  let enc: Encoder = beamcoder.encoder({ name: 'h264' });
 
   t.deepEqual(enc.active_thread_type, { FRAME: false, SLICE: false},
     'active_thread_type has expected default.');

@@ -20,10 +20,10 @@
 */
 
 import test from 'tape';
-import beamcoder from '..';
+import beamcoder, { Demuxer } from '..';
 
 test('Creating a demuxer', async t => {
-  let dm = await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
+  let dm: Demuxer = await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
   t.ok(dm, 'is truthy.');
   t.equal(dm.type, 'demuxer', 'type name says demuxer.');
   // @ts-expect-error:next-line

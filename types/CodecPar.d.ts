@@ -2,20 +2,44 @@
  * CodecPar describes the properties of an encoded stream.
  */
 export interface CodecPar {
+	/** Object name. */
+	readonly type: 'CodecParameters'
+
+	/** General type of the encoded data. */
+	codec_type: string | 'data' | 'video'
+
+	/** Specific type of the encoded data (the codec used). */
+	codec_id: number
+
+	/** The name corresponding to the codec_id. */
+	name: 'node' | 'h264' | string
+
+	/** Additional information about the codec (corresponds to the AVI FOURCC). */
+	codec_tag: number | string
+
+	/** Extra binary data needed for initializing the decoder, codec-dependent. */
+	extradata: Buffer | null
+
+	/**
+	 * - video: the pixel format.
+	 * - audio: the sample format.
+	 */
+	format: 'video' | 'audio' | null
+
 	/** The average bitrate of the encoded data (in bits per second). */
 	bit_rate: number
 
 	/**
-     * The number of bits per sample in the codedwords.
-     *
-     * This is basically the bitrate per sample. It is mandatory for a bunch of
-     * formats to actually decode them. It's the number of bits for one sample in
-     * the actual coded bitstream.
-     *
-     * This could be for example 4 for ADPCM
-     * For PCM formats this matches bits_per_raw_sample
-     * Can be 0
-     */
+	 * The number of bits per sample in the codedwords.
+	 *
+	 * This is basically the bitrate per sample. It is mandatory for a bunch of
+	 * formats to actually decode them. It's the number of bits for one sample in
+	 * the actual coded bitstream.
+	 *
+	 * This could be for example 4 for ADPCM
+	 * For PCM formats this matches bits_per_raw_sample
+	 * Can be 0
+	 */
 	bits_per_coded_sample: number
 
 	/**
@@ -29,82 +53,18 @@ export interface CodecPar {
 	 * For ADPCM this might be 12 or 16 or similar
 	 * Can be 0
 	 */
-	 bits_per_raw_sample: number
-
-	 /**
-	  * Audio only. The number of bytes per coded audio frame, required by some
-	  * formats.
-	  *
-	  * Corresponds to nBlockAlign in WAVEFORMATEX.
-	  */
-	block_align: number
-
-	/**
-	 * Audio only. A description of the channel layout.
-	 * ex: "0 channels"
-	 */
-	channel_layout: string
-
-	/** Audio only. The number of audio channels. */
-	channels: number
-
-	/** Video only. Additional colorspace characteristics. */
-	chroma_location: string | 'unspecified'
-
-	/** Specific type of the encoded data (the codec used). */
-	codec_id: number
-
-	/** Additional information about the codec (corresponds to the AVI FOURCC). */
-	codec_tag: number
-
-	/** General type of the encoded data. */
-	codec_type: string | 'data'
-
-	/** Video only. Additional colorspace characteristics. */
-	color_primaries: string | 'unknown'
-	
-	/** Video only. Additional colorspace characteristics. */
-	color_range: string | 'unknown'
-
-	/** Video only. Additional colorspace characteristics. */
-	color_space: string | 'unknown'
-
-	/** Video only. Additional colorspace characteristics. */
-	color_trc: string | 'unknown'
-
-	/** Extra binary data needed for initializing the decoder, codec-dependent. */
-	extradata: Buffer | null
-
-	/** Video only. The order of the fields in interlaced video. */
-	field_order: string | 'unknown'
-
-	/**
-	 * - video: the pixel format.
-	 * - audio: the sample format.
-	 */
-	format: 'video' | 'audio' | null
-
-	/** Audio only. Audio frame size, if known. Required by some formats to be static. */
-	frame_size: number
-
-	/** Video only. The video frame height in pixels. */
-	height: number
-
-	/**
-	 * Audio only. The amount of padding (in samples) inserted by the encoder at
-	 * the beginning of the audio. I.e. this number of leading decoded samples
-	 * must be discarded by the caller to get the original audio without leading
-	 * padding.
-	 */
-	initial_padding: number
-
-	level: number
-
-	/** The name corresponding to the codec_id. */
-	name: 'node' | string
+	bits_per_raw_sample: number
 
 	/** Codec-specific bitstream restrictions that the stream conforms to. */
 	profile: string | number
+
+	level: number
+
+	/** Video only. The video frame width in pixels. */
+	width: number
+
+	/** Video only. The video frame height in pixels. */
+	height: number
 
 	/**
 	 * Video only. The aspect ratio (width / height) which a single pixel
@@ -115,28 +75,70 @@ export interface CodecPar {
 	 */
 	sample_aspect_ratio: [number, number]
 
-	/** Audio only. The number of audio samples per second. */
-	sample_rate: number
+	/** Video only. The order of the fields in interlaced video. */
+	field_order: string | 'unknown' | 'progressive'
 
-	/** Audio only. Number of samples to skip after a discontinuity. */
-	seek_preroll: number
+	/** Video only. Additional colorspace characteristics. */
+	color_range: string | 'unknown' | 'pc'
 
-	trailing_padding: number
-	/** Retun a JSON string containing the object properties. */
+	/** Video only. Additional colorspace characteristics. */
+	color_primaries: string | 'unknown' | 'bt709'
 
-	/** Object name. */
-	readonly type: 'CodecParameters'
+	/** Video only. Additional colorspace characteristics. */
+	color_trc: string | 'unknown' | 'bt709'
+
+	/** Video only. Additional colorspace characteristics. */
+	color_space: string | 'unknown' | 'bt709'
+
+	/** Video only. Additional colorspace characteristics. */
+	chroma_location: string | 'unspecified' | 'left'
 
 	/** Video only. Number of delayed frames. */
 	video_delay: number
 
-	/** Video only. The video frame width in pixels. */
-	width: number
+	/**
+	 * Audio only. A description of the channel layout.
+	 * ex: "0 channels"
+	 */
+	channel_layout: string | '0 channels'
+
+
+	/** Audio only. The number of audio channels. */
+	channels: number
+
+	/** Audio only. The number of audio samples per second. */
+	sample_rate: number
+
+	/**
+	 * Audio only. The number of bytes per coded audio frame, required by some
+	 * formats.
+	 *
+	 * Corresponds to nBlockAlign in WAVEFORMATEX.
+	 */
+	block_align: number
+
+	/** Audio only. Audio frame size, if known. Required by some formats to be static. */
+	frame_size: number
+
+	/**
+	 * Audio only. The amount of padding (in samples) inserted by the encoder at
+	 * the beginning of the audio. I.e. this number of leading decoded samples
+	 * must be discarded by the caller to get the original audio without leading
+	 * padding.
+	 */
+	initial_padding: number
+
+	trailing_padding: number
+
+	/** Audio only. Number of samples to skip after a discontinuity. */
+	seek_preroll: number
 
 	// native code;
 	readonly _codecPar: {};
 
+	/** Retun a JSON string containing the object properties. */
 	toJSON(): string
 }
 
-export function codecParameters(options?: string | { [key: string]: any }): CodecPar;
+export function codecParameters(options?: string | Partial<Omit<CodecPar, 'type', '_codecPar', 'toJSON'>>): CodecPar;
+// { [key: string]: any }

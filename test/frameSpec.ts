@@ -20,17 +20,17 @@
 */
 
 import test from 'tape';
-import beamcoder from '..';
+import beamcoder, { Frame } from '..';
 import util from 'util';
 
 test('Create a frame', t => {
-  let fr = beamcoder.frame();
+  let fr: Frame = beamcoder.frame();
   t.ok(fr, 'is truthy.');
   t.end();
 });
 
 test('Minimal JSON serialization', t => {
-  let fr = beamcoder.frame({});
+  let fr: Frame = beamcoder.frame({});
   let fp = JSON.stringify(fr);
   t.ok(fp, 'JSON serialization is truthy.');
   let pfp = JSON.parse(fp);
@@ -42,7 +42,7 @@ test('Minimal JSON serialization', t => {
 });
 
 test('Maximal JSON serialization', t => {
-  let fr = beamcoder.frame({ type: 'Frame',
+  let fr: Frame = beamcoder.frame({ type: 'Frame',
     linesize: [42],
     width: 43,
     height: 44,

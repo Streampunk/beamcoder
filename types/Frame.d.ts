@@ -33,23 +33,23 @@ export interface Frame {
 	width: number
 	height: number
 	/** number of audio samples (per channel) described by this frame */
-  nb_samples: number
+    nb_samples: number
 	/** format of the frame, null if unknown or unset */
 	format: string | null
 	/** Whether this frame is a keyframe */
 	key_frame: boolean
-  /** Picture type of the frame. */
+    /** Picture type of the frame. */
 	pict_type: 'I' | 'P' | 'B' | 'S' | 'SI' | 'SP' | 'BI' | null
-  /** Sample aspect ratio for the video frame, 0/1 if unknown/unspecified. */
-	sample_aspect_ratio: Array<number>
-  /** Presentation timestamp in time_base units (time when frame should be shown to user). */
-	pts: number
+    /** Sample aspect ratio for the video frame, 0/1 if unknown/unspecified. */
+	sample_aspect_ratio: [number, number]
+    /** Presentation timestamp in time_base units (time when frame should be shown to user). */
+	pts: number | null
 	/**
 	 * DTS copied from the Packet that triggered returning this frame. (if frame threading isn't used)
 	 * This is also the Presentation time of this Frame calculated from
 	 * only Packet.dts values without pts values.
 	 */
-	pkt_dts: number
+	pkt_dts: number | null
 	/** picture number in bitstream order */
 	coded_picture_number: number
 	/** picture number in display order */
@@ -80,7 +80,7 @@ export interface Frame {
   /** Sample rate of the audio data. */
 	sample_rate: number
   /** Channel layout of the audio data. */
-	channel_layout: string
+	channel_layout: string | '0 channels'
 	/**
 	 * Raw data for the picture/channel planes.
 	 *
@@ -101,13 +101,13 @@ export interface Frame {
 		DISCARD?: boolean
 	}
 	/** MPEG vs JPEG YUV range. */
-	color_range: string
+	color_range: string | "unknown"
 	/** Chromaticity coordinates of the source primaries. */
-	color_primaries?: string
+	color_primaries: string | "unknown"
 	/** Color Transfer Characteristic. */
-	color_trc: string
+	color_trc: string | "unknown"
 	/** YUV colorspace type. */
-	colorspace: string
+	colorspace: string | "unknown"
 	/**
 	 * Location of chroma samples.
 	 *
@@ -126,12 +126,12 @@ export interface Frame {
 	 */
 	chroma_location: 'unspecified' | 'left' | 'center' | 'topleft' | 'top' | 'bottomleft' | 'bottom'
   /** frame timestamp estimated using various heuristics, in stream time base */
-	best_effort_timestamp: number
+	best_effort_timestamp: number | null
   /** reordered pos from the last AVPacket that has been input into the decoder */
 	pkt_pos: number
   /** duration of the corresponding packet, expressed in Stream->time_base units, 0 if unknown. */
 	pkt_duration: number
-	metadata: { [key: string]: string }
+	metadata: { [key: string]: string } | null
 	/**
 	 * decode error flags of the frame, set if the decoder produced a frame, but there
 	 * were errors during the decoding.
@@ -151,7 +151,7 @@ export interface Frame {
 	 * For hwaccel-format frames, this should be a reference to the
 	 * HWFramesContext describing the frame.
 	 */
-	hw_frames_ctx: HWFramesContext
+	hw_frames_ctx: HWFramesContext | null
 	/**
 	* Video frames only. The number of pixels to discard from the the
 	* top/bottom/left/right border of the frame to obtain the sub-rectangle of
@@ -176,6 +176,8 @@ export interface Frame {
 	 */
 	alloc(): Frame
 
+	// internal
+	readonly _frame: {};
     /** Retun a JSON string containing the object properties. */
 	toJSON(): string
 }

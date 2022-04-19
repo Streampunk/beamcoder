@@ -20,7 +20,7 @@
 */
 
 import test from 'tape';
-import beamcoder from '..';
+import beamcoder, { CodecPar } from '..';
 
 test('Creating codec parameters', t => {
   let cps = beamcoder.codecParameters();
@@ -80,7 +80,7 @@ test('Minimal JSON serialization', t => {
 });
 
 test('Maximal JSON serialization', t=> {
-  let cp = beamcoder.codecParameters({
+  let cp: CodecPar = beamcoder.codecParameters({
     codec_type: 'video',
     codec_id: 27,
     codec_tag: 'avc1',

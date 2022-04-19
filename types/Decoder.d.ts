@@ -19,32 +19,32 @@ export interface DecodedFrames {
 }
 
 export interface Decoder extends CodecContext_base {
-	readonly type: 'decoder'
-	readonly time_base: Array<number>
-	readonly sample_aspect_ratio: Array<number>
-	readonly intra_matrix: Array<number> | null
-	readonly inter_matrix: Array<number> | null
-	readonly intra_dc_precision: number
-	readonly refs: number
-	readonly color_primaries?: string
-	readonly color_trc: string
-	readonly colorspace: string
-	readonly color_range: string
-	readonly chroma_sample_location: 'unspecified' | 'left' | 'center' | 'topleft' | 'top' | 'bottomleft' | 'bottom'
-	readonly field_order: 'progressive' |
-	'top coded first, top displayed first' |
-	'bottom coded first, bottom displayed first' |
-	'top coded first, bottom displayed first' |
-	'bottom coded first, top displayed first' |
-	'unknown'
-	readonly sample_fmt: string | null
-	readonly audio_service_type: 'main' | 'effects' | 'visually-impaired' | 'hearing-impaired' | 'dialogue' |
-	'commentary' | 'emergency' | 'voice-over' | 'karaoke' | 'nb'
-	readonly bits_per_raw_sample: number
-	readonly profile: string | number
-	readonly level: number
-	readonly subtitle_header: Buffer | null
-	readonly framerate: Array<number>
+	// readonly type: 'decoder'
+	// readonly time_base: [number, number]
+	// readonly sample_aspect_ratio: [number, number]
+	// readonly intra_matrix: Array<number> | null
+	// readonly inter_matrix: Array<number> | null
+	// readonly intra_dc_precision: number
+	// readonly refs: number
+	// readonly color_primaries?: string
+	// readonly color_trc: string
+	// readonly colorspace: string
+	// readonly color_range: string
+	// readonly chroma_sample_location: 'unspecified' | 'left' | 'center' | 'topleft' | 'top' | 'bottomleft' | 'bottom'
+	// readonly field_order: 'progressive' |
+	// 'top coded first, top displayed first' |
+	// 'bottom coded first, bottom displayed first' |
+	// 'top coded first, bottom displayed first' |
+	// 'bottom coded first, top displayed first' |
+	// 'unknown'
+	// readonly sample_fmt: string | null
+	// readonly audio_service_type: 'main' | 'effects' | 'visually-impaired' | 'hearing-impaired' | 'dialogue' |
+	// 'commentary' | 'emergency' | 'voice-over' | 'karaoke' | 'nb'
+	// readonly bits_per_raw_sample: number
+	// readonly profile: string | number
+	// readonly level: number
+	// readonly subtitle_header: Buffer | null
+	// readonly framerate: [number, number]
 
 	/**
 	 * Decode an encoded data packet or array of packets and create an uncompressed frame

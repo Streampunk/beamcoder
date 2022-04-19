@@ -20,14 +20,14 @@
 */
 
 import test from 'tape';
-import beamcoder from '..';
+import beamcoder, { FormatContext } from '..';
 
 const isExternal = o => (Object as any).toString(o).indexOf('native code') >= 0;
 //const isExternal = o => Object.toString.apply(o).indexOf('native code') >= 0;
 // Object.toString.apply(Object)
 
 test('Creating a format', t => {
-  let fmt = beamcoder.format();
+  let fmt: FormatContext = beamcoder.format();
   t.ok(fmt, 'is truthy.');
   t.equal(fmt.type, 'format', 'calls itself type format.');
   t.equal(fmt.iformat, null, 'has no input format.');
@@ -44,7 +44,7 @@ test('Creating a format', t => {
 const stripNewStream = ({ newStream, ...others }) => ({ ...others }); // eslint-disable-line no-unused-vars
 
 test('Minimal JSON serialization', t => {
-  let fmt = beamcoder.format();
+  let fmt: FormatContext = beamcoder.format();
   let fmts = JSON.stringify(fmt);
   t.equal(typeof fmts, 'string', 'stringify creates a string.');
   let fmtj = JSON.parse(fmts);
@@ -127,7 +127,7 @@ test('Minimal JSON serialization', t => {
 });
 
 test('Maximal JSON serialization', t => {
-  let fmt = beamcoder.format({
+  let fmt: FormatContext = beamcoder.format({
     type: 'format',
     oformat: null,
     iformat: null,

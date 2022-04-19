@@ -2,7 +2,7 @@ import { CodecPar } from "./CodecPar"
 import { Packet } from "./Packet";
 import { Frame } from "./Frame";
 import { Codec } from "./Codec"
-import { CodecContext } from "./CodecContext"
+import { CodecContext, CodecContextBaseMin } from "./CodecContext"
 
 /** The EncodedPackets object is returned as the result of a encode operation */
 export interface EncodedPackets {
@@ -10,7 +10,7 @@ export interface EncodedPackets {
 	readonly type: 'packets'
   /** 
 	 * Encoded packets that are now available. If the array is empty, the encoder has buffered
-   * the frame as part of the process of producing future packets
+   * the frame as part of the process of prodfcodec_tagucing future packets
 	 */
 	readonly packets: Array<Packet>
 	/** Total time in microseconds that the encode operation took to complete */
@@ -20,18 +20,12 @@ export interface EncodedPackets {
  * Encoder takes a stream of uncompressed data in the form of Frames and converts them into coded Packets.
  * Encoding takes place on a single type of stream, for example audio or video.
  */
-export interface Encoder extends Omit<CodecContext,
-	'coded_width' |	'coded_height' | 'slice_flags' | 'skip_top' | 'skip_bottom' |
-	'request_channel_layout' | 'request_sample_fmt' | 'error_concealment' | 'err_recognition' |
-	'reordered_opaque' | 'skip_loop_filter' | 'skip_idct' | 'skip_frame' | 'sw_pix_fmt' |
-	'pkt_timebase' | 'codec_descriptor' | 'sub_charenc' | 'sub_charenc_mode' | 'skip_alpha' |
-	'codec_whitelist' | 'properties' | 'sub_text_format' | 'hwaccel_flags' | 'apply_cropping' |	'extra_hw_frames'
-> {
+export interface Encoder extends CodecContextBaseMin {
 	readonly type: 'encoder'
-	readonly extradata: Buffer | null
-	readonly slice_count: number
-	readonly slice_offset: Array<number> | null
-	readonly bits_per_coded_sample: number
+	// readonly extradata: Buffer | null
+	// readonly slice_count: number
+	// readonly slice_offset: Array<number> | null
+	// readonly bits_per_coded_sample: number
 
 	/**
 	 * Encode a Frame or array of Frames and create a compressed Packet or Packets.
@@ -64,7 +58,7 @@ export interface Encoder extends Omit<CodecContext,
 	 * Extract the CodecPar object for the Encoder
 	 * @returns A CodecPar object
 	 */
-	extractParams(): any
+	extractParams(): CodecPar
 	/** 
 	 * Initialise the encoder with parameters from a CodecPar object
 	 * @param param The CodecPar object that is to be used to override the current Encoder parameters
