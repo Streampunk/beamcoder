@@ -19,22 +19,22 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 import bindings from 'bindings';
-// import { Frame, Stream, Muxer, CodecPar, WritableDemuxerStream, BeamstreamParams, Demuxer, Packet, Filterer, BeamstreamSource } from ''; // Codec, CodecContext, 
 import { Writable, Readable, Transform } from 'stream';
 import type { ffStats } from './types';
-
 import { teeBalancer } from './teeBalancer';
 import { parallelBalancer } from './parallelBalancer';
 import { serialBalancer } from './serialBalancer';
-
 import { BeamcoderType } from './types/BeamcoderType';
-import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, BeamstreamStream, Filterer, FilterLink, Frame, Packet, Timing, WritableDemuxerStream } from '../types';
 import { CodecPar } from './types/CodecPar';
 import { Demuxer } from './types/Demuxer';
 import { Muxer } from './types/Muxer';
 import { Stream } from './types/Stream';
-import { DecodedFrames } from './types/Decoder';
+import { DecodedFrames } from './types/DecodedFrames';
 import type { Governor } from './types/Governor';
+import { Frame } from './types/Frame';
+import { Packet, Timing } from './types/Packet';
+import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, BeamstreamStream, WritableDemuxerStream } from './types/Beamstreams';
+import { Filterer, FilterLink } from './types/Filter';
 
 const beamcoder = bindings('beamcoder') as BeamcoderType;
 

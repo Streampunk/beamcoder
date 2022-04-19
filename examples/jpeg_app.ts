@@ -24,7 +24,7 @@
    Only supports 8-bit YUV 4:2:2 or 4:2:0 pixel formats.
 */
 
-import beamcoder from '../ts/index'; // Use require('beamcoder') externally
+import beamcoder from '..'; // Use require('beamcoder') externally
 import Koa from 'koa'; // Add koa to package.json dependencies
 import fs from 'fs'; // Add koa to package.json dependencies
 

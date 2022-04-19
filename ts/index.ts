@@ -58,3 +58,4 @@ export { Encoder } from './types/Encoder';
 export { Filterer, Filter } from './types/Filter';
 export { FormatContext } from './types/FormatContext';
 export { Frame } from './types/Frame';
+export { DecodedFrames } from './types/DecodedFrames';

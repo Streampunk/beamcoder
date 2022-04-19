@@ -26,7 +26,7 @@
 
 import beamcoder from '../ts/index'; // Use require('beamcoder') externally
 import Koa from 'koa'; // Add koa to package.json dependencies
-import { DecodedFrames } from '../types';
+import { DecodedFrames } from '..';
 const app = new Koa();
 
 app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
