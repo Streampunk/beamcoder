@@ -19,9 +19,10 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const beamcoder = require('../index.js');
+import beamcoder from '..';
 
 async function run() {
+  // https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_1080p_h264.mov
   const urls = [ 'file:../../Media/big_buck_bunny_1080p_h264.mov' ];
   const spec = { start: 0, end: 24 };
 
@@ -36,7 +37,7 @@ async function run() {
           { name: 'h264', time_base: [1, 90000],
             codecpar: {
               width: 1280, height: 720, format: 'yuv422p', color_space: 'bt709',
-              sample_aspect_ratio: [1, 1]
+              sample_aspect_ratio: [1, 1] as [number, number]
             }
           }
         ]

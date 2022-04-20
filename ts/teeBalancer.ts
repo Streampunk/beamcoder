@@ -1,15 +1,21 @@
 import { Readable } from "stream";
+import { Frame } from "./types/Frame";
+import { Timing } from "./types/Timing";
 
-type teeBalancerType = Readable[] & { pushFrames: (frames: any, unusedFlag?: boolean) => any };
+type BalanceResult = { value: { timings: Timing }, done: boolean, final?: boolean };
+
+type teeBalancerType = Readable[] & { pushFrames: (frames: Frame[] & {timings: Timing}, unusedFlag?: boolean) => any };
 
 export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number }, numStreams: number): teeBalancerType {
-  let resolvePush = null;
-  const pending = [];
+  debugger;
+  let resolvePush: (result?: BalanceResult) => void = null;
+  const pending: Array<{ frames: Frame, resolve: (result: { value?: Frame, done: boolean }) => void, final: boolean }> = [];
   for (let s = 0; s < numStreams; ++s)
     pending.push({ frames: null, resolve: null, final: false });
 
-  const pullFrame = async index => {
-    return new Promise<{ done: boolean, value?: any }>(resolve => {
+  const pullFrame = async (index: number) => {
+
+    return new Promise<{ done: boolean, value?: Frame }>(resolve => {
       if (pending[index].frames) {
         resolve({ value: pending[index].frames, done: false });
         Object.assign(pending[index], { frames: null, resolve: null });
@@ -38,7 +44,8 @@ export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number 
           if (result.done)
             this.push(null);
           else {
-            result.value.timings[params.name] = { reqTime: reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
+            // @ts-ignore
+            result.value.timings[params.name] = { reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
             this.push(result.value);
           }
         })();
@@ -46,10 +53,11 @@ export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number 
     }));
 
   readStreams.pushFrames = frames => {
-    return new Promise<{ value: { timings: any }, done: boolean }>(resolve => {
+    return new Promise<BalanceResult>(resolve => {
       pending.forEach((p, index) => {
         if (frames.length)
-          p.frames = frames[index].frames;
+            // @ts-ignore
+            p.frames = frames[index].frames;
         else
           p.final = true;
       });
@@ -57,6 +65,7 @@ export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number 
       pending.forEach(p => {
         if (p.resolve) {
           if (p.frames) {
+            // @ts-ignore
             p.frames.timings = frames.timings;
             p.resolve({ value: p.frames, done: false });
           } else if (p.final)
