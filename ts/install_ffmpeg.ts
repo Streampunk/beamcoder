@@ -23,11 +23,11 @@ import os from 'os';
 import fs from 'fs';
 import util from 'util';
 import https from 'https';
-import cp from 'child_process';
+import child_process, { ChildProcess } from 'child_process';
 
 const { mkdir, access, rename } = fs.promises;
 
-const [ execFile, exec ] = [ cp.execFile, cp.exec ].map(util.promisify);
+const [ execFile, exec ] = [ child_process.execFile, child_process.exec ].map(util.promisify);
 
 async function get(ws: NodeJS.WritableStream, url: string, name: string): Promise<void> {
   let received = 0;
@@ -179,8 +179,8 @@ sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-
 
 async function darwin(): Promise<0> {
   console.log('Checking for FFmpeg dependencies via HomeBrew.');
-  let output;
-  let returnMessage;
+  let output: ChildProcess;
+  let returnMessage: string;
   
   try {
     output = await exec('brew list ffmpeg');

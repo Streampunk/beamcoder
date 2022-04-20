@@ -9,11 +9,6 @@
  * (e.g. to update some stream parameters at the end of encoding).
  */
 
-export interface Timing {
-	reqTime: number;
-	elapsed: number;
-}
-
 export interface PacketFlags {
 	/** The packet contains a keyframe */
 	KEY: boolean

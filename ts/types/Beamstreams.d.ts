@@ -51,7 +51,7 @@ export interface BeamstreamSource {
 	iformat?: InputFormat
 	options?: { [key: string]: any }
 	format?: Demuxer | Promise<Demuxer>;
-	stream: any; // FIXME
+	stream?: any; // FIXME
 	decoder?: Decoder; // FIXME
 }
 

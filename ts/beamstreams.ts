@@ -32,7 +32,8 @@ import { Stream } from './types/Stream';
 import { DecodedFrames } from './types/DecodedFrames';
 import type { Governor } from './types/Governor';
 import { Frame } from './types/Frame';
-import { Packet, Timing } from './types/Packet';
+import { Packet } from './types/Packet';
+import { Timing } from './types/Timing';
 import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, BeamstreamStream, WritableDemuxerStream } from './types/Beamstreams';
 import { Filterer, FilterLink } from './types/Filter';
 
@@ -335,9 +336,9 @@ export async function makeSources(params: BeamstreamParams): Promise<void> {
       src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options as any }); // FIXME
   }));
 
-  await (params.video.reduce as any)(async (promise, p) => { // FIXME
+  await (params.video.reduce as any)(async (promise: Promise<any>, p: BeamstreamChannel) => { // FIXME
     await promise;
-    return p.sources.reduce(async (promise, src) => {
+    return p.sources.reduce(async (promise: Promise<any>, src) => {
       await promise;
       src.format = await src.format;
       if (src.ms && !src.input_stream)
@@ -346,9 +347,9 @@ export async function makeSources(params: BeamstreamParams): Promise<void> {
     }, Promise.resolve());
   }, Promise.resolve());
   
-  await (params.audio.reduce as any)(async (promise, p) => {
+  await (params.audio.reduce as any)(async (promise: Promise<any>, p: BeamstreamChannel) => {
     await promise;
-    return p.sources.reduce(async (promise, src) => {
+    return p.sources.reduce(async (promise: Promise<any>, src) => {
       await promise;
       src.format = await src.format;
       if (src.ms && !src.input_stream)
@@ -393,10 +394,13 @@ function runStreams(
 
     const streamTee = teeBalancer({ name: 'streamTee', highWaterMark: 1 }, streams.length);
     const filtStream = transformStream({ name: 'filter', highWaterMark: 1 }, frms => {
+      debugger;
+      // @ts-ignore
       if (filterer.cb) filterer.cb(frms[0].frames[0].pts);
       return filterer.filter(frms);
     }, () => { }, reject);
     const streamSource = writeStream({ name: 'streamSource', highWaterMark: 1 },
+      // @ts-ignore
       frms => streamTee.pushFrames(frms), () => streamTee.pushFrames([], true), reject);
 
     filterBalancer.pipe(filtStream).pipe(streamSource);
