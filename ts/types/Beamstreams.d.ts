@@ -14,7 +14,7 @@ export interface WritableDemuxerStream extends NodeJS.WritableStream {
 	/**
 	 * Create a demuxer for this source
 	 * @param options a DemuxerCreateOptions object
-   * @returns a promise that resolves to a Demuxer when it has determined sufficient 
+     * @returns a promise that resolves to a Demuxer when it has determined sufficient
 	 * format details by consuming data from the source. The promise will wait indefinitely 
 	 * until sufficient source data has been read.
 	 */
