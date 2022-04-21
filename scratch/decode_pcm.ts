@@ -19,7 +19,7 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const beamcoder = require('../index.js');
+import beamcoder from '../ts/index';
 
 async function run() {
   let demuxer = await beamcoder.demuxer('../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
@@ -28,6 +28,7 @@ async function run() {
   console.log(decoder);
   for ( let x = 0 ; x < 100 ; x++ ) {
     let packet = await demuxer.read();
+    // @ts-ignore
     if (packet.stream == 1) {
       //console.log(packet);
       let frames = await decoder.decode(packet);

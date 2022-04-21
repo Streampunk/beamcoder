@@ -18,7 +18,7 @@ export interface WritableDemuxerStream extends NodeJS.WritableStream {
 	 * format details by consuming data from the source. The promise will wait indefinitely 
 	 * until sufficient source data has been read.
 	 */
-	demuxer(options: DemuxerCreateOptions | string): Promise<Demuxer>
+	demuxer(options?: DemuxerCreateOptions | string): Promise<Demuxer>
 }
 
 /**

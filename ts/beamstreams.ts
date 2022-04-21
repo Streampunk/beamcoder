@@ -318,7 +318,7 @@ export function muxerStream(params: { highwaterMark: number }): muxerStreamType 
   };
   return stream;
 }
-// params: { video?: Array<{ sources: any[] }>, audio?: Array<{ sources: any[] }> }
+
 export async function makeSources(params: BeamstreamParams): Promise<void> {
   if (!params.video) params.video = [];
   if (!params.audio) params.audio = [];
@@ -339,7 +339,7 @@ export async function makeSources(params: BeamstreamParams): Promise<void> {
       src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options as any }); // FIXME
   }));
 
-  await (params.video.reduce)(async (promise: Promise<any>, p: BeamstreamChannel) => { // FIXME
+  await (params.video.reduce)(async (promise: Promise<any>, p: BeamstreamChannel) => {
     await promise;
     return p.sources.reduce(async (promise: Promise<any>, src: BeamstreamSource) => {
       await promise;

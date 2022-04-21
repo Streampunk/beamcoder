@@ -1,13 +1,33 @@
 {
   "version": "0.2.0",
   "configurations": [
+
+    {
+      "name": "scratch stream_avci",
+      "type": "node",
+      "request": "launch",
+      "runtimeArgs": [ "--nolazy", "-r", "ts-node/register" ],
+      "args": [ "./scratch/stream_avci.ts" ],
+      "cwd": "${workspaceFolder}/scratch/",
+      "internalConsoleOptions": "openOnSessionStart",
+      // "skipFiles": ["<node_internals>/**", "node_modules/**"],
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "env": {
+        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.json",
+        "DEBUG": "*"
+      }
+    },
+
+
     {
       "name": "scratch stream_mp4",
       "type": "node",
       "request": "launch",
       "runtimeArgs": [ "--nolazy", "-r", "ts-node/register" ],
       "args": [ "./scratch/stream_mp4.ts" ],
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}/scratch/",
       "internalConsoleOptions": "openOnSessionStart",
       // "skipFiles": ["<node_internals>/**", "node_modules/**"],
       "skipFiles": [

@@ -19,12 +19,14 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const beamcoder = require('../index.js');
-const fs = require('fs');
+import beamcoder from '../ts/index';
+import fs from 'fs';
+import { Packet } from '../ts/types/Packet';
 // const util = require('util');
 
 async function run() {
   // let demuxer = await createDemuxer('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
+  // http://ftp.kw.bbc.co.uk/dppdownload/dpp_example_files/AS11_DPP_HD_EXAMPLE_1.mxf
   let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
   fs.createReadStream('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf').pipe(demuxerStream);
   let demuxer = await demuxerStream.demuxer({});
@@ -100,7 +102,7 @@ async function run() {
 
   // await demuxer.seek({ frame: 4200, stream_index: 0});
 
-  let packet = {};
+  let packet: Packet | null = null;
   for ( let x = 0 ; x < 10 && packet !== null; x++ ) {
     packet = await demuxer.read();
     if (packet.stream_index == 0) {
@@ -120,7 +122,8 @@ async function run() {
   }
   let frames = await decoder.flush();
   console.log('flush', frames.total_time, frames.frames.length);
-
+  debugger;
+  // @ts-ignore
   demuxerStream.destroy();
 }
 

@@ -19,20 +19,30 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const beamcoder = require('../index.js');
+import beamcoder from '../ts/index';
+import fs from 'fs';
+import { Packet } from '../ts/types/Packet';
 
 async function run() {
-  let demuxer = await beamcoder.demuxer({ url: '../media/bbb_1080p_c.ts'});
-  let decoder = beamcoder.decoder({ name: 'aac' });
-  let packet = {};
-  for ( let x = 0 ; packet !== null && x < 100 ; x++ ) {
+  let demuxer = await beamcoder.demuxer('../../media/sound/BBCNewsCountdown.wav');
+
+  let muxerStream = beamcoder.muxerStream({ highwaterMark: 65536 });
+  muxerStream.pipe(fs.createWriteStream('test.wav'));
+
+  let muxer = muxerStream.muxer({ format_name: 'wav' });
+  let stream = muxer.newStream(demuxer.streams[0]); // eslint-disable-line
+  // stream.time_base = demuxer.streams[0].time_base;
+  // stream.codecpar = demuxer.streams[0].codecpar;
+  await muxer.openIO();
+
+  await muxer.writeHeader();
+  let packet: Packet | null = null;
+  for ( let x = 0 ; x < 10000 && packet !== null ; x++ ) {
     packet = await demuxer.read();
-    if (packet.stream_index == 1) {
-      console.log(JSON.stringify(packet, null, 2));
-      let frames = await decoder.decode(packet);
-      console.log(JSON.stringify(frames.frames[0], null, 2));
-    }
+    if (packet)
+      await muxer.writeFrame(packet);
   }
+  await muxer.writeTrailer();
 }
 
 run();

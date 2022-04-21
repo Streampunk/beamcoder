@@ -19,9 +19,10 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-const beamcoder = require('../index.js');
-const fs = require('fs');
-const util = require('util'); // eslint-disable-line
+import beamcoder from '../ts/index';
+import fs from 'fs';
+import util from 'util'; // eslint-disable-line
+import { Packet } from '../ts/types/Packet';
 
 async function run() {
   let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
@@ -63,7 +64,7 @@ async function run() {
   // const abuffersink = filterer.graph.filters.find(f => 'abuffersink' === f.filter.name);
   // console.log(util.inspect(abuffersink, {depth: null}));
 
-  let packet = {};
+  let packet: Packet | null = null;
   for ( let x = 0 ; x < 10000 && packet !== null ; x++ ) {
     packet = await demuxer.read();
     if (packet && packet.stream_index == 0) {
