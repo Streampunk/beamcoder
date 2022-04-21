@@ -19,7 +19,7 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-import beamcoder from '..';
+import beamcoder from '../ts/index';
 
 async function run() {
   // https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_1080p_h264.mov

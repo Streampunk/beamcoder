@@ -1,4 +1,5 @@
 import { Readable } from "stream";
+import { Frame } from './types/Frame';
 
 type parallelBalancerType = Readable & {
     pushPkts: (packets, stream, streamIndex: number, final?: boolean) => any
@@ -13,8 +14,9 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
     for (let s = 0; s < numStreams; ++s)
         pending.push({ ts: -Number.MAX_VALUE, streamIndex: s });
 
-    const makeSet = resolve => {
-        if (resolve) {
+    // const makeSet = (resolve: (result: {value?: { name: string, frames: any[] }, done: boolean}) => void) => {
+    const makeSet = (resolve: (result: {value?: any, done: boolean}) => void) => {
+                if (resolve) {
             // console.log('makeSet', pending.map(p => p.ts));
             const nextPends = pending.every(pend => pend.pkt) ? pending : null;
             const final = pending.filter(pend => true === pend.final);
@@ -37,13 +39,13 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
         }
     };
 
-    const pushPkt = async (pkt, streamIndex: number, ts: number) =>
+    const pushPkt = async (pkt: Frame, streamIndex: number, ts: number): Promise<{ pkt, ts, final: boolean, resolve }> =>
         new Promise(resolve => {
             Object.assign(pending[streamIndex], { pkt, ts, final: pkt ? false : true, resolve });
             makeSet(resolveGet);
         });
 
-    const pullSet = async () => new Promise<{ done: any, value: { timings: any } }>(resolve => makeSet(resolve));
+    const pullSet = async () => new Promise<{ done: any, value: { timings: any } }>(resolve => makeSet(resolve as any));
 
     const readStream: parallelBalancerType = new Readable({
         objectMode: true,

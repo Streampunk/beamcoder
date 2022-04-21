@@ -75,7 +75,7 @@ export interface Stream {
    *           written into the file (which may or may not be related to the
    *           user-provided one, depending on the format).
    */
-  time_base: Array<number>
+  time_base: [ number, number ]
   /**
    * Decoding: pts of the first frame of the stream in presentation order, in stream time base.
    * Only set this if you are absolutely 100% sure that the value you set

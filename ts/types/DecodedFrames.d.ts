@@ -1,5 +1,5 @@
 /** The DecodedFrames object is returned as the result of a decode operation */
-export interface DecodedFrames {
+export interface DecodedFrames extends Timable {
 	/** Object name. */
 	readonly type: 'frames'
 	/** 
@@ -10,9 +10,6 @@ export interface DecodedFrames {
 	/** Total time in microseconds that the decode operation took to complete */
 	readonly total_time: number
 
-
-	timings?: { 
-		// "encode" | "dice" | "decode" | "filter"
-		[key: string]: Timing; };
-
+	// "encode" | "dice" | "decode" | "filter"
+	// timings?: { [key: string]: Timing; };
 }

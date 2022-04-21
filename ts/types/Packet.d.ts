@@ -9,6 +9,8 @@
  * (e.g. to update some stream parameters at the end of encoding).
  */
 
+import { Timable } from "./Timable"
+
 export interface PacketFlags {
 	/** The packet contains a keyframe */
 	KEY: boolean
@@ -34,7 +36,7 @@ export interface PacketFlags {
 	DISPOSABLE: boolean // Frames that can be discarded by the decoder
 }
 
-export interface Packet {
+export interface Packet extends Timable {
 	/** Object name. */
 	readonly type: 'Packet'
 
@@ -82,8 +84,8 @@ export interface Packet {
 	duration: number
 	/** byte position in stream, -1 if unknown */
 	pos: number,
-	timings: {
-		read?: Timing;
-	};
+	// timings: {
+	// 	read?: Timing;
+	// };
 }
 

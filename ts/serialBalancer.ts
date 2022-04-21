@@ -1,5 +1,5 @@
 export class serialBalancer {
-    pending = [] as { ts:number, streamIndex: number, resolve?: (result: any) => void, pkt?: any }[];
+    pending = [] as { ts: number, streamIndex: number, resolve?: (result: any) => void, pkt?: any }[];
   
     constructor(numStreams: number) {
       // initialise with negative ts and no pkt
