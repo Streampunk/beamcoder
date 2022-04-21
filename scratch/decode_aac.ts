@@ -25,7 +25,7 @@ import { Packet } from '../ts/types/Packet';
 async function run() {
   let demuxer = await beamcoder.demuxer({ url: '../media/bbb_1080p_c.ts'});
   let decoder = beamcoder.decoder({ name: 'aac' });
-  let packet: Packet = null;
+  let packet: Packet = {} as Packet;
   for ( let x = 0 ; packet !== null && x < 100 ; x++ ) {
     packet = await demuxer.read();
     if (packet.stream_index == 1) {

@@ -11,6 +11,7 @@ import { Encoder } from "./Encoder"
  * allowing source data to be streamed to the demuxer from a file or other stream source such as a network connection
  */
 export interface WritableDemuxerStream extends NodeJS.WritableStream {
+// export interface WritableDemuxerStream implements WritableStream extends NodeJS.Writable {
 	/**
 	 * Create a demuxer for this source
 	 * @param options a DemuxerCreateOptions object

@@ -64,7 +64,7 @@ async function run() {
   // const abuffersink = filterer.graph.filters.find(f => 'abuffersink' === f.filter.name);
   // console.log(util.inspect(abuffersink, {depth: null}));
 
-  let packet: Packet | null = null;
+  let packet: Packet = {} as Packet;
   for ( let x = 0 ; x < 10000 && packet !== null ; x++ ) {
     packet = await demuxer.read();
     if (packet && packet.stream_index == 0) {

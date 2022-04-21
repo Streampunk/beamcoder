@@ -29,7 +29,7 @@ async function run() {
   // stream.codecpar = demuxer.streams[0].codecpar;
   await muxer.openIO();
   await muxer.writeHeader();
-  let packet: Packet = null;
+  let packet: Packet = {} as Packet;
   for ( let x = 0 ; x < 100 && packet !== null ; x++ ) {
     packet = await demuxer.read();
     await muxer.writeFrame(packet);

@@ -236,7 +236,7 @@ function readStream(params: { highWaterMark?: number }, demuxer: Demuxer, ms: { 
   const time_base = demuxer.streams[index].time_base;
   const end_pts = ms ? ms.end * time_base[1] / time_base[0] : Number.MAX_SAFE_INTEGER;
   async function getPacket(): Promise<Packet | null> {
-    let packet: Packet | null = null;
+    let packet: Packet = {} as Packet;
     do { packet = await demuxer.read(); }
     while (packet && packet.stream_index !== index);
     return packet;

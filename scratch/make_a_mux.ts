@@ -58,7 +58,7 @@ async function run() {
   // stream.codecpar = demuxer.streams[0].codecpar;
   await muxer.openIO({ options: { blocksize: 8192 }}).then(console.log);
   await muxer.writeHeader({ options: { write_bext: true, write_peak: 'on', peak_format: 2 }}).then(console.log);
-  let packet: Packet;
+  let packet: Packet = {} as Packet;
   for ( let x = 0 ; x < 100 && packet !== null ; x++ ) {
     packet = await demuxer.read();
     await muxer.writeFrame(packet);

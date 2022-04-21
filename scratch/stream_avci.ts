@@ -31,8 +31,7 @@ async function run() {
   fs.createReadStream('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf').pipe(demuxerStream);
   let demuxer = await demuxerStream.demuxer({});
   // console.log(demuxer);
-
-  let decoder = await beamcoder.decoder({ name: 'h264' });
+  let decoder = beamcoder.decoder({ name: 'h264' });
   // console.log(decoder);
 
   const vidStream = demuxer.streams[0];
@@ -102,7 +101,7 @@ async function run() {
 
   // await demuxer.seek({ frame: 4200, stream_index: 0});
 
-  let packet: Packet | null = null;
+  let packet: Packet = {} as Packet;
   for ( let x = 0 ; x < 10 && packet !== null; x++ ) {
     packet = await demuxer.read();
     if (packet.stream_index == 0) {

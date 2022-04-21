@@ -31,7 +31,7 @@ async function run() {
   // let decoder = beamcoder.decoder({ name: 'h264', thread_count: 4, thread_type: { FRAME: false, SLICE: true } });
   let decoder = beamcoder.decoder({ name: 'h264', thread_count: 1, hwaccel: true });
   // console.dir(decoder, { getters: true, depth: 3 });
-  let packet: Packet = null;
+  let packet: Packet = {} as Packet;
   for ( let x = 0 ; x < 2000 && packet != null; x++ ) {
     packet = await demuxer.read();
     if (packet && packet.stream_index === 0) {

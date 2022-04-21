@@ -36,7 +36,7 @@ async function run() {
   await muxer.openIO();
 
   await muxer.writeHeader();
-  let packet: Packet | null = null;
+  let packet: Packet = {} as Packet;
   for ( let x = 0 ; x < 10000 && packet !== null ; x++ ) {
     packet = await demuxer.read();
     if (packet)
