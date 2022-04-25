@@ -7,14 +7,14 @@ type BalanceResult = { value: { timings: Timing }, done: boolean, final?: boolea
 type teeBalancerType = Readable[] & { pushFrames: (frames: Frame[] & {timings: Timing}, unusedFlag?: boolean) => any };
 
 export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number }, numStreams: number): teeBalancerType {
-  let resolvePush: (result?: BalanceResult) => void = null;
-  const pending: Array<{ frames: Frame, resolve: (result: { value?: Frame, done: boolean }) => void, final: boolean }> = [];
+  let resolvePush: null | ((result?: BalanceResult) => void) = null;
+  const pending: Array<{ frames: null | Frame, resolve: null | ((result: { value?: Frame, done: boolean }) => void), final: boolean }> = [];
   for (let s = 0; s < numStreams; ++s)
     pending.push({ frames: null, resolve: null, final: false });
 
   const pullFrame = async (index: number) => {
 
-    return new Promise<{ done: boolean, value?: Frame }>(resolve => {
+    return new Promise<{ done: boolean, value?: Frame | null }>(resolve => {
       if (pending[index].frames) {
         resolve({ value: pending[index].frames, done: false });
         Object.assign(pending[index], { frames: null, resolve: null });
@@ -30,7 +30,7 @@ export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number 
     });
   };
 
-  const readStreams: teeBalancerType = [] as teeBalancerType;
+  const readStreams: teeBalancerType = [] as any as teeBalancerType;
   for (let s = 0; s < numStreams; ++s)
     readStreams.push(new Readable({
       objectMode: true,
@@ -52,7 +52,7 @@ export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number 
     }));
 
   readStreams.pushFrames = frames => {
-    return new Promise<BalanceResult>(resolve => {
+    return new Promise<BalanceResult | undefined>(resolve => {
       pending.forEach((p, index) => {
         if (frames.length)
             // @ts-ignore

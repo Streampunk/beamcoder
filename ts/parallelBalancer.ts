@@ -50,13 +50,13 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
         }
     };
 
-    const pushPkt = async (pkt: Frame, streamIndex: number, ts: number): Promise<localFrame> =>
+    const pushPkt = async (pkt: null | Frame, streamIndex: number, ts: number): Promise<localFrame> =>
         new Promise(resolve => {
             Object.assign(pending[streamIndex], { pkt, ts, final: pkt ? false : true, resolve });
             makeSet(resolveGet);
         });
 
-    const pullSet = async () => new Promise<localResult>(resolve => makeSet(resolve as any));
+    const pullSet = async () => new Promise<localResult>(resolve => makeSet(resolve));
 
     const readStream: parallelBalancerType = new Readable({
         objectMode: true,

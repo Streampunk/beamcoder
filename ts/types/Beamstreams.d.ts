@@ -120,8 +120,8 @@ export interface BeamstreamChannel {
  * that are to be processed and multiplexed into an output file or stream
  */
 export interface BeamstreamParams {
-	video?: Array<BeamstreamChannel>
-	audio?: Array<BeamstreamChannel>
+	video: Array<BeamstreamChannel>
+	audio: Array<BeamstreamChannel>
 	/** Destination definition for the beamstream process, to either a file or NodeJS WritableStream */
 	out: {
 		formatName: string

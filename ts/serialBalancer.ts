@@ -1,7 +1,8 @@
 import { EncodedPackets } from "./types/Encoder";
+import { Packet } from "./types/Packet";
 
 export class serialBalancer {
-    pending = [] as { ts: number, streamIndex: number, resolve?: (result: any) => void, pkt?: any }[];
+    pending = [] as { ts: number, streamIndex: number, resolve?: (result: any) => void, pkt?: Packet }[];
   
     constructor(numStreams: number) {
       // initialise with negative ts and no pkt
@@ -18,12 +19,13 @@ export class serialBalancer {
     };
   
   
-    pullPkts(pkt: {}, streamIndex: number, ts: number): Promise<void> {
+    pullPkts(pkt: null | Packet, streamIndex: number, ts: number): Promise<void> {
       return new Promise<void>(resolve => {
         Object.assign(this.pending[streamIndex], { pkt, ts, resolve });
         const minTS = this.pending.reduce((acc, pend) => Math.min(acc, pend.ts), Number.MAX_VALUE);
         // console.log(streamIndex, pending.map(p => p.ts), minTS);
         const nextPend = this.pending.find(pend => pend.pkt && (pend.ts === minTS));
+        // @ts-ignore
         if (nextPend) nextPend.resolve(nextPend.pkt);
         if (!pkt) resolve();
       });

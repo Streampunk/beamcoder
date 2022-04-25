@@ -301,6 +301,7 @@ export function muxerStream(params: { highwaterMark: number }): ReadableMuxerStr
   stream.on('end', () => governor.finish());
   stream.on('error', console.error);
   stream.muxer = (options) => {
+    options = options || {};
     options.governor = governor;
     return beamcoder.muxer(options);
   };
@@ -404,8 +405,6 @@ function runStreams(
       const encStream = transformStream<Timables<Frame>, any>({ name: 'encode', highWaterMark: 1 },
         (frms) => str.encoder.encode(frms), () => str.encoder.flush(), reject);
 
-
-
       const muxStream = writeStream(
         { name: 'mux', highWaterMark: 1 },
         (pkts: EncodedPackets) => {
@@ -414,10 +413,6 @@ function runStreams(
         },
         () => muxBalancer.writePkts(null, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts), true),
         reject);
-
-
-
-
 
       muxStream.on('finish', resolve);
 
