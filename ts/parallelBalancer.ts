@@ -1,5 +1,7 @@
 import { Readable } from "stream";
+import { DecodedFrames } from "./types/DecodedFrames";
 import { Frame } from './types/Frame';
+import { Timable } from "./types/Timable";
 
 type parallelBalancerType = Readable & {
     pushPkts: (packets, stream, streamIndex: number, final?: boolean) => any
@@ -39,7 +41,7 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
         }
     };
 
-    const pushPkt = async (pkt: Frame, streamIndex: number, ts: number): Promise<{ pkt, ts, final: boolean, resolve }> =>
+    const pushPkt = async (pkt: Frame, streamIndex: number, ts: number): Promise<{ pkt: Frame, ts: number, final: boolean, resolve: () => void }> =>
         new Promise(resolve => {
             Object.assign(pending[streamIndex], { pkt, ts, final: pkt ? false : true, resolve });
             makeSet(resolveGet);
@@ -66,12 +68,13 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
         },
     }) as parallelBalancerType;
 
-    readStream.pushPkts = (packets: { frames: Array<any>, timings: [number, number] }, stream: { time_base: [number, number] }, streamIndex: number, final = false): any => {
+    readStream.pushPkts = (packets: DecodedFrames, stream: { time_base: [number, number] }, streamIndex: number, final = false): Promise<{ pkt: Frame, ts: number, final: boolean, resolve: () => void }> => {
         if (packets && packets.frames.length) {
-            return packets.frames.reduce(async (promise, pkt) => {
+            // @ts-ignore
+            return packets.frames.reduce(async (promise, pkt: Frame) => {
                 await promise;
                 const ts = pkt.pts * stream.time_base[0] / stream.time_base[1];
-                pkt.timings = packets.timings;
+                (pkt as Timable).timings = packets.timings;
                 return pushPkt(pkt, streamIndex, ts);
             }, Promise.resolve());
         } else if (final) {

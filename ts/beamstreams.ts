@@ -221,7 +221,7 @@ function writeStream(params: { name: string, highWaterMark?: number }, processFn
   }).on('error', err => reject(err));
 }
 
-function readStream(params: { highWaterMark?: number }, demuxer: Demuxer, ms: { end: number }, index: number) {
+function readStream(params: { highWaterMark?: number }, demuxer: Demuxer, ms: { end: number }, index: number): Readable {
   const time_base = demuxer.streams[index].time_base;
   const end_pts = ms ? ms.end * time_base[1] / time_base[0] : Number.MAX_SAFE_INTEGER;
   async function getPacket(): Promise<Packet | null> {
@@ -374,6 +374,7 @@ function runStreams(
         { name: 'decode', highWaterMark: 1 },
         (pkts: Packet) => src.decoder.decode(pkts),
         () => src.decoder.flush(), reject);
+        debugger;
       const filterSource = writeStream({ name: 'filterSource', highWaterMark: 1 },
         pkts => filterBalancer.pushPkts(pkts, (src.format as Demuxer).streams[src.streamIndex], srcIndex),
         () => filterBalancer.pushPkts(null, (src.format as Demuxer).streams[src.streamIndex], srcIndex, true), reject);
