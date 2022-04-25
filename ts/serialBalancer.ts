@@ -38,7 +38,6 @@ export class serialBalancer {
         index: number
       },
       writeFn: (r: void) => void, final = false) {
-        debugger;
       if (packets && packets.packets.length) {
         return packets.packets.reduce(async (promise, pkt) => {
           await promise;

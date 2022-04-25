@@ -179,7 +179,6 @@ function writeStream(params: { name: string, highWaterMark?: number }, processFn
       (async () => {
         const start = process.hrtime();
         const reqTime = start[0] * 1e3 + start[1] / 1e6;
-        debugger
         const result = await processFn(val);
         if ('mux' === params.name) {
           const pktTimings = val.timings;
@@ -408,7 +407,6 @@ function runStreams(
       const muxStream = writeStream(
         { name: 'mux', highWaterMark: 1 },
         (pkts: EncodedPackets) => {
-          debugger;
           return muxBalancer.writePkts(pkts, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts))
         },
         () => muxBalancer.writePkts(null, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts), true),

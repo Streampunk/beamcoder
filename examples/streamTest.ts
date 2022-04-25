@@ -10,7 +10,6 @@ async function process() {
 }
 
 async function run() {
-    debugger;
     const stream = beamcoder.demuxerStream({highwaterMark: 360000});
     console.log(stream);
     console.log('stream');

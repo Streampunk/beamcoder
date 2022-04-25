@@ -91,7 +91,7 @@ export interface BeamstreamSource {
 	url?: string
 	input_stream?: NodeJS.ReadableStream
 	ms?: { start: number, end: number }
-	streamIndex?: number
+	streamIndex: number
 	iformat?: InputFormat
 	options?: { [key: string]: any }
 	format?: Demuxer | Promise<Demuxer>;
@@ -105,7 +105,7 @@ export interface BeamstreamStream {
 	time_base: Array<number>
 	codecpar: { [key: string]: any }
 	// added later
-	encoder?: Encoder;
+	encoder?: Encoder; // TODO add default value
 	stream?: Stream;
 }
 /** Definition for a channel of beamstream processing */
