@@ -6,6 +6,7 @@
   "types": "ts/index.d.ts",
   "scripts": {
     "postinstall": "tsc -p . && node ts/install_ffmpeg.js && node-gyp rebuild",
+    "build": "tsc -p .",
     "clean": "rimraf ts/*.js",
     "test": "ts-node node_modules/tape/bin/tape test/*.ts",
     "lint": "eslint **/*.js",

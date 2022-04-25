@@ -4,7 +4,7 @@ import { Timable } from "./Timable";
 /**
  * This object describes decoded (raw) audio or video data.
  */
-export interface Frame implements Timable {
+export interface Frame extends Timable {
 	/** Object name. */
 	readonly type: 'Frame'
 	/**

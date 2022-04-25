@@ -1,23 +1,29 @@
 import { Readable } from "stream";
 import { DecodedFrames } from "./types/DecodedFrames";
 import { Frame } from './types/Frame';
-import { Timable } from "./types/Timable";
+import { Stream } from "./types/Stream";
+import { Timable, Timables } from "./types/Timable";
+
+
+type localFrame = { pkt?: Frame, ts: number, streamIndex: number, final?: boolean, resolve?: () => void };
+type localResult = { done: boolean, value?: {name: string, frames: Timables<Frame>}[] & Timable };
+
 
 type parallelBalancerType = Readable & {
-    pushPkts: (packets, stream, streamIndex: number, final?: boolean) => any
+    pushPkts: (packets: DecodedFrames, stream: Stream, streamIndex: number, final?: boolean) => any
 };
 
 export function parallelBalancer(params: { name: string, highWaterMark: number }, streamType: 'video' | 'audio', numStreams: number): parallelBalancerType {
-    let resolveGet = null;
+    let resolveGet: null | ((result: {value?: {name: string, frames: Frame[]}[] & Timable, done: boolean }) => void) = null;
     const tag = 'video' === streamType ? 'v' : 'a';
-    const pending = [];
+    const pending: Array<localFrame> = [];
     // initialise with negative ts and no pkt
     // - there should be no output until each stream has sent its first packet
     for (let s = 0; s < numStreams; ++s)
         pending.push({ ts: -Number.MAX_VALUE, streamIndex: s });
 
     // const makeSet = (resolve: (result: {value?: { name: string, frames: any[] }, done: boolean}) => void) => {
-    const makeSet = (resolve: (result: {value?: any, done: boolean}) => void) => {
+    const makeSet = (resolve: (result: localResult) => void) => {
                 if (resolve) {
             // console.log('makeSet', pending.map(p => p.ts));
             const nextPends = pending.every(pend => pend.pkt) ? pending : null;
@@ -26,8 +32,11 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
                 nextPends.forEach(pend => pend.resolve());
                 resolve({
                     value: nextPends.map(pend => {
-                        return { name: `in${pend.streamIndex}:${tag}`, frames: [pend.pkt] };
-                    }),
+                        return {
+                            name: `in${pend.streamIndex}:${tag}`,
+                            frames: [pend.pkt]
+                        };
+                    }), // as any[] & Timable,
                     done: false
                 });
                 resolveGet = null;
@@ -41,13 +50,13 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
         }
     };
 
-    const pushPkt = async (pkt: Frame, streamIndex: number, ts: number): Promise<{ pkt: Frame, ts: number, final: boolean, resolve: () => void }> =>
+    const pushPkt = async (pkt: Frame, streamIndex: number, ts: number): Promise<localFrame> =>
         new Promise(resolve => {
             Object.assign(pending[streamIndex], { pkt, ts, final: pkt ? false : true, resolve });
             makeSet(resolveGet);
         });
 
-    const pullSet = async () => new Promise<{ done: any, value: { timings: any } }>(resolve => makeSet(resolve as any));
+    const pullSet = async () => new Promise<localResult>(resolve => makeSet(resolve as any));
 
     const readStream: parallelBalancerType = new Readable({
         objectMode: true,
@@ -68,13 +77,13 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
         },
     }) as parallelBalancerType;
 
-    readStream.pushPkts = (packets: DecodedFrames, stream: { time_base: [number, number] }, streamIndex: number, final = false): Promise<{ pkt: Frame, ts: number, final: boolean, resolve: () => void }> => {
+    readStream.pushPkts = (packets: DecodedFrames, stream: Stream, streamIndex: number, final = false): Promise<localFrame> => {
         if (packets && packets.frames.length) {
             // @ts-ignore
             return packets.frames.reduce(async (promise, pkt: Frame) => {
                 await promise;
                 const ts = pkt.pts * stream.time_base[0] / stream.time_base[1];
-                (pkt as Timable).timings = packets.timings;
+                pkt.timings = packets.timings;
                 return pushPkt(pkt, streamIndex, ts);
             }, Promise.resolve());
         } else if (final) {

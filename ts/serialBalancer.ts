@@ -1,3 +1,5 @@
+import { EncodedPackets } from "./types/Encoder";
+
 export class serialBalancer {
     pending = [] as { ts: number, streamIndex: number, resolve?: (result: any) => void, pkt?: any }[];
   
@@ -27,15 +29,14 @@ export class serialBalancer {
       });
     };
   
-    writePkts(packets: {
-      packets: Array<{ stream_index: number, pts: number, dts: number, duration: number }>
-    } | null,
+    writePkts(packets: EncodedPackets | null,
       srcStream: { time_base: [number, number] },
       dstStream: {
         time_base: [number, number],
         index: number
       },
       writeFn: (r: void) => void, final = false) {
+        debugger;
       if (packets && packets.packets.length) {
         return packets.packets.reduce(async (promise, pkt) => {
           await promise;

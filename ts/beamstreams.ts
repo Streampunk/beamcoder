@@ -37,6 +37,7 @@ import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, BeamstreamStream
 import { Filterer, FilterGraph, FilterLink } from './types/Filter';
 import { CodecContextBaseMin } from './types/CodecContext';
 import { Timable, Timables } from './types/Timable'
+import { EncodedPackets } from './types/Encoder';
 
 const beamcoder = bindings('beamcoder') as BeamcoderType;
 
@@ -170,14 +171,15 @@ const calcStats = (arr: Array<any>, elem: string, prop: string): ffStats => {
   return { mean, stdDev, max, min };
 };
 
-function writeStream(params: { name: string, highWaterMark?: number }, processFn: (val: { stream_index: number, pts: number, dts: number, duration: number, timings: any }) => Promise<any>, finalFn: () => Promise<any>, reject: (err: Error) => void) {
+function writeStream(params: { name: string, highWaterMark?: number }, processFn: (val: EncodedPackets) => Promise<any>, finalFn: () => Promise<any>, reject: (err: Error) => void) {
   return new Writable({
     objectMode: true,
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
-    write(val: { stream_index: number, pts: number, dts: number, duration: number, timings: any }, encoding: BufferEncoding, cb: (error?: Error | null, result?: any) => void) {
+    write(val: EncodedPackets, encoding: BufferEncoding, cb: (error?: Error | null, result?: any) => void) {
       (async () => {
         const start = process.hrtime();
         const reqTime = start[0] * 1e3 + start[1] / 1e6;
+        debugger
         const result = await processFn(val);
         if ('mux' === params.name) {
           const pktTimings = val.timings;
@@ -374,9 +376,9 @@ function runStreams(
         { name: 'decode', highWaterMark: 1 },
         (pkts: Packet) => src.decoder.decode(pkts),
         () => src.decoder.flush(), reject);
-        debugger;
       const filterSource = writeStream({ name: 'filterSource', highWaterMark: 1 },
-        pkts => filterBalancer.pushPkts(pkts, (src.format as Demuxer).streams[src.streamIndex], srcIndex),
+      // @ts-ignore
+        (pkts: DecodedFrames) => filterBalancer.pushPkts(pkts, (src.format as Demuxer).streams[src.streamIndex], srcIndex),
         () => filterBalancer.pushPkts(null, (src.format as Demuxer).streams[src.streamIndex], srcIndex, true), reject);
 
       src.stream.pipe(decStream).pipe(filterSource);
@@ -402,9 +404,21 @@ function runStreams(
       const encStream = transformStream<Timables<Frame>, any>({ name: 'encode', highWaterMark: 1 },
         (frms) => str.encoder.encode(frms), () => str.encoder.flush(), reject);
 
-      const muxStream = writeStream({ name: 'mux', highWaterMark: 1 },
-        (pkts: any) => muxBalancer.writePkts(pkts, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts)),
-        () => muxBalancer.writePkts(null, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts), true), reject);
+
+
+      const muxStream = writeStream(
+        { name: 'mux', highWaterMark: 1 },
+        (pkts: EncodedPackets) => {
+          debugger;
+          return muxBalancer.writePkts(pkts, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts))
+        },
+        () => muxBalancer.writePkts(null, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts), true),
+        reject);
+
+
+
+
+
       muxStream.on('finish', resolve);
 
       streamTee[i].pipe(diceStream).pipe(encStream).pipe(muxStream);
