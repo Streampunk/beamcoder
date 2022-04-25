@@ -4,6 +4,7 @@ import { Frame } from "./Frame"
 import { Codec } from "./Codec"
 import { CodecContext, CodecContext_base } from "./CodecContext"
 import { Demuxer } from "./Demuxer"
+import { DecodedFrames } from "./DecodedFrames"
 
 export interface Decoder extends CodecContext_base {
 	// readonly type: 'decoder'
