@@ -20,9 +20,11 @@
 */
 import beamcoder from '../ts/index';
 import { Packet } from '../ts/types/Packet';
+import { getMedia } from './common';
 
 async function run() {
-  let demuxer = await beamcoder.demuxer('../media/sound/BBCNewsCountdown.wav');
+  // let demuxer = await beamcoder.demuxer(getMedia('sound/BBCNewsCountdown.wav'));
+  let demuxer = await beamcoder.demuxer(getMedia('sound/BBCNewsCountdown.wav'));
   let muxer = beamcoder.muxer({ filename: 'file:test.wav' });
   let stream = muxer.newStream(demuxer.streams[0]); // eslint-disable-line
   // stream.time_base = demuxer.streams[0].time_base;

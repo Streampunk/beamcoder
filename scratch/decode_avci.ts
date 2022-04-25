@@ -21,11 +21,13 @@
 
 import beamcoder from '../ts/index';
 import { Packet } from '../ts/types/Packet';
-
+import { getMedia } from './common';
+// Ok
 async function run() {
   // let demuxer = await beamcoder.demuxer('../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
   // console.log(JSON.stringify(demuxer, null, 2));
-  let demuxer = await beamcoder.demuxer('M:/dpp/AS11_4K_8.mxf');
+  // let demuxer = await beamcoder.demuxer(getMedia('dpp/AS11_4K_8.mxf'));
+  let demuxer = await beamcoder.demuxer(getMedia('dpp/sample_1280x720_surfing_with_audio.mxf'));
   // let demuxer = await beamcoder.demuxer('M:/dpp/AS11.mxf');
   demuxer.streams.forEach(s => s.discard = (0 == s.index) ? 'default' : 'all');
   // let decoder = beamcoder.decoder({ name: 'h264', thread_count: 4, thread_type: { FRAME: false, SLICE: true } });
@@ -45,7 +47,7 @@ async function run() {
     }
   }
   let frames = await decoder.flush();
-  console.log('flush', frames.total_time, frames.length);
+  console.log('flush', frames.total_time, frames.frames.length);
 }
 
 run();

@@ -20,9 +20,10 @@
 */
 
 import beamcoder from '../ts/index';
+import { getMedia } from './common';
 
 async function run() {
-  let demuxer = await beamcoder.demuxer('../media/sound/BBCNewsCountdown.wav');
+  let demuxer = await beamcoder.demuxer(getMedia('sound/BBCNewsCountdown.wav'));
   let packet = {};
   for ( let x = 0 ; x < 100 && packet !== null ; x++ ) {
     packet = await demuxer.read();

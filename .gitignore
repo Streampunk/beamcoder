@@ -78,3 +78,5 @@ install_ffmpeg.js
 ts/*.js
 ts/*.d.ts
 examples/capture
+scratch/test.wav
+scratch/wibble.h264

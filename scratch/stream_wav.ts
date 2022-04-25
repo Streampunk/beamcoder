@@ -20,9 +20,10 @@
 */
 
 import beamcoder from '../ts/index';
+import { getMedia } from './common';
 
 async function run() {
-  const urls = [ 'file:../Media/sound/Countdown.wav' ];
+  const urls = [ `file:${getMedia('sound/Countdown.wav')}` ];
   const spec = { start: 50, end: 58 };
   const params = {
     video: [],

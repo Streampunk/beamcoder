@@ -22,13 +22,14 @@
 import beamcoder from '../ts/index';
 import fs from 'fs';
 import { Packet } from '../ts/types/Packet';
-
+import { ReadableMuxerStream } from '../ts/types/Beamstreams';
+import { getMedia } from './common';
+// OK
 async function run() {
-  let demuxer = await beamcoder.demuxer('../../media/sound/BBCNewsCountdown.wav');
-
-  let muxerStream = beamcoder.muxerStream({ highwaterMark: 65536 });
+  let file = getMedia('sound/BBCNewsCountdown.wav');
+  let demuxer = await beamcoder.demuxer(file);
+  let muxerStream: ReadableMuxerStream = beamcoder.muxerStream({ highwaterMark: 65536 });
   muxerStream.pipe(fs.createWriteStream('test.wav'));
-
   let muxer = muxerStream.muxer({ format_name: 'wav' });
   let stream = muxer.newStream(demuxer.streams[0]); // eslint-disable-line
   // stream.time_base = demuxer.streams[0].time_base;
@@ -43,6 +44,7 @@ async function run() {
       await muxer.writeFrame(packet);
   }
   await muxer.writeTrailer();
+  muxerStream.destroy();  
 }
 
 run();

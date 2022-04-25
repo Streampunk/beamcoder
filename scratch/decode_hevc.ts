@@ -20,9 +20,10 @@
 */
 
 import beamcoder from '../ts/index';
+import { getMedia } from './common';
 
 async function run() {
-  let demuxer = await beamcoder.demuxer('../media/bbb_1080p_c.ts');
+  let demuxer = await beamcoder.demuxer(getMedia('bbb_1080p_c.ts'));
   console.log(demuxer);
   let decoder = await beamcoder.decoder({ name: 'hevc' });
   for ( let x = 0 ; x < 100 ; x++ ) {

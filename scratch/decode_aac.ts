@@ -21,14 +21,15 @@
 
 import beamcoder from '../ts/index';
 import { Packet } from '../ts/types/Packet';
-
+import { getMedia } from './common';
+// Ok
 async function run() {
-  let demuxer = await beamcoder.demuxer({ url: '../media/bbb_1080p_c.ts'});
+  let demuxer = await beamcoder.demuxer({ url: getMedia('bbb_1080p_c.ts')});
   let decoder = beamcoder.decoder({ name: 'aac' });
   let packet: Packet = {} as Packet;
   for ( let x = 0 ; packet !== null && x < 100 ; x++ ) {
     packet = await demuxer.read();
-    if (packet.stream_index == 1) {
+    if (packet.stream_index === 1) {
       console.log(JSON.stringify(packet, null, 2));
       let frames = await decoder.decode(packet);
       console.log(JSON.stringify(frames.frames[0], null, 2));

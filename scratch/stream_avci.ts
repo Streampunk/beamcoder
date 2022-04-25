@@ -22,13 +22,15 @@
 import beamcoder from '../ts/index';
 import fs from 'fs';
 import { Packet } from '../ts/types/Packet';
+import { WritableDemuxerStream } from '../ts/types/Beamstreams';
+import { getMedia } from './common';
 // const util = require('util');
 
 async function run() {
   // let demuxer = await createDemuxer('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
   // http://ftp.kw.bbc.co.uk/dppdownload/dpp_example_files/AS11_DPP_HD_EXAMPLE_1.mxf
-  let demuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
-  fs.createReadStream('../../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf').pipe(demuxerStream);
+  let demuxerStream: WritableDemuxerStream = beamcoder.demuxerStream({ highwaterMark: 65536 });
+  fs.createReadStream(getMedia('dpp/AS11_DPP_HD_EXAMPLE_1.mxf')).pipe(demuxerStream);
   let demuxer = await demuxerStream.demuxer({});
   // console.log(demuxer);
   let decoder = beamcoder.decoder({ name: 'h264' });
@@ -121,8 +123,6 @@ async function run() {
   }
   let frames = await decoder.flush();
   console.log('flush', frames.total_time, frames.frames.length);
-  debugger;
-  // @ts-ignore
   demuxerStream.destroy();
 }
 

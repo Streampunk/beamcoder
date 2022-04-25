@@ -25,7 +25,6 @@ import { teeBalancer } from './teeBalancer';
 import { parallelBalancer } from './parallelBalancer';
 import { serialBalancer } from './serialBalancer';
 import { BeamcoderType } from './types/BeamcoderType';
-import { CodecPar } from './types/CodecPar';
 import { Demuxer } from './types/Demuxer';
 import { Muxer } from './types/Muxer';
 import { Stream } from './types/Stream';
@@ -34,10 +33,9 @@ import type { Governor } from './types/Governor';
 import { Frame } from './types/Frame';
 import { Packet } from './types/Packet';
 import { Timing } from './types/Timing';
-import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, BeamstreamStream, WritableDemuxerStream } from './types/Beamstreams';
+import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, BeamstreamStream, ReadableMuxerStream, WritableDemuxerStream } from './types/Beamstreams';
 import { Filterer, FilterGraph, FilterLink } from './types/Filter';
 import { CodecContextBaseMin } from './types/CodecContext';
-import { EncodedPackets, Encoder } from './types/Encoder';
 import { Timable, Timables } from './types/Timable'
 
 const beamcoder = bindings('beamcoder') as BeamcoderType;
@@ -223,15 +221,6 @@ function writeStream(params: { name: string, highWaterMark?: number }, processFn
   }).on('error', err => reject(err));
 }
 
-// interface Packet {
-//   stream_index: number;
-//   pts: number;
-//   timings: {
-//     read?: Timing;
-//   };
-// }
-
-
 function readStream(params: { highWaterMark?: number }, demuxer: Demuxer, ms: { end: number }, index: number) {
   const time_base = demuxer.streams[index].time_base;
   const end_pts = ms ? ms.end * time_base[1] / time_base[0] : Number.MAX_SAFE_INTEGER;
@@ -273,23 +262,22 @@ function createBeamWritableStream(params: { highwaterMark?: number }, governor: 
   });
   return beamStream;
 }
-type demuxerStreamType = Writable & { demuxer: (options: { governor: Governor }) => Promise<any> };
 
 export function demuxerStream(params: { highwaterMark?: number }): WritableDemuxerStream {
   const governor = new beamcoder.governor({});
-  const stream: demuxerStreamType = createBeamWritableStream(params, governor) as demuxerStreamType;
+  const stream = createBeamWritableStream(params, governor) as WritableDemuxerStream;
   stream.on('finish', () => governor.finish());
   stream.on('error', console.error);
-  stream.demuxer = (options: { governor: Governor }) => {
+  stream.demuxer = (options: { governor?: Governor }) => {
     options.governor = governor;
     // delay initialisation of demuxer until stream has been written to - avoids lock-up
     return new Promise(resolve => setTimeout(async () => resolve(await beamcoder.demuxer(options)), 20));
   };
-  return stream as WritableDemuxerStream;
+  return stream;
 }
 
 
-function createBeamReadableStream(params: { highwaterMark?: number }, governor: Governor) {
+function createBeamReadableStream(params: { highwaterMark?: number }, governor: Governor): Readable {
   const beamStream = new Readable({
     highWaterMark: params.highwaterMark || 16384,
     read: size => {
@@ -305,11 +293,9 @@ function createBeamReadableStream(params: { highwaterMark?: number }, governor: 
   return beamStream;
 }
 
-type muxerStreamType = Readable & { muxer: (options: { governor: Governor }) => any };
-
-export function muxerStream(params: { highwaterMark: number }): muxerStreamType {
+export function muxerStream(params: { highwaterMark: number }): ReadableMuxerStream {
   const governor = new beamcoder.governor({ highWaterMark: 1 });
-  const stream: muxerStreamType = createBeamReadableStream(params, governor) as muxerStreamType;
+  const stream = createBeamReadableStream(params, governor) as ReadableMuxerStream;
   stream.on('end', () => governor.finish());
   stream.on('error', console.error);
   stream.muxer = (options) => {

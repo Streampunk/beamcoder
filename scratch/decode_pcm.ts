@@ -20,9 +20,10 @@
 */
 
 import beamcoder from '../ts/index';
+import { getMedia } from './common';
 
 async function run() {
-  let demuxer = await beamcoder.demuxer('../media/dpp/AS11_DPP_HD_EXAMPLE_1.mxf');
+  let demuxer = await beamcoder.demuxer(getMedia('dpp/AS11_DPP_HD_EXAMPLE_1.mxf'));
   console.log(demuxer.streams[1]);
   let decoder = await beamcoder.decoder({ demuxer: demuxer, stream_index : 1 });
   console.log(decoder);

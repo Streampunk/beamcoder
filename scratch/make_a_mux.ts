@@ -21,9 +21,10 @@
 
 import beamcoder from '../ts/index';
 import { Packet } from '../ts/types/Packet';
+import { getMedia } from './common';
 
 async function run() {
-  let demuxer = await beamcoder.demuxer('../media/sound/BBCNewsCountdown.wav');
+  let demuxer = await beamcoder.demuxer(getMedia('sound/BBCNewsCountdown.wav'));
   console.log(demuxer.streams[0].codecpar);
   let muxer = beamcoder.muxer({ filename: 'file:test.wav' });
   let stream = muxer.newStream({

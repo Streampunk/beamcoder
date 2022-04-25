@@ -5,13 +5,35 @@ import { Stream } from "./Stream"
 import { Filterer } from "./Filter"
 import { Decoder } from "./Decoder"
 import { Encoder } from "./Encoder"
+import { Readable, Writable } from "stream"
+
 
 /**
+ * OLD Typing
+ * 
  * A [Node.js Writable stream](https://nodejs.org/docs/latest-v12.x/api/stream.html#stream_writable_streams)
  * allowing source data to be streamed to the demuxer from a file or other stream source such as a network connection
  */
-export interface WritableDemuxerStream extends NodeJS.WritableStream {
-// export interface WritableDemuxerStream implements WritableStream extends NodeJS.Writable {
+// export interface WritableDemuxerStream extends NodeJS.WritableStream {
+// // export interface WritableDemuxerStream implements WritableStream extends NodeJS.Writable {
+// 	/**
+// 	 * Create a demuxer for this source
+// 	 * @param options a DemuxerCreateOptions object
+//      * @returns a promise that resolves to a Demuxer when it has determined sufficient
+// 	 * format details by consuming data from the source. The promise will wait indefinitely 
+// 	 * until sufficient source data has been read.
+// 	 */
+// 	demuxer(options?: DemuxerCreateOptions | string): Promise<Demuxer>
+// }
+
+
+
+/**
+ * WritableDemuxerStream is not a Writable Class augmented by a demuxer function, should be replace by a new class
+ * A [Node.js Writable stream](https://nodejs.org/docs/latest-v12.x/api/stream.html#stream_writable_streams)
+ * allowing source data to be streamed to the demuxer from a file or other stream source such as a network connection
+ */
+ export type WritableDemuxerStream = Writable & {
 	/**
 	 * Create a demuxer for this source
 	 * @param options a DemuxerCreateOptions object
@@ -19,21 +41,42 @@ export interface WritableDemuxerStream extends NodeJS.WritableStream {
 	 * format details by consuming data from the source. The promise will wait indefinitely 
 	 * until sufficient source data has been read.
 	 */
-	demuxer(options?: DemuxerCreateOptions | string): Promise<Demuxer>
-}
+	 demuxer: (options?: { iformat?: InputFormat, options?: { [key: string]: any }, governor?: Governor }) => Promise<Demuxer>
+};
+
+/**
+ * OLD TYPING
+ * 
+ * A [Node.js Readable stream](https://nodejs.org/docs/latest-v12.x/api/stream.html#stream_readable_streams)
+ * allowing data to be streamed from the muxer to a file or other stream destination such as a network connection
+ */
+// export interface ReadableMuxerStream extends NodeJS.ReadableStream {
+// 	/**
+// 	 * Create a muxer for this source
+// 	 * @param options a MuxerCreateOptions object
+// 	 * @returns A Muxer object
+// 	 */
+// 	muxer(options: MuxerCreateOptions): Muxer
+// }
+
 
 /**
  * A [Node.js Readable stream](https://nodejs.org/docs/latest-v12.x/api/stream.html#stream_readable_streams)
  * allowing data to be streamed from the muxer to a file or other stream destination such as a network connection
  */
-export interface ReadableMuxerStream extends NodeJS.ReadableStream {
+export type ReadableMuxerStream = Readable & {
 	/**
-	 * Create a muxer for this source
-	 * @param options a MuxerCreateOptions object
-	 * @returns A Muxer object
+	 * Create a demuxer for this source
+	 * @param options a DemuxerCreateOptions object
+     * @returns a promise that resolves to a Demuxer when it has determined sufficient
+	 * format details by consuming data from the source. The promise will wait indefinitely 
+	 * until sufficient source data has been read.
 	 */
-	muxer(options: MuxerCreateOptions): Muxer
-}
+	 muxer: (options?: MuxerCreateOptions & {governor?: Governor }) => Muxer
+};
+
+
+
 
 /** Create object for AVIOContext based buffered I/O */
 // export function governor(options: { highWaterMark: number }): {
