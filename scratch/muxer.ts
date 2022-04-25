@@ -25,7 +25,7 @@ import beamcoder from '../ts/index';
 
 const STREAM_FRAME_RATE = 25;
 
-function allocAudioFrame(sampleFormat, channelLayout, sampleRate, nbSamples) {
+function allocAudioFrame(sampleFormat: string, channelLayout: 'stereo' | 'mono', sampleRate: number, nbSamples: number) {
 
   return beamcoder.frame({
     format: sampleFormat,
@@ -35,7 +35,7 @@ function allocAudioFrame(sampleFormat, channelLayout, sampleRate, nbSamples) {
   }).alloc();
 }
 
-function allocPicture(pixelFmt, width, height) { // eslint-disable-line
+function allocPicture(pixelFmt: string, width: number, height: number) { // eslint-disable-line
 
   return beamcoder.frame({
     format: pixelFmt,
@@ -44,7 +44,7 @@ function allocPicture(pixelFmt, width, height) { // eslint-disable-line
   }).alloc();
 }
 
-async function addStream(stream, muxer, codecID) { // eslint-disable-line
+async function addStream(stream, muxer, codecID: number) { // eslint-disable-line
   let codec = await beamcoder.encoder({ codec_id: codecID });
 
   stream.st = muxer.newStream();
