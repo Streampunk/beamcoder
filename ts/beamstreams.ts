@@ -46,8 +46,8 @@ const timings = [] as Array<{ [key: string]: Timing }>;
 
 class frameDicer {
 
-  private addFrame: (srcFrm: Frame) => any[];
-  private getLast: () => any[];
+  private addFrame: (srcFrm: Frame) => Frame[];
+  private getLast: () => Frame[];
   private doDice: boolean;
   // CodecPar
   constructor(encoder: CodecContextBaseMin, private isAudio: boolean) {
@@ -103,8 +103,8 @@ class frameDicer {
       return result;
     };
 
-    this.getLast = (): any[] => {
-      let result = [];
+    this.getLast = (): Frame[] => {
+      let result: Frame[] = [];
       if (lastBuf[0].length > 0) {
         const resFrm = beamcoder.frame(lastFrm.toJSON());
         resFrm.data = lastBuf.map(d => d.slice(0));
@@ -119,11 +119,9 @@ class frameDicer {
   }
   public dice(frames: Frame[], flush = false): Frame[] {
     if (this.isAudio && this.doDice) {
-      let result: Frame[] = frames.reduce((muxFrms: Frame[], frm: Frame) => {
-        this.addFrame(frm).forEach(f => muxFrms.push(f));
-        return muxFrms;
-      }, [] as Frame[]);
-
+      let result: Frame[] = [];
+      for (const frm of frames)
+        this.addFrame(frm).forEach(f => result.push(f));
       if (flush)
         this.getLast().forEach(f => result.push(f));
       return result;
@@ -327,27 +325,24 @@ export async function makeSources(params: BeamstreamParams): Promise<void> {
       src.formatP = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options});
   }));
 
-  await (params.video.reduce)(async (promise: Promise<void>, p: BeamstreamChannel) => {
-    await promise;
-    return p.sources.reduce(async (promise: Promise<Demuxer | void>, src: BeamstreamSource) => {
-      await promise;
-      src.format = await src.formatP;
-      if (src.ms && !src.input_stream)
-        src.format.seek({ time: src.ms.start });
-      return src.format;
-    }, Promise.resolve());
-  }, Promise.resolve());
 
-  await params.audio.reduce(async (promise: Promise<void>, p: BeamstreamChannel) => {
-    await promise;
-    return p.sources.reduce(async (promise: Promise<Demuxer | void>, src: BeamstreamSource) => {
-      await promise;
+  for (const video of params.video) {
+    for (const src of video.sources) {
       src.format = await src.formatP;
       if (src.ms && !src.input_stream)
         src.format.seek({ time: src.ms.start });
-      return src.format;
-    }, Promise.resolve());
-  }, Promise.resolve());
+      await src.formatP;
+    }
+  }
+
+  for (const audio of params.audio) {
+    for (const src of audio.sources) {
+      src.format = await src.formatP;
+      if (src.ms && !src.input_stream)
+        src.format.seek({ time: src.ms.start });
+      await src.formatP;
+    }
+  }
 
   params.video.forEach((p: BeamstreamChannel) => p.sources.forEach(src =>
     src.stream = readStream({ highWaterMark: 1 }, src.format, src.ms, src.streamIndex)));
@@ -379,10 +374,7 @@ function runStreams(
 
       const filterSource = writeStream<DecodedFrames>(
         { name: 'filterSource', highWaterMark: 1 },
-        (pkts: DecodedFrames) => {
-          console.log(pkts)
-          return filterBalancer.pushPkts(pkts, src.format.streams[src.streamIndex], srcIndex, false)
-        },
+        (pkts: DecodedFrames) => filterBalancer.pushPkts(pkts, src.format.streams[src.streamIndex], srcIndex, false),
         () => filterBalancer.pushPkts(null, src.format.streams[src.streamIndex], srcIndex, true),
         reject
       );

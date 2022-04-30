@@ -6,15 +6,15 @@ import { Timable, Timables } from "./types/Timable";
 
 
 type localFrame = { pkt?: Frame, ts: number, streamIndex: number, final?: boolean, resolve?: () => void };
-type localResult = { done: boolean, value?: {name: string, frames: Timables<Frame>}[] & Timable };
+type localResult = { done: boolean, value?: { name: string, frames: Timables<Frame> }[] & Timable };
 
 
 type parallelBalancerType = Readable & {
-    pushPkts: (packets: DecodedFrames, stream: Stream, streamIndex: number, final?: boolean) => any
+    pushPkts: (packets: DecodedFrames, stream: Stream, streamIndex: number, final?: boolean) => Promise<localFrame>
 };
 
 export function parallelBalancer(params: { name: string, highWaterMark: number }, streamType: 'video' | 'audio', numStreams: number): parallelBalancerType {
-    let resolveGet: null | ((result: {value?: {name: string, frames: Frame[]}[] & Timable, done: boolean }) => void) = null;
+    let resolveGet: null | ((result: { value?: { name: string, frames: Frame[] }[] & Timable, done: boolean }) => void) = null;
     const tag = 'video' === streamType ? 'v' : 'a';
     const pending: Array<localFrame> = [];
     // initialise with negative ts and no pkt
@@ -24,7 +24,7 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
 
     // const makeSet = (resolve: (result: {value?: { name: string, frames: any[] }, done: boolean}) => void) => {
     const makeSet = (resolve: (result: localResult) => void) => {
-                if (resolve) {
+        if (resolve) {
             // console.log('makeSet', pending.map(p => p.ts));
             const nextPends = pending.every(pend => pend.pkt) ? pending : null;
             const final = pending.filter(pend => true === pend.final);
@@ -50,7 +50,7 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
         }
     };
 
-    const pushPkt = async (pkt: null | Frame, streamIndex: number, ts: number): Promise<localFrame> =>
+    const pushPkt = async (pkt: Frame, streamIndex: number, ts: number): Promise<localFrame> =>
         new Promise(resolve => {
             Object.assign(pending[streamIndex], { pkt, ts, final: pkt ? false : true, resolve });
             makeSet(resolveGet);
@@ -78,15 +78,15 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
         },
     }) as parallelBalancerType;
 
-    readStream.pushPkts = (packets: DecodedFrames, stream: Stream, streamIndex: number, final = false): Promise<localFrame> => {
+    readStream.pushPkts = async (packets: DecodedFrames, stream: Stream, streamIndex: number, final = false): Promise<localFrame> => {
         if (packets && packets.frames.length) {
-            // @ts-ignore
-            return packets.frames.reduce(async (promise, pkt: Frame) => {
-                await promise;
+            let lst: localFrame = {} as localFrame;
+            for (const pkt of packets.frames) {
                 const ts = pkt.pts * stream.time_base[0] / stream.time_base[1];
                 pkt.timings = packets.timings;
-                return pushPkt(pkt, streamIndex, ts);
-            }, Promise.resolve());
+                lst = await pushPkt(pkt, streamIndex, ts);
+            }
+            return lst;
         } else if (final) {
             return pushPkt(null, streamIndex, Number.MAX_VALUE);
         }
