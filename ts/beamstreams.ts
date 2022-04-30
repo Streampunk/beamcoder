@@ -81,7 +81,7 @@ class frameDicer {
       dstFrm.pkt_duration = dstNumSamples;
 
       while (curStart + dstFrmBytes - lastBuf[0].length <= srcFrm.nb_samples * sampleBytes) {
-        const resFrm = beamcoder.frame((dstFrm as any as Stream).toJSON());
+        const resFrm = beamcoder.frame(dstFrm.toJSON());
         resFrm.data = lastBuf.map((d, i) =>
           Buffer.concat([
             d, srcFrm.data[i].slice(curStart, curStart + dstFrmBytes - d.length)],
@@ -156,7 +156,7 @@ function transformStream<T extends Timable, D extends Timable>(
     flush(cb) {
       (async () => {
         const result = flushFn ? await flushFn() : null;
-        if (result) (result as any).timings = {};
+        if (result) result.timings = {};
         cb(null, result);
       })().catch(cb);
     }
@@ -316,7 +316,7 @@ export async function makeSources(params: BeamstreamParams): Promise<void> {
       src.input_stream.pipe(demuxerStream);
       src.format = demuxerStream.demuxer({ iformat: src.iformat, options: src.options });
     } else
-      src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options as any }); // FIXME
+      src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options});
   }));
   params.audio.forEach(p => p.sources.forEach((src: BeamstreamSource) => {
     if (src.input_stream) {
@@ -324,12 +324,12 @@ export async function makeSources(params: BeamstreamParams): Promise<void> {
       src.input_stream.pipe(demuxerStream);
       src.format = demuxerStream.demuxer({ iformat: src.iformat, options: src.options });
     } else
-      src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options as any }); // FIXME
+      src.format = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options});
   }));
 
-  await (params.video.reduce)(async (promise: Promise<any>, p: BeamstreamChannel) => {
+  await (params.video.reduce)(async (promise: Promise<void>, p: BeamstreamChannel) => {
     await promise;
-    return p.sources.reduce(async (promise: Promise<any>, src: BeamstreamSource) => {
+    return p.sources.reduce(async (promise: Promise<Demuxer | void>, src: BeamstreamSource) => {
       await promise;
       src.format = await src.format;
       if (src.ms && !src.input_stream)
@@ -338,9 +338,9 @@ export async function makeSources(params: BeamstreamParams): Promise<void> {
     }, Promise.resolve());
   }, Promise.resolve());
 
-  await (params.audio.reduce as any)(async (promise: Promise<any>, p: BeamstreamChannel) => {
+  await params.audio.reduce(async (promise: Promise<void>, p: BeamstreamChannel) => {
     await promise;
-    return p.sources.reduce(async (promise: Promise<any>, src: BeamstreamSource) => {
+    return p.sources.reduce(async (promise: Promise<Demuxer | void>, src: BeamstreamSource) => {
       await promise;
       src.format = await src.format;
       if (src.ms && !src.input_stream)
@@ -362,7 +362,7 @@ function runStreams(
   filterer: { cb?: (result: any) => void, filter: (stream: Array<any>) => any, graph: FilterGraph }, // Filterer?
   streams: Array<BeamstreamStream>,
   mux: { writeFrame: (pkts: any) => void },
-  muxBalancer: serialBalancer) {
+  muxBalancer: serialBalancer): Promise<void> {
   // serialBalancer // { writePkts: (packets: {timings: any; }, srcStream: {}, dstStream: {}, writeFn: {}, final?: boolean) => any }
   return new Promise<void>((resolve, reject) => {
     if (!sources.length)
@@ -554,7 +554,7 @@ export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Pr
       await mux.writeHeader({ options: params.out.options ? params.out.options : {} });
 
       const muxBalancer = new serialBalancer(mux.streams.length);
-      const muxStreamPromises: Promise<any>[] = [];
+      const muxStreamPromises: Promise<void>[] = [];
       params.video.forEach(p => muxStreamPromises.push(runStreams('video', p.sources, p.filter as Filterer, p.streams, mux, muxBalancer)));
       params.audio.forEach(p => muxStreamPromises.push(runStreams('audio', p.sources, p.filter as Filterer, p.streams, mux, muxBalancer)));
       await Promise.all(muxStreamPromises);

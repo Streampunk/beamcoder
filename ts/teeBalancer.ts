@@ -30,7 +30,7 @@ export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number 
     });
   };
 
-  const readStreams: teeBalancerType = [] as any as teeBalancerType;
+  const readStreams: teeBalancerType = [] as teeBalancerType;
   for (let s = 0; s < numStreams; ++s)
     readStreams.push(new Readable({
       objectMode: true,

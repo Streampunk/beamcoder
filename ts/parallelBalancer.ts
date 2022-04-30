@@ -36,7 +36,7 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
                             name: `in${pend.streamIndex}:${tag}`,
                             frames: [pend.pkt]
                         };
-                    }), // as any[] & Timable,
+                    }),
                     done: false
                 });
                 resolveGet = null;
