@@ -19,8 +19,8 @@ export class serialBalancer {
     };
   
   
-    pullPkts(pkt: null | Packet, streamIndex: number, ts: number): Promise<void> {
-      return new Promise<void>(resolve => {
+    pullPkts(pkt: void | Packet, streamIndex: number, ts: number): Promise<void | Packet> {
+      return new Promise<void | Packet>(resolve => {
         Object.assign(this.pending[streamIndex], { pkt, ts, resolve });
         const minTS = this.pending.reduce((acc, pend) => Math.min(acc, pend.ts), Number.MAX_VALUE);
         // console.log(streamIndex, pending.map(p => p.ts), minTS);
@@ -31,21 +31,24 @@ export class serialBalancer {
       });
     };
   
-    writePkts(packets: EncodedPackets | null,
+    async writePkts(
+      packets: EncodedPackets | null,
       srcStream: { time_base: [number, number] },
       dstStream: {
         time_base: [number, number],
         index: number
       },
-      writeFn: (r: void) => void, final = false) {
+      writeFn: (r: void | Packet) => void,
+      final = false
+    ): Promise<void | Packet> {
       if (packets && packets.packets.length) {
-        return packets.packets.reduce(async (promise, pkt) => {
-          await promise;
+        for (const pkt of packets.packets) {
           pkt.stream_index = dstStream.index;
           this.adjustTS(pkt, srcStream.time_base, dstStream.time_base);
           const pktTS = pkt.pts * dstStream.time_base[0] / dstStream.time_base[1];
-          return writeFn(await this.pullPkts(pkt, dstStream.index, pktTS));
-        }, Promise.resolve());
+          const packet = await this.pullPkts(pkt, dstStream.index, pktTS)
+          writeFn(packet);
+        }
       } else if (final)
         return this.pullPkts(null, dstStream.index, Number.MAX_VALUE);
     };
