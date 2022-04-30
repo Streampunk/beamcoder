@@ -1,10 +1,11 @@
 import { Readable } from "stream";
 import { Frame } from "./types/Frame";
+import { Timables } from "./types/Timable";
 import { Timing } from "./types/Timing";
 
 type BalanceResult = { value: { timings: Timing }, done: boolean, final?: boolean };
 
-type teeBalancerType = Readable[] & { pushFrames: (frames: Frame[] & {timings: Timing}, unusedFlag?: boolean) => any };
+type teeBalancerType = Readable[] & { pushFrames: (frames: Timables<Frame>, unusedFlag?: boolean) => any };
 
 export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number }, numStreams: number): teeBalancerType {
   let resolvePush: null | ((result?: BalanceResult) => void) = null;
@@ -43,7 +44,6 @@ export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number 
           if (result.done)
             this.push(null);
           else {
-            // @ts-ignore
             result.value.timings[params.name] = { reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
             this.push(result.value);
           }
@@ -64,7 +64,6 @@ export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number 
       pending.forEach(p => {
         if (p.resolve) {
           if (p.frames) {
-            // @ts-ignore
             p.frames.timings = frames.timings;
             p.resolve({ value: p.frames, done: false });
           } else if (p.final)

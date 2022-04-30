@@ -94,7 +94,8 @@ export interface BeamstreamSource {
 	streamIndex: number
 	iformat?: InputFormat
 	options?: { [key: string]: any }
-	format?: Demuxer | Promise<Demuxer>;
+	formatP?: Promise<Demuxer>;
+	format?: Demuxer;
 	stream?: any; // FIXME
 	decoder?: Decoder; // FIXME
 }
@@ -110,10 +111,11 @@ export interface BeamstreamStream {
 }
 /** Definition for a channel of beamstream processing */
 export interface BeamstreamChannel {
-	sources: Array<BeamstreamSource>
-	filterSpec: string
-	streams: Array<BeamstreamStream>
-	filter?: Filterer | Promise<Filterer>;
+	sources: Array<BeamstreamSource>;
+	filterSpec: string;
+	streams: Array<BeamstreamStream>;
+	filterP?: Promise<Filterer>;
+	filter?: Filterer;
 }
 /**
  * Definition for a beamstream process consisting of a number of audio and video sources
