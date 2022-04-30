@@ -69,8 +69,9 @@ export function parallelBalancer(params: { name: string, highWaterMark: number }
                 if (result.done)
                     this.push(null);
                 else {
-                    result.value.timings = result.value[0].frames[0].timings;
-                    result.value.timings[params.name] = { reqTime: reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
+                    const value = result.value;
+                    value.timings = value[0].frames[0].timings;
+                    value.timings[params.name] = { reqTime: reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
                     this.push(result.value);
                 }
             })();

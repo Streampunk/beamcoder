@@ -23,14 +23,14 @@ import beamcoder from '../ts/index';
 import { getMedia } from './common';
 
 async function run() {
-  const urls = [ `file:${getMedia('sound/Countdown.wav')}` ];
+  const url = `file:${getMedia('sound/Countdown.wav')}`;
   const spec = { start: 50, end: 58 };
   const params = {
     video: [],
     audio: [
       {
         sources: [
-          { url: urls[0], ms: spec, streamIndex: 0 }
+          { url, ms: spec, streamIndex: 0 }
         ],
         filterSpec: '[in0:a] \
                      volume=precision=float:volume=0.8 \

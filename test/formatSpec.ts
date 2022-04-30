@@ -22,7 +22,7 @@
 import test from 'tape';
 import beamcoder, { FormatContext } from '..';
 
-const isExternal = o => (Object as any).toString(o).indexOf('native code') >= 0;
+const isExternal = (o: any) => (Object as any).toString(o).indexOf('native code') >= 0;
 //const isExternal = o => Object.toString.apply(o).indexOf('native code') >= 0;
 // Object.toString.apply(Object)
 
@@ -41,7 +41,10 @@ test('Creating a format', t => {
   t.end();
 });
 
-const stripNewStream = ({ newStream, ...others }) => ({ ...others }); // eslint-disable-line no-unused-vars
+const stripNewStream = (ctxt: FormatContext) => {
+  const { newStream, ...others } = ctxt;
+  return { ...others }
+};
 
 test('Minimal JSON serialization', t => {
   let fmt: FormatContext = beamcoder.format();
