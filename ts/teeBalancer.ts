@@ -3,9 +3,9 @@ import { Frame } from "./types/Frame";
 import { Timables } from "./types/Timable";
 import { Timing } from "./types/Timing";
 
-type BalanceResult = { value: { timings: Timing }, done: boolean, final?: boolean };
+export type BalanceResult = { value: { timings: Timing }, done: boolean, final?: boolean };
 
-type teeBalancerType = Readable[] & { pushFrames: (frames: Timables<Frame>, unusedFlag?: boolean) => any };
+type teeBalancerType = Readable[] & { pushFrames: (frames: Timables<Frame>, unusedFlag?: boolean) => Promise<BalanceResult | void> };
 
 export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number }, numStreams: number): teeBalancerType {
   let resolvePush: null | ((result?: BalanceResult) => void) = null;
@@ -51,8 +51,8 @@ export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number 
       },
     }));
 
-  readStreams.pushFrames = frames => {
-    return new Promise<BalanceResult | undefined>(resolve => {
+  readStreams.pushFrames = (frames): Promise<BalanceResult | void> => {
+    return new Promise<BalanceResult | void>(resolve => {
       pending.forEach((p, index) => {
         if (frames.length)
             // @ts-ignore

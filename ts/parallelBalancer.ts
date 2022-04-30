@@ -5,7 +5,7 @@ import { Stream } from "./types/Stream";
 import { Timable, Timables } from "./types/Timable";
 
 
-type localFrame = { pkt?: Frame, ts: number, streamIndex: number, final?: boolean, resolve?: () => void };
+export type localFrame = { pkt?: Frame, ts: number, streamIndex: number, final?: boolean, resolve?: () => void };
 type localResult = { done: boolean, value?: { name: string, frames: Timables<Frame> }[] & Timable };
 
 

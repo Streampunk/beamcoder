@@ -2,13 +2,13 @@ import { EncodedPackets } from "./types/Encoder";
 import { Packet } from "./types/Packet";
 
 export class serialBalancer {
-    pending = [] as { ts: number, streamIndex: number, resolve?: (result: any) => void, pkt?: Packet }[];
+    pending = [] as { ts: number, streamIndex: number, resolve?: (result: any) => void, pkt: Packet | null }[];
   
     constructor(numStreams: number) {
       // initialise with negative ts and no pkt
       // - there should be no output until each stream has sent its first packet
-      for (let s = 0; s < numStreams; ++s)
-        this.pending.push({ ts: -Number.MAX_VALUE, streamIndex: s });
+      for (let streamIndex = 0; streamIndex < numStreams; ++streamIndex)
+        this.pending.push({ ts: -Number.MAX_VALUE, streamIndex, pkt: null });
     }
   
     adjustTS(pkt: { pts: number, dts: number, duration: number }, srcTB: [number, number], dstTB: [number, number]): void {
@@ -18,14 +18,16 @@ export class serialBalancer {
       pkt.duration > 0 ? Math.round(pkt.duration * adj) : Math.round(adj);
     };
   
-  
-    pullPkts(pkt: void | Packet, streamIndex: number, ts: number): Promise<void | Packet> {
+    pullPkts(pkt: null | Packet, streamIndex: number, ts: number): Promise<void | Packet> {
       return new Promise<void | Packet>(resolve => {
-        Object.assign(this.pending[streamIndex], { pkt, ts, resolve });
+        const pending = this.pending[streamIndex];
+        pending.pkt = pkt;
+        pending.ts = ts;
+        pending.resolve = resolve;
+        // TODO loop only once
         const minTS = this.pending.reduce((acc, pend) => Math.min(acc, pend.ts), Number.MAX_VALUE);
         // console.log(streamIndex, pending.map(p => p.ts), minTS);
         const nextPend = this.pending.find(pend => pend.pkt && (pend.ts === minTS));
-        // @ts-ignore
         if (nextPend) nextPend.resolve(nextPend.pkt);
         if (!pkt) resolve();
       });
