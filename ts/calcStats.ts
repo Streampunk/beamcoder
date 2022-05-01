@@ -19,8 +19,17 @@
   https://www.streampunk.media/ mailto:furnace@streampunk.media
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
-import bindings from 'bindings';
-import { BeamcoderType } from './types/BeamcoderType';
+import type { ffStats } from './types';
 
-const beamcoder = bindings('beamcoder') as BeamcoderType;
-export default beamcoder;
+export default function calcStats<K extends string, P extends string>(arr: Array<{ [key in K]: { [prop in P]: number } }>, elem: K, prop: P): ffStats {
+    const values: number[] = arr.filter(cur => cur[elem]).map(cur => cur[elem][prop]);
+    const mean: number = values.reduce((acc, cur) => acc + cur, 0) / arr.length;
+    const max: number = Math.max(...values)
+    const min: number = Math.min(...values)
+    // standard deviation
+    const sumDelta: number = values.reduce((acc, cur) => acc + Math.pow(cur - mean, 2), 0);
+    const stdDev: number = Math.pow(sumDelta / arr.length, 0.5);
+    return { mean, stdDev, max, min };
+  };
+  
+  

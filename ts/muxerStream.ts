@@ -2,7 +2,7 @@
   Aerostat Beam Coder - Node.js native bindings to FFmpeg
   Copyright (C) 2019 Streampunk Media Ltd.
   Copyright (C) 2022 Chemouni Uriel.
-  
+
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
@@ -19,8 +19,20 @@
   https://www.streampunk.media/ mailto:furnace@streampunk.media
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
-import bindings from 'bindings';
-import { BeamcoderType } from './types/BeamcoderType';
+import { ReadableMuxerStream } from './types/Beamstreams';
+import beamcoder from './beamcoder'
+import createBeamReadableStream from './createBeamReadableStream';
 
-const beamcoder = bindings('beamcoder') as BeamcoderType;
-export default beamcoder;
+export default function muxerStream(params: { highwaterMark: number }): ReadableMuxerStream {
+    const governor = new beamcoder.governor({ highWaterMark: 1 });
+    const stream = createBeamReadableStream(params, governor) as ReadableMuxerStream;
+    stream.on('end', () => governor.finish());
+    stream.on('error', console.error);
+    stream.muxer = (options) => {
+      options = options || {};
+      options.governor = governor;
+      return beamcoder.muxer(options);
+    };
+    return stream;
+  }
+  

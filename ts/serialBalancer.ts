@@ -1,3 +1,24 @@
+/*
+  Aerostat Beam Coder - Node.js native bindings to FFmpeg
+  Copyright (C) 2019 Streampunk Media Ltd.
+  Copyright (C) 2022 Chemouni Uriel.
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+  https://www.streampunk.media/ mailto:furnace@streampunk.media
+  14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
+*/
 import { EncodedPackets } from "./types/Encoder";
 import { Packet } from "./types/Packet";
 
@@ -40,7 +61,7 @@ export class serialBalancer {
         time_base: [number, number],
         index: number
       },
-      writeFn: (r: void | Packet) => void,
+      writeFn: (r: Packet) => void,
       final = false
     ): Promise<void | Packet> {
       if (packets && packets.packets.length) {
@@ -49,7 +70,7 @@ export class serialBalancer {
           this.adjustTS(pkt, srcStream.time_base, dstStream.time_base);
           const pktTS = pkt.pts * dstStream.time_base[0] / dstStream.time_base[1];
           const packet = await this.pullPkts(pkt, dstStream.index, pktTS)
-          writeFn(packet);
+          writeFn(packet as Packet);
         }
       } else if (final)
         return this.pullPkts(null, dstStream.index, Number.MAX_VALUE);

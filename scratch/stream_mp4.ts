@@ -19,6 +19,7 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
+import path from 'path';
 import beamcoder from '../ts/index';
 import { getMedia } from './common';
 
@@ -71,6 +72,7 @@ async function run() {
   const beamStreams = await beamcoder.makeStreams(params);
 
   await beamStreams.run();
+  console.log('output result to ', path.resolve('temp.mp4'));
 }
 
 console.log('Running mp4 maker');
