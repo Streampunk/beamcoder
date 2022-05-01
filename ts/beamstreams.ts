@@ -73,9 +73,9 @@ function transformStream<SRC extends Timable, DST extends Timable>(
   }).on('error', err => reject(err));
 }
 
-function calcStats<K extends string, P extends string>(arr: Array<{[key in K]: {[prop in P]: number}}>, elem: K, prop: P): ffStats {
+function calcStats<K extends string, P extends string>(arr: Array<{ [key in K]: { [prop in P]: number } }>, elem: K, prop: P): ffStats {
   const values: number[] = arr.filter(cur => cur[elem]).map(cur => cur[elem][prop]);
-  const mean: number = values.reduce((acc, cur) => acc + cur, 0) / arr.length;  
+  const mean: number = values.reduce((acc, cur) => acc + cur, 0) / arr.length;
   const max: number = Math.max(...values)
   const min: number = Math.min(...values)
   // standard deviation
@@ -294,7 +294,7 @@ function runStreams(
     });
 
     const streamTee = teeBalancer({ name: 'streamTee', highWaterMark: 1 }, streams.length);
-    
+
     const filtStream = transformStream<Timables<DecodedFrames>, Timable & Promise<Array<FiltererResult> & TotalTimeed>>({ name: 'filter', highWaterMark: 1 }, (frms: Timables<DecodedFrames>) => {
       if (filterer.cb) filterer.cb(frms[0].frames[0].pts);
       return filterer.filter(frms);
@@ -349,6 +349,8 @@ export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Pr
       src.decoder = beamcoder.decoder({ demuxer: src.format, stream_index: src.streamIndex }));
   });
 
+  const promises: Promise<Filterer>[] = [];
+
   params.video.forEach((channel: BeamstreamChannel) => {
     const inputParams = channel.sources.map((src, i) => {
       const { codecpar, time_base, sample_aspect_ratio } = src.format.streams[src.streamIndex];
@@ -362,20 +364,14 @@ export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Pr
       };
     });
 
-    channel.filterP = beamcoder.filterer({
-      // FiltererVideoOptions
+    const p = beamcoder.filterer({
       filterType: 'video',
       inputParams,
       outputParams: channel.streams.map((str: BeamstreamStream, i: number) => ({ name: `out${i}:v`, pixelFormat: str.codecpar.format })),
       filterSpec: channel.filterSpec
-    });
+    }).then(filter => channel.filter = filter);
+    promises.push(p);
   });
-  const vidFilts = await Promise.all(params.video.map(p => p.filterP));
-
-  console.log(vidFilts);
-
-  params.video.forEach((channel: BeamstreamChannel, i: number) => channel.filter = vidFilts[i]);
-  // params.video.forEach(p => console.log(p.filter.graph.dump()));
 
   params.audio.forEach((channel: BeamstreamChannel) => {
     const inputParams = channel.sources.map((src: BeamstreamSource, i: number) => {
@@ -397,10 +393,13 @@ export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Pr
         channelLayout: channel_layout
       };
     });
-    channel.filterP = beamcoder.filterer({ filterType: 'audio', inputParams, outputParams, filterSpec: channel.filterSpec });
+    const p = beamcoder.filterer({ filterType: 'audio', inputParams, outputParams, filterSpec: channel.filterSpec })
+    .then(filter => channel.filter = filter);
+    promises.push(p);
   });
-  const audFilts = await Promise.all(params.audio.map((p: BeamstreamChannel) => p.filterP));
-  params.audio.forEach((channel: BeamstreamChannel, i: number) => channel.filter = audFilts[i]);
+  await Promise.all(promises);
+
+  // params.video.forEach(p => console.log(p.filter.graph.dump()));
   // params.audio.forEach(p => console.log(p.filter.graph.dump()));
 
   let mux: Muxer;

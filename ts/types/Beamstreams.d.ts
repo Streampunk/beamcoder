@@ -114,7 +114,6 @@ export interface BeamstreamChannel {
 	sources: Array<BeamstreamSource>;
 	filterSpec: string;
 	streams: Array<BeamstreamStream>;
-	filterP?: Promise<Filterer>;
 	filter?: Filterer;
 }
 /**
