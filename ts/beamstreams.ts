@@ -18,13 +18,11 @@
   https://www.streampunk.media/ mailto:furnace@streampunk.media
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
-import bindings from 'bindings';
 import { Writable, Readable, Transform } from 'stream';
 import type { ffStats } from './types';
 import { BalanceResult, teeBalancer } from './teeBalancer';
 import { localFrame, parallelBalancer } from './parallelBalancer';
 import { serialBalancer } from './serialBalancer';
-import { BeamcoderType } from './types/BeamcoderType';
 import { Demuxer } from './types/Demuxer';
 import { Muxer } from './types/Muxer';
 import { Stream } from './types/Stream';
@@ -35,112 +33,26 @@ import { Packet } from './types/Packet';
 import { Timing } from './types/Timing';
 import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, BeamstreamStream, ReadableMuxerStream, WritableDemuxerStream } from './types/Beamstreams';
 import { FilterGraph, FilterLink } from './types/Filter';
-import { CodecContextBaseMin } from './types/CodecContext';
 import { Timable, Timables } from './types/Timable'
 import { EncodedPackets } from './types/Encoder';
 
-const beamcoder = bindings('beamcoder') as BeamcoderType;
+import beamcoder from './beamcoder'
+import frameDicer from './frameDicer';
 
 const doTimings = false;
 const timings = [] as Array<{ [key: string]: Timing }>;
 
-class frameDicer {
-
-  private addFrame: (srcFrm: Frame) => Frame[];
-  private getLast: () => Frame[];
-  private doDice: boolean;
-  // CodecPar
-  constructor(encoder: CodecContextBaseMin, private isAudio: boolean) {
-    let sampleBytes = 4; // Assume floating point 4 byte samples for now...
-    const numChannels = encoder.channels;
-    const dstNumSamples = encoder.frame_size;
-    let dstFrmBytes = dstNumSamples * sampleBytes;
-    this.doDice = false === beamcoder.encoders()[encoder.name].capabilities.VARIABLE_FRAME_SIZE;
-
-    let lastFrm: Frame = null as Frame;
-    let lastBuf: Buffer[] = [];
-    const nullBuf: Buffer[] = [];
-    for (let b = 0; b < numChannels; ++b)
-      nullBuf.push(Buffer.alloc(0));
-
-    this.addFrame = (srcFrm: Frame): Frame[] => {
-      let result: Frame[] = [];
-      let dstFrm: Frame;
-      let curStart = 0;
-      if (!lastFrm) {
-        lastFrm = beamcoder.frame(srcFrm.toJSON()) as Frame;
-        lastBuf = nullBuf;
-        dstFrmBytes = dstNumSamples * sampleBytes;
-      }
-
-      if (lastBuf[0].length > 0)
-        dstFrm = beamcoder.frame(lastFrm.toJSON());
-      else
-        dstFrm = beamcoder.frame(srcFrm.toJSON());
-      dstFrm.nb_samples = dstNumSamples;
-      dstFrm.pkt_duration = dstNumSamples;
-
-      while (curStart + dstFrmBytes - lastBuf[0].length <= srcFrm.nb_samples * sampleBytes) {
-        const resFrm = beamcoder.frame(dstFrm.toJSON());
-        resFrm.data = lastBuf.map((d, i) =>
-          Buffer.concat([
-            d, srcFrm.data[i].slice(curStart, curStart + dstFrmBytes - d.length)],
-            dstFrmBytes));
-        result.push(resFrm);
-
-        dstFrm.pts += dstNumSamples;
-        dstFrm.pkt_dts += dstNumSamples;
-        curStart += dstFrmBytes - lastBuf[0].length;
-        lastFrm.pts = 0;
-        lastFrm.pkt_dts = 0;
-        lastBuf = nullBuf;
-      }
-
-      lastFrm.pts = dstFrm.pts;
-      lastFrm.pkt_dts = dstFrm.pkt_dts;
-      lastBuf = srcFrm.data.map(d => d.slice(curStart, srcFrm.nb_samples * sampleBytes));
-
-      return result;
-    };
-
-    this.getLast = (): Frame[] => {
-      let result: Frame[] = [];
-      if (lastBuf[0].length > 0) {
-        const resFrm = beamcoder.frame(lastFrm.toJSON());
-        resFrm.data = lastBuf.map(d => d.slice(0));
-        resFrm.nb_samples = lastBuf[0].length / sampleBytes;
-        resFrm.pkt_duration = resFrm.nb_samples;
-        lastFrm.pts = 0;
-        lastBuf = nullBuf;
-        result.push(resFrm);
-      }
-      return result;
-    };
-  }
-  public dice(frames: Frame[], flush = false): Frame[] {
-    if (this.isAudio && this.doDice) {
-      let result: Frame[] = [];
-      for (const frm of frames)
-        this.addFrame(frm).forEach(f => result.push(f));
-      if (flush)
-        this.getLast().forEach(f => result.push(f));
-      return result;
-    }
-
-    return frames;
-  };
-}
-// T = Frame | Frame[] | Packet
-// D = Promise<DecodedFrames>, DecodedFrames
-function transformStream<T extends Timable, D extends Timable>(
+// SRC = Frame | Frame[] | Packet
+// DST = Promise<DecodedFrames>, DecodedFrames
+function transformStream<SRC extends Timable, DST extends Timable>(
   params: { name: 'encode' | 'dice' | 'decode' | 'filter', highWaterMark: number },
-  processFn: (val: T) => D,
-  flushFn: () => D | null | void,
+  processFn: (val: SRC) => DST,
+  flushFn: () => DST | null | void,
   reject: (err?: Error) => void) {
   return new Transform({
     objectMode: true,
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
-    transform(val: T, encoding, cb) {
+    transform(val: SRC, encoding, cb) {
       (async () => {
         const start = process.hrtime();
         const reqTime = start[0] * 1e3 + start[1] / 1e6;
@@ -162,10 +74,13 @@ function transformStream<T extends Timable, D extends Timable>(
 }
 
 const calcStats = (arr: Array<any>, elem: string, prop: string): ffStats => {
-  const mean: number = arr.reduce((acc, cur) => cur[elem] ? acc + cur[elem][prop] : acc, 0) / arr.length;
-  const stdDev: number = Math.pow(arr.reduce((acc, cur) => cur[elem] ? acc + Math.pow(cur[elem][prop] - mean, 2) : acc, 0) / arr.length, 0.5);
-  const max: number = arr.reduce((acc, cur) => cur[elem] ? Math.max(cur[elem][prop], acc) : acc, 0);
-  const min: number = arr.reduce((acc, cur) => cur[elem] ? Math.min(cur[elem][prop], acc) : acc, Number.MAX_VALUE);
+  const values: number[] = arr.filter(cur => cur[elem]).map(cur => cur[elem][prop]);
+  const mean: number = values.reduce((acc, cur) => acc + cur, 0) / arr.length;  
+  const max: number = Math.max(...values)
+  const min: number = Math.min(...values)
+  // standard deviation
+  const sumDelta: number = values.reduce((acc, cur) => acc + Math.pow(cur - mean, 2), 0);
+  const stdDev: number = Math.pow(sumDelta / arr.length, 0.5);
   return { mean, stdDev, max, min };
 };
 
@@ -274,7 +189,6 @@ export function demuxerStream(params: { highwaterMark?: number }): WritableDemux
   };
   return stream;
 }
-
 
 function createBeamReadableStream(params: { highwaterMark?: number }, governor: Governor): Readable {
   const beamStream = new Readable({
