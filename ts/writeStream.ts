@@ -21,8 +21,7 @@
 */
 import { Writable } from 'stream';
 import type { ffStats } from './types';
-import { Timing } from './types/Timing';
-import { Timable } from './types/Timable'
+import { Timing, Timable } from './types/time';
 
 import calcStats from './calcStats';
 

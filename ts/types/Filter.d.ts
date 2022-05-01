@@ -1,7 +1,6 @@
 import { Frame } from "./Frame"
 import { PrivClass } from "./PrivClass"
-import { Timable } from "./Timable"
-import { TotalTimeed } from "./Timing"
+import { Timable, TotalTimeed } from "./time"
 
 export interface FilterFlags {
 	/**

@@ -3,7 +3,7 @@ import { Packet } from "./Packet";
 import { Frame } from "./Frame";
 import { CodecContextBaseMin } from "./CodecContext"
 import { Timable } from "./Timable";
-import { TotalTimeed } from "./Timing";
+import { TotalTimeed } from "./time";
 
 /** The EncodedPackets object is returned as the result of a encode operation */
 export interface EncodedPackets extends Timable, TotalTimeed {

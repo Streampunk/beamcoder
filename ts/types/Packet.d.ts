@@ -9,7 +9,7 @@
  * (e.g. to update some stream parameters at the end of encoding).
  */
 
-import { Timable } from "./Timable"
+import { Timable } from "./time"
 
 export interface PacketFlags {
 	/** The packet contains a keyframe */

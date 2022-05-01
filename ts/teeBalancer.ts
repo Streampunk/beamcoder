@@ -21,8 +21,7 @@
 */
 import { Readable } from "stream";
 import { Frame } from "./types/Frame";
-import { Timable, Timables } from "./types/Timable";
-import { Timing, TotalTimeed } from "./types/Timing";
+import { Timable, Timables, Timing, TotalTimeed } from "./types/time";
 
 export type BalanceResult = { value: { timings: Timing }, done: boolean, final?: boolean };
 

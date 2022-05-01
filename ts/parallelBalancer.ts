@@ -23,7 +23,7 @@ import { Readable } from "stream";
 import { DecodedFrames } from "./types/DecodedFrames";
 import { Frame } from './types/Frame';
 import { Stream } from "./types/Stream";
-import { Timable, Timables } from "./types/Timable";
+import { Timable, Timables } from "./types/time";
 
 export type localFrame = { pkt?: Frame, ts: number, streamIndex: number, final?: boolean, resolve?: () => void };
 type localResult = { done: boolean, value?: { name: string, frames: Timables<Frame> }[] & Timable };

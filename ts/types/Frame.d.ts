@@ -1,5 +1,5 @@
 import { HWFramesContext } from "./HWContext";
-import { Timable } from "./Timable";
+import { Timable } from "./time";
 
 /**
  * This object describes decoded (raw) audio or video data.

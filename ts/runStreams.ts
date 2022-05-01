@@ -26,10 +26,10 @@ import { Stream } from './types/Stream';
 import { DecodedFrames } from './types/DecodedFrames';
 import { Frame } from './types/Frame';
 import { Packet } from './types/Packet';
-import { TotalTimeed } from './types/Timing';
+import { TotalTimeed } from './types/time';
 import { BeamstreamSource, BeamstreamStream } from './types/Beamstreams';
 import { Filterer, FiltererResult } from './types/Filter';
-import { Timable, Timables } from './types/Timable'
+import { Timable, Timables } from './types/time'
 import { EncodedPackets } from './types/Encoder';
 
 import frameDicer from './frameDicer';

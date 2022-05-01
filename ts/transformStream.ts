@@ -20,7 +20,7 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 import { Transform } from 'stream';
-import { Timable } from './types/Timable'
+import { Timable } from './types/time'
 
 // SRC = Frame | Frame[] | Packet
 // DST = Promise<DecodedFrames>, DecodedFrames
