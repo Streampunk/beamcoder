@@ -1,5 +1,7 @@
 import { Frame } from "./Frame"
 import { PrivClass } from "./PrivClass"
+import { Timable } from "./Timable"
+import { TotalTimeed } from "./Timing"
 
 export interface FilterFlags {
 	/**
@@ -212,7 +214,7 @@ export interface FiltererResult {
 	readonly frames: Array<Frame>
 }
 
-export interface Filterer {
+export interface Filterer extends Timable {
 	readonly type: 'Filterer'
 	readonly graph: FilterGraph
 
@@ -224,7 +226,7 @@ export interface Filterer {
 	   * @param frames Array of Frame objects to be applied to the single input pad
 	   * @returns Array of objects containing Frame arrays for each output pad of the filter
 	   */
-	filter(frames: Array<Frame>): Promise<Array<FiltererResult> & { total_time: number }>
+	filter(frames: Array<Frame>): Promise<Array<FiltererResult> & TotalTimeed>
 	/**
 	   * Filter an array of frames
 	   * Pass an array of objects, one per filter input, each with a name string property
@@ -233,7 +235,10 @@ export interface Filterer {
 	   * @param framesArr Array of objects with name and Frame array for each input pad
 	   * @returns Array of objects containing Frame arrays for each output pad of the filter
 	 */
-	filter(framesArr: Array<{ name?: string, frames: Array<Frame> }>): Promise<Array<FiltererResult> & { total_time: number }>
+	filter(framesArr: Array<{ name?: string, frames: Array<Frame> }>): Timable & Promise<Array<FiltererResult> & TotalTimeed>
+
+	// may add a callback
+	cb?: (pts: number | null) => void;
 }
 
 

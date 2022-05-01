@@ -1,8 +1,9 @@
 import { Frame } from "./Frame"
 import { Timable } from "./Timable"
+import { TotalTimeed } from "./Timing"
 
 /** The DecodedFrames object is returned as the result of a decode operation */
-export interface DecodedFrames extends Timable {
+export interface DecodedFrames extends Timable, TotalTimeed {
 	/** Object name. */
 	readonly type: 'frames'
 	/** 
@@ -10,8 +11,6 @@ export interface DecodedFrames extends Timable {
 	 * the packet as part of the process of producing future frames
 	   */
 	readonly frames: Array<Frame>
-	/** Total time in microseconds that the decode operation took to complete */
-	readonly total_time: number
 
 	// "encode" | "dice" | "decode" | "filter"
 	// timings?: { [key: string]: Timing; };

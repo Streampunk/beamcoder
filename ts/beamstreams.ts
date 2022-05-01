@@ -30,9 +30,9 @@ import { DecodedFrames } from './types/DecodedFrames';
 import type { Governor } from './types/Governor';
 import { Frame } from './types/Frame';
 import { Packet } from './types/Packet';
-import { Timing } from './types/Timing';
+import { Timing, TotalTimeed } from './types/Timing';
 import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, BeamstreamStream, ReadableMuxerStream, WritableDemuxerStream } from './types/Beamstreams';
-import { FilterGraph, FilterLink } from './types/Filter';
+import { Filterer, FiltererResult, FilterLink } from './types/Filter';
 import { Timable, Timables } from './types/Timable'
 import { EncodedPackets } from './types/Encoder';
 
@@ -266,7 +266,7 @@ export async function makeSources(params: BeamstreamParams): Promise<void> {
 function runStreams(
   streamType: 'video' | 'audio',
   sources: Array<BeamstreamSource>,
-  filterer: { cb?: (result: number | null) => void, filter: (stream: Array<any>) => any, graph: FilterGraph }, // Filterer?
+  filterer: Filterer,
   streams: Array<BeamstreamStream>,
   mux: { writeFrame: (pkts: void | Packet) => void },
   muxBalancer: serialBalancer): Promise<void> {
@@ -294,7 +294,8 @@ function runStreams(
     });
 
     const streamTee = teeBalancer({ name: 'streamTee', highWaterMark: 1 }, streams.length);
-    const filtStream = transformStream({ name: 'filter', highWaterMark: 1 }, (frms: Timables<DecodedFrames>) => {
+    
+    const filtStream = transformStream<Timables<DecodedFrames>, Timable & Promise<Array<FiltererResult> & TotalTimeed>>({ name: 'filter', highWaterMark: 1 }, (frms: Timables<DecodedFrames>) => {
       if (filterer.cb) filterer.cb(frms[0].frames[0].pts);
       return filterer.filter(frms);
     }, () => { }, reject);
@@ -370,6 +371,9 @@ export async function makeStreams(params: BeamstreamParams): Promise<{ run(): Pr
     });
   });
   const vidFilts = await Promise.all(params.video.map(p => p.filterP));
+
+  console.log(vidFilts);
+
   params.video.forEach((channel: BeamstreamChannel, i: number) => channel.filter = vidFilts[i]);
   // params.video.forEach(p => console.log(p.filter.graph.dump()));
 

@@ -3,9 +3,10 @@ import { Packet } from "./Packet";
 import { Frame } from "./Frame";
 import { CodecContextBaseMin } from "./CodecContext"
 import { Timable } from "./Timable";
+import { TotalTimeed } from "./Timing";
 
 /** The EncodedPackets object is returned as the result of a encode operation */
-export interface EncodedPackets extends Timable {
+export interface EncodedPackets extends Timable, TotalTimeed {
 	/** Object name. */
 	readonly type: 'packets'
   /** 
@@ -13,8 +14,6 @@ export interface EncodedPackets extends Timable {
    * the frame as part of the process of prodfcodec_tagucing future packets
 	 */
 	readonly packets: Array<Packet>
-	/** Total time in microseconds that the encode operation took to complete */
-	readonly total_time: number
 }
 /**
  * Encoder takes a stream of uncompressed data in the form of Frames and converts them into coded Packets.
