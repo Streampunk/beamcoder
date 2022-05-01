@@ -19,7 +19,8 @@
   https://www.streampunk.media/ mailto:furnace@streampunk.media
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
-import { BalanceResult, teeBalancer } from './teeBalancer';
+import teeBalancer from './teeBalancer';
+import { BalanceResult } from './teeBalancer';
 import { localFrame, parallelBalancer } from './parallelBalancer';
 import { serialBalancer } from './serialBalancer';
 import { Stream } from './types/Stream';

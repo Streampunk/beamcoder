@@ -27,7 +27,7 @@ export type BalanceResult = { value: { timings: Timing }, done: boolean, final?:
 
 type teeBalancerType = Readable[] & { pushFrames: (frames: Timables<Frame>, unusedFlag?: boolean) => Promise<BalanceResult | void> };
 
-export function teeBalancer(params: { name: 'streamTee', highWaterMark?: number }, numStreams: number): teeBalancerType {
+export default function teeBalancer(params: { name: 'streamTee', highWaterMark?: number }, numStreams: number): teeBalancerType {
   let resolvePush: null | ((result?: BalanceResult) => void) = null;
   const pending: Array<{ frames: null | Frame, resolve: null | ((result: { value?: Frame, done: boolean }) => void), final: boolean }> = [];
   for (let s = 0; s < numStreams; ++s)
