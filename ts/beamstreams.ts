@@ -73,7 +73,7 @@ function transformStream<SRC extends Timable, DST extends Timable>(
   }).on('error', err => reject(err));
 }
 
-const calcStats = (arr: Array<any>, elem: string, prop: string): ffStats => {
+function calcStats<K extends string, P extends string>(arr: Array<{[key in K]: {[prop in P]: number}}>, elem: K, prop: P): ffStats {
   const values: number[] = arr.filter(cur => cur[elem]).map(cur => cur[elem][prop]);
   const mean: number = values.reduce((acc, cur) => acc + cur, 0) / arr.length;  
   const max: number = Math.max(...values)
@@ -107,7 +107,7 @@ function writeStream<T extends Timable, R>(params: { name: string, highWaterMark
         const result = finalFn ? await finalFn() : null;
         if (doTimings && ('mux' === params.name)) {
           const elapsedStats = {} as { [key: string]: ffStats };
-          Object.keys(timings[0]).forEach(k => elapsedStats[k] = calcStats(timings.slice(10, -10), k, 'elapsed'));
+          Object.keys(timings[0]).forEach(k => elapsedStats[k] = calcStats<typeof k, 'elapsed'>(timings.slice(10, -10), k, 'elapsed'));
           console.log('elapsed:');
           console.table(elapsedStats);
 
@@ -118,7 +118,7 @@ function writeStream<T extends Timable, R>(params: { name: string, highWaterMark
             return absDelays;
           });
           const absStats = {} as { [key: string]: ffStats };
-          Object.keys(absArr[0]).forEach(k => absStats[k] = calcStats(absArr.slice(10, -10), k, 'reqDelta'));
+          Object.keys(absArr[0]).forEach(k => absStats[k] = calcStats<typeof k, 'reqDelta'>(absArr.slice(10, -10), k, 'reqDelta'));
           console.log('request time delta:');
           console.table(absStats);
 
@@ -127,7 +127,7 @@ function writeStream<T extends Timable, R>(params: { name: string, highWaterMark
             return { total: { total: total } };
           });
           console.log('total time:');
-          console.table(calcStats(totalsArr.slice(10, -10), 'total', 'total'));
+          console.table(calcStats<'total', 'total'>(totalsArr.slice(10, -10), 'total', 'total'));
         }
         cb(null, result);
       })().catch(cb);
@@ -265,13 +265,11 @@ export async function makeSources(params: BeamstreamParams): Promise<void> {
 
 function runStreams(
   streamType: 'video' | 'audio',
-  // sources: Array<{ decoder: { decode: (pkts: any) => any, flush: () => any }, format: { streams: Array<{}> }, streamIndex: any, stream: any }>, 
   sources: Array<BeamstreamSource>,
   filterer: { cb?: (result: number | null) => void, filter: (stream: Array<any>) => any, graph: FilterGraph }, // Filterer?
   streams: Array<BeamstreamStream>,
   mux: { writeFrame: (pkts: void | Packet) => void },
   muxBalancer: serialBalancer): Promise<void> {
-  // serialBalancer // { writePkts: (packets: {timings: any; }, srcStream: {}, dstStream: {}, writeFn: {}, final?: boolean) => any }
   return new Promise<void>((resolve, reject) => {
     if (!sources.length)
       return resolve();
@@ -280,7 +278,7 @@ function runStreams(
     const filterBalancer = parallelBalancer({ name: 'filterBalance', highWaterMark: 1 }, streamType, sources.length);
 
     sources.forEach((src: BeamstreamSource, srcIndex: number) => {
-      const decStream = transformStream<Packet, Promise<DecodedFrames> & Timable>(
+      const decStream = transformStream<Packet, Timable & Promise<DecodedFrames>>(
         { name: 'decode', highWaterMark: 1 },
         (pkts: Packet) => src.decoder.decode(pkts),
         () => src.decoder.flush(), reject);
@@ -312,17 +310,26 @@ function runStreams(
     streams.forEach((str: BeamstreamStream, i: number) => {
       const dicer = new frameDicer(str.encoder, 'audio' === streamType);
 
-      const diceStream = transformStream<Timables<Frame>, Timables<Frame>>({ name: 'dice', highWaterMark: 1 },
-        (frms) => dicer.dice(frms), () => dicer.dice([], true), reject);
+      const diceStream = transformStream<Timables<Frame>, Timables<Frame>>(
+        { name: 'dice', highWaterMark: 1 },
+        (frms) => dicer.dice(frms),
+        () => dicer.dice([], true),
+        reject
+      );
 
-      const encStream = transformStream<Timables<Frame>, any>({ name: 'encode', highWaterMark: 1 },
-        (frms) => str.encoder.encode(frms), () => str.encoder.flush(), reject);
+      const encStream = transformStream<Timables<Frame>, Timable & Promise<EncodedPackets>>(
+        { name: 'encode', highWaterMark: 1 },
+        (frms) => str.encoder.encode(frms),
+        () => str.encoder.flush(),
+        reject
+      );
 
       const muxStream = writeStream<EncodedPackets, void | Packet>(
         { name: 'mux', highWaterMark: 1 },
         (pkts: EncodedPackets) => muxBalancer.writePkts(pkts, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts)),
         () => muxBalancer.writePkts(null, timeBaseStream, str.stream, pkts => mux.writeFrame(pkts), true),
-        reject);
+        reject
+      );
 
       muxStream.on('finish', resolve);
 
