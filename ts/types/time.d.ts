@@ -12,4 +12,9 @@ export interface Timable {
     timings?: { [key: string]: Timing; };
 }
 
+export interface toJSONAble {
+	/** Retun a JSON string containing the object properties. */
+	toJSON(): string
+}
+
 export type Timables<T> = Array<T> & Timable;

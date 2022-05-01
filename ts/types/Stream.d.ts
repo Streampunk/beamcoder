@@ -1,5 +1,6 @@
 import { CodecPar } from "./CodecPar";
 import { Packet } from "./Packet"
+import { toJSONAble } from "./time";
 
 export interface Disposition {
 	DEFAULT?: boolean
@@ -50,7 +51,7 @@ export interface EventFlags {
 /**
  * Stream describes the properties of a stream.
  */
-export interface Stream {
+export interface Stream extends toJSONAble {
   // native code;
   readonly _stream: {};
 	/** Object name. */
@@ -161,7 +162,4 @@ export interface Stream {
    * - muxing: filled by the caller before writeHeader()
    */
   codecpar: CodecPar
-
-  /** Retun a JSON string containing the object properties. */
-  toJSON(): string
 }

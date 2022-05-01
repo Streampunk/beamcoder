@@ -1,7 +1,7 @@
 /**
  * CodecPar describes the properties of an encoded stream.
  */
-export interface CodecPar {
+export interface CodecPar extends toJSONAble {
 	/** Object name. */
 	readonly type: 'CodecParameters'
 
@@ -135,8 +135,5 @@ export interface CodecPar {
 
 	// native code;
 	readonly _codecPar: {};
-
-	/** Retun a JSON string containing the object properties. */
-	toJSON(): string
 }
 

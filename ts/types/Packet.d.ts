@@ -9,7 +9,7 @@
  * (e.g. to update some stream parameters at the end of encoding).
  */
 
-import { Timable } from "./time"
+import { Timable, toJSONAble } from "./time"
 
 export interface PacketFlags {
 	/** The packet contains a keyframe */
@@ -36,12 +36,9 @@ export interface PacketFlags {
 	DISPOSABLE: boolean // Frames that can be discarded by the decoder
 }
 
-export interface Packet extends Timable {
+export interface Packet extends Timable, toJSONAble {
 	/** Object name. */
 	readonly type: 'Packet'
-
-	/** Retun a JSON string containing the object properties. */
-	toJSON(): string
 
 	// internal data
 	readonly _packet: {};

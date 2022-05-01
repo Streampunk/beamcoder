@@ -19,7 +19,7 @@
   https://www.streampunk.media/ mailto:furnace@streampunk.media
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
-import { serialBalancer } from './serialBalancer';
+import serialBalancer from './serialBalancer';
 import { Muxer } from './types/Muxer';
 import { BeamstreamChannel, BeamstreamParams, BeamstreamSource, BeamstreamStream, ReadableMuxerStream, WritableDemuxerStream } from './types/Beamstreams';
 import { Filterer, FilterLink } from './types/Filter';

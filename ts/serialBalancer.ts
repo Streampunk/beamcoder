@@ -22,7 +22,7 @@
 import { EncodedPackets } from "./types/Encoder";
 import { Packet } from "./types/Packet";
 
-export class serialBalancer {
+export default class serialBalancer {
     pending = [] as { ts: number, streamIndex: number, resolve?: (result: any) => void, pkt: Packet | null }[];
   
     constructor(numStreams: number) {

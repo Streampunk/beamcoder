@@ -22,7 +22,7 @@
 import teeBalancer from './teeBalancer';
 import { BalanceResult } from './teeBalancer';
 import { localFrame, parallelBalancer } from './parallelBalancer';
-import { serialBalancer } from './serialBalancer';
+import serialBalancer from './serialBalancer';
 import { Stream } from './types/Stream';
 import { DecodedFrames } from './types/DecodedFrames';
 import { Frame } from './types/Frame';

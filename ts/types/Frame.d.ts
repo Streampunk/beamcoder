@@ -1,10 +1,10 @@
 import { HWFramesContext } from "./HWContext";
-import { Timable } from "./time";
+import { Timable, toJSONAble } from "./time";
 
 /**
  * This object describes decoded (raw) audio or video data.
  */
-export interface Frame extends Timable {
+export interface Frame extends Timable, toJSONAble {
 	/** Object name. */
 	readonly type: 'Frame'
 	/**
@@ -179,8 +179,6 @@ export interface Frame extends Timable {
 
 	// internal
 	readonly _frame: {};
-    /** Retun a JSON string containing the object properties. */
-	toJSON(): string
 }
 
 /** Pixel format description */
