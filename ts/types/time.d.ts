@@ -3,7 +3,7 @@ export interface Timing {
     elapsed: number;
 }
 
-export interface TotalTimeed {
+export interface TotalTimed {
 	/** Total time in microseconds that the decode operation took to complete */
     total_time: number
 }

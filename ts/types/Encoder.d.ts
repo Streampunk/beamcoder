@@ -2,11 +2,10 @@ import { CodecPar } from "./CodecPar"
 import { Packet } from "./Packet";
 import { Frame } from "./Frame";
 import { CodecContextBaseMin } from "./CodecContext"
-import { Timable } from "./Timable";
-import { TotalTimeed } from "./time";
+import { TotalTimed, Timable } from "./time";
 
 /** The EncodedPackets object is returned as the result of a encode operation */
-export interface EncodedPackets extends Timable, TotalTimeed {
+export interface EncodedPackets extends Timable, TotalTimed {
 	/** Object name. */
 	readonly type: 'packets'
   /** 

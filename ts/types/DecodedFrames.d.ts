@@ -1,8 +1,8 @@
 import { Frame } from "./Frame"
-import { Timable, TotalTimeed } from "./time"
+import { Timable, TotalTimed } from "./time"
 
 /** The DecodedFrames object is returned as the result of a decode operation */
-export interface DecodedFrames extends Timable, TotalTimeed {
+export interface DecodedFrames extends Timable, TotalTimed {
 	/** Object name. */
 	readonly type: 'frames'
 	/** 

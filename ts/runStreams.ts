@@ -27,7 +27,7 @@ import { Stream } from './types/Stream';
 import { DecodedFrames } from './types/DecodedFrames';
 import { Frame } from './types/Frame';
 import { Packet } from './types/Packet';
-import { TotalTimeed } from './types/time';
+import { TotalTimed } from './types/time';
 import { BeamstreamSource, BeamstreamStream } from './types/Beamstreams';
 import { Filterer, FiltererResult } from './types/Filter';
 import { Timable, Timables } from './types/time'
@@ -70,7 +70,7 @@ export default function runStreams(
   
       const streamTee = teeBalancer({ name: 'streamTee', highWaterMark: 1 }, streams.length);
   
-      const filtStream = transformStream<Timables<DecodedFrames>, Timable & Promise<Array<FiltererResult> & TotalTimeed>>({ name: 'filter', highWaterMark: 1 }, (frms: Timables<DecodedFrames>) => {
+      const filtStream = transformStream<Timables<DecodedFrames>, Timable & Promise<Array<FiltererResult> & TotalTimed>>({ name: 'filter', highWaterMark: 1 }, (frms: Timables<DecodedFrames>) => {
         if (filterer.cb) filterer.cb(frms[0].frames[0].pts);
         return filterer.filter(frms);
       }, () => { }, reject);

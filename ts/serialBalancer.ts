@@ -21,6 +21,7 @@
 */
 import { EncodedPackets } from "./types/Encoder";
 import { Packet } from "./types/Packet";
+import { Stream } from "./types/Stream";
 
 export default class serialBalancer {
     pending = [] as { ts: number, streamIndex: number, resolve?: (result: any) => void, pkt: Packet | null }[];
@@ -54,14 +55,11 @@ export default class serialBalancer {
       });
     };
   
-    async writePkts(
+    public async writePkts(
       packets: EncodedPackets | null,
-      srcStream: { time_base: [number, number] },
-      dstStream: {
-        time_base: [number, number],
-        index: number
-      },
-      writeFn: (r: Packet) => void,
+      srcStream: Stream,
+      dstStream: Stream,
+      writeFn: (r: Packet) => Promise<void>,
       final = false
     ): Promise<void | Packet> {
       if (packets && packets.packets.length) {
@@ -70,7 +68,7 @@ export default class serialBalancer {
           this.adjustTS(pkt, srcStream.time_base, dstStream.time_base);
           const pktTS = pkt.pts * dstStream.time_base[0] / dstStream.time_base[1];
           const packet = await this.pullPkts(pkt, dstStream.index, pktTS)
-          writeFn(packet as Packet);
+          await writeFn(packet as Packet);
         }
       } else if (final)
         return this.pullPkts(null, dstStream.index, Number.MAX_VALUE);

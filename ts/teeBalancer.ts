@@ -21,7 +21,7 @@
 */
 import { Readable } from "stream";
 import { Frame } from "./types/Frame";
-import { Timable, Timables, Timing, TotalTimeed } from "./types/time";
+import { Timable, Timables, Timing, TotalTimed } from "./types/time";
 
 export type BalanceResult = { value: { timings: Timing }, done: boolean, final?: boolean };
 
@@ -72,7 +72,7 @@ export default function teeBalancer(params: { name: 'streamTee', highWaterMark?:
     }));
 
   // {frames: Frame[], name: string}
-  readStreams.pushFrames = (frames: Array<any> & TotalTimeed & Timable): Promise<BalanceResult | void> => {
+  readStreams.pushFrames = (frames: Array<any> & TotalTimed & Timable): Promise<BalanceResult | void> => {
     return new Promise<BalanceResult | void>(resolve => {
       pending.forEach((p, index) => {
         if (frames.length)
