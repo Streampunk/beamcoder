@@ -1,52 +1,10 @@
 import { Frame } from "./Frame"
 import { PrivClass } from "./PrivClass"
-import { Timable, TotalTimed } from "./time"
-
-export interface FilterFlags {
-	/**
-	 * The number of the filter inputs is not determined just by AVFilter.inputs.
-	 * The filter might add additional inputs during initialization depending on the
-	 * options supplied to it.
-	 */
-	DYNAMIC_INPUTS: boolean
-	/**
-	 * The number of the filter outputs is not determined just by AVFilter.outputs.
-     * The filter might add additional outputs during initialization depending on
-     * the options supplied to it.
-	 */
-	DYNAMIC_OUTPUTS: boolean
-	/**
-	 * The filter supports multithreading by splitting frames into multiple parts and
-	 * processing them concurrently.
-	 */
-	SLICE_THREADS: boolean
-	/**
-	 * Some filters support a generic "enable" expression option that can be used
-     * to enable or disable a filter in the timeline. Filters supporting this
-     * option have this flag set. When the enable expression is false, the default
-     * no-op filter_frame() function is called in place of the filter_frame()
-     * callback defined on each input pad, thus the frame is passed unchanged to
-     * the next filters.
-	 */
-	SUPPORT_TIMELINE_GENERIC: boolean
-	/**
-	 * Same as AVFILTER_FLAG_SUPPORT_TIMELINE_GENERIC, except that the filter will
-     * have its filter_frame() callback(s) called as usual even when the enable
-     * expression is false. The filter will disable filtering within the
-     * filter_frame() callback(s) itself, for example executing code depending on
-     * the AVFilterContext->is_disabled value.
-	 */
-	SUPPORT_TIMELINE_INTERNAL: boolean
-	/**
-	 * Handy mask to test whether the filter supports or no the timeline feature
-	 * (internally or generically).
-	 */
-	SUPPORT_TIMELINE: boolean;
-}
+import { Timable } from "./time"
 
 export interface Filter {
 	readonly type: 'Filter'
-	/** Filter name. Must be non-NULL and unique among filters. */
+  /** Filter name. Must be non-NULL and unique among filters. */
 	readonly name: string
 	/** A description of the filter. May be NULL. */
 	readonly description: string
@@ -72,7 +30,47 @@ export interface Filter {
 	 */
 	readonly priv_class: PrivClass | null
 	/** A combination of AVFILTER_FLAG_* */
-	readonly flags: FilterFlags
+	readonly flags: {
+		/**
+		 * The number of the filter inputs is not determined just by AVFilter.inputs.
+		 * The filter might add additional inputs during initialization depending on the
+		 * options supplied to it.
+		 */
+		DYNAMIC_INPUTS: boolean
+		/**
+		 * The number of the filter outputs is not determined just by AVFilter.outputs.
+     * The filter might add additional outputs during initialization depending on
+     * the options supplied to it.
+		 */
+		DYNAMIC_OUTPUTS: boolean
+		/**
+		 * The filter supports multithreading by splitting frames into multiple parts and
+		 * processing them concurrently.
+		 */
+		SLICE_THREADS: boolean
+		/**
+		 * Some filters support a generic "enable" expression option that can be used
+     * to enable or disable a filter in the timeline. Filters supporting this
+     * option have this flag set. When the enable expression is false, the default
+     * no-op filter_frame() function is called in place of the filter_frame()
+     * callback defined on each input pad, thus the frame is passed unchanged to
+     * the next filters.
+		 */
+		SUPPORT_TIMELINE_GENERIC: boolean
+		/**
+		 * Same as AVFILTER_FLAG_SUPPORT_TIMELINE_GENERIC, except that the filter will
+     * have its filter_frame() callback(s) called as usual even when the enable
+     * expression is false. The filter will disable filtering within the
+     * filter_frame() callback(s) itself, for example executing code depending on
+     * the AVFilterContext->is_disabled value.
+		 */
+		SUPPORT_TIMELINE_INTERNAL: boolean
+		/**
+		 * Handy mask to test whether the filter supports or no the timeline feature
+		 * (internally or generically).
+		 */
+		SUPPORT_TIMELINE: boolean
+	}
 }
 
 export type MediaType = 'unknown' | 'video' | 'audio' | 'data' | 'subtitle' | 'attachment' | 'nb'
@@ -83,7 +81,7 @@ export interface FilterPad {
 }
 
 export interface FilterLink {
-	/** source filter name */
+  /** source filter name */
 	readonly src: string
 	/** output pad on the source filter */
 	readonly srcpad: string
@@ -98,7 +96,7 @@ export interface FilterLink {
 	/** video only - agreed upon image height */
 	readonly h?: number
 	/** video only - agreed upon sample aspect ratio */
-	readonly sample_aspect_ratio?: ReadonlyArray<number>
+	readonly sample_aspect_ratio?: [number, number]; // ReadonlyArray<number>
 	/** audio only - number of channels in the channel layout. */
 	readonly channel_count?: number
 	/** audio only - channel layout of current buffer */
@@ -109,7 +107,7 @@ export interface FilterLink {
 	readonly format: string
 	/**
 	 * Define the time base used by the PTS of the frames/samples which will pass through this link.
-	 * During the configuration stage, each filter is supposed to change only the output timebase,
+   * During the configuration stage, each filter is supposed to change only the output timebase,
 	 * while the timebase of the input link is assumed to be an unchangeable property.
 	*/
 	readonly time_base: ReadonlyArray<number>
@@ -117,71 +115,71 @@ export interface FilterLink {
 
 export interface FilterContext {
 	readonly type: 'FilterContext'
-	/** the AVFilter of which this is an instance */
+  /** the AVFilter of which this is an instance */
 	readonly filter: Filter
-	/** name of this filter instance */
+  /** name of this filter instance */
 	readonly name: string
-	/** array of input pads */
+  /** array of input pads */
 	readonly input_pads: ReadonlyArray<FilterPad>
-	/** array of pointers to input links */
+  /** array of pointers to input links */
 	readonly inputs: ReadonlyArray<FilterLink> | null
-	/** array of output pads */
+  /** array of output pads */
 	readonly output_pads: ReadonlyArray<FilterPad>
-	/** array of pointers to output links */
+  /** array of pointers to output links */
 	readonly outputs: ReadonlyArray<FilterLink> | null
-	/** private data for use by the filter */
+  /** private data for use by the filter */
 	priv: { [key: string]: any } | null
-	/**
-	   * Type of multithreading being allowed/used. A combination of
-	   * AVFILTER_THREAD_* flags.
-	   *
-	   * May be set by the caller before initializing the filter to forbid some
-	   * or all kinds of multithreading for this filter. The default is allowing
-	   * everything.
-	   *
-	   * When the filter is initialized, this field is combined using bit AND with
-	   * AVFilterGraph.thread_type to get the final mask used for determining
-	   * allowed threading types. I.e. a threading type needs to be set in both
-	   * to be allowed.
-	   *
-	   * After the filter is initialized, libavfilter sets this field to the
-	   * threading type that is actually used (0 for no multithreading).
-	   */
+  /**
+	 * Type of multithreading being allowed/used. A combination of
+	 * AVFILTER_THREAD_* flags.
+	 *
+	 * May be set by the caller before initializing the filter to forbid some
+	 * or all kinds of multithreading for this filter. The default is allowing
+	 * everything.
+	 *
+	 * When the filter is initialized, this field is combined using bit AND with
+	 * AVFilterGraph.thread_type to get the final mask used for determining
+	 * allowed threading types. I.e. a threading type needs to be set in both
+	 * to be allowed.
+	 *
+	 * After the filter is initialized, libavfilter sets this field to the
+	 * threading type that is actually used (0 for no multithreading).
+	 */
 	readonly thread_type: number
-	/**
-	   * Max number of threads allowed in this filter instance.
-	   * If <= 0, its value is ignored.
-	   * Overrides global number of threads set per filter graph.
-	   */
+  /**
+	 * Max number of threads allowed in this filter instance.
+	 * If <= 0, its value is ignored.
+	 * Overrides global number of threads set per filter graph.
+	 */
 	readonly nb_threads: number
-	/**
-	   * Ready status of the filter.
-	   * A non-0 value means that the filter needs activating,
-	   * a higher value suggests a more urgent activation.
-	   */
+  /**
+	 * Ready status of the filter.
+	 * A non-0 value means that the filter needs activating,
+	 * a higher value suggests a more urgent activation.
+	 */
 	readonly ready: number
-	/**
-	   * Sets the number of extra hardware frames which the filter will
-	   * allocate on its output links for use in following filters or by
-	   * the caller.
-	   *
-	   * Some hardware filters require all frames that they will use for
-	   * output to be defined in advance before filtering starts.  For such
-	   * filters, any hardware frame pools used for output must therefore be
-	   * of fixed size.  The extra frames set here are on top of any number
-	   * that the filter needs internally in order to operate normally.
-	   *
-	   * This field must be set before the graph containing this filter is
-	   * configured.
-	   */
-	readonly extra_hw_frames: number
+  /**
+	 * Sets the number of extra hardware frames which the filter will
+	 * allocate on its output links for use in following filters or by
+	 * the caller.
+	 *
+	 * Some hardware filters require all frames that they will use for
+	 * output to be defined in advance before filtering starts.  For such
+	 * filters, any hardware frame pools used for output must therefore be
+	 * of fixed size.  The extra frames set here are on top of any number
+	 * that the filter needs internally in order to operate normally.
+	 *
+	 * This field must be set before the graph containing this filter is
+	 * configured.
+	 */
+  readonly extra_hw_frames: number
 }
 
 export interface FilterGraph {
 	readonly type: 'FilterGraph'
 
 	readonly filters: ReadonlyArray<FilterContext>
-	/** sws options to use for the auto-inserted scale filters */
+  /** sws options to use for the auto-inserted scale filters */
 	readonly scale_sws_opts: string | null
 	/**
 	 * Type of multithreading allowed for filters in this graph. A combination of AVFILTER_THREAD_* flags.
@@ -193,16 +191,16 @@ export interface FilterGraph {
 	 * I.e. a threading type needs to be set in both to be allowed.
 	 */
 	readonly thread_type: number
-	/**
-	   * Maximum number of threads used by filters in this graph. May be set by
-	 * the caller before adding any filters to the filtergraph. Zero (the
-	 * default) means that the number of threads is determined automatically.
-	   */
+  /**
+	 * Maximum number of threads used by filters in this graph. May be set by
+   * the caller before adding any filters to the filtergraph. Zero (the
+   * default) means that the number of threads is determined automatically.
+	 */
 	readonly nb_threads: number
-	/**
-	   * Dump a graph into a human-readable string representation.
-	   * @returns: String representation of the filter graph
-	   */
+  /**
+	 * Dump a graph into a human-readable string representation.
+	 * @returns: String representation of the filter graph
+	 */
 	dump(): string
 }
 
@@ -217,29 +215,43 @@ export interface Filterer extends Timable {
 	readonly type: 'Filterer'
 	readonly graph: FilterGraph
 
-	/**
-	   * Filter an array of frames
-	   * For a filter that has only one input pass an array of frame objects directly
-	   * and the filter input will have a default name applied.
-	   * This name will match a filter specification that doesn't name its inputs.
-	   * @param frames Array of Frame objects to be applied to the single input pad
-	   * @returns Array of objects containing Frame arrays for each output pad of the filter
-	   */
-	filter(frames: Array<Frame>): Promise<Array<FiltererResult> & TotalTimed>
-	/**
-	   * Filter an array of frames
-	   * Pass an array of objects, one per filter input, each with a name string property
-	   * and a frames property that contains an array of frame objects
-	   * The name must match the input name in the filter specification
-	   * @param framesArr Array of objects with name and Frame array for each input pad
-	   * @returns Array of objects containing Frame arrays for each output pad of the filter
+  /**
+	 * Filter an array of frames
+	 * For a filter that has only one input pass an array of frame objects directly
+	 * and the filter input will have a default name applied.
+	 * This name will match a filter specification that doesn't name its inputs.
+	 * @param frames Array of Frame objects to be applied to the single input pad
+	 * @returns Array of objects containing Frame arrays for each output pad of the filter
 	 */
-	filter(framesArr: Array<{ name?: string, frames: Array<Frame> }>): Timable & Promise<Array<FiltererResult> & TotalTimed>
-
+	filter(frames: Array<Frame>): Promise<Array<FiltererResult> & TotalTimed>
+  /**
+	 * Filter an array of frames
+	 * Pass an array of objects, one per filter input, each with a name string property
+	 * and a frames property that contains an array of frame objects
+	 * The name must match the input name in the filter specification
+	 * @param framesArr Array of objects with name and Frame array for each input pad
+	 * @returns Array of objects containing Frame arrays for each output pad of the filter
+   */
+	filter(framesArr: Array<{ name?: string, frames: Array<Frame> }>): Promise<Array<FiltererResult> & { total_time: number }>
+	
 	// may add a callback
 	cb?: (pts: number | null) => void;
+
 }
 
+/**
+ * Provides a list and details of all the available filters
+ * @returns an object with name and details of each of the available filters
+ */
+export function filters(): { [key: string]: Filter }
+
+/** List the available bitstream filters */
+export function bsfs(): {
+  [key: string]: {
+		name: string
+		codec_ids: Array<string>
+		priv_class: PrivClass | null }
+}
 
 /** The required parameters for setting up filter inputs */
 export interface InputParam {
@@ -306,3 +318,9 @@ export interface FiltererAudioOptions extends FiltererOptions {
 	outputParams: Array<AudioOutputParam>
 }
 
+/**
+ * Create a filterer
+ * @param options parameters to set up the type, inputs, outputs and spec of the filter
+ * @returns Promise that resolve to a Filterer on success
+ */
+export function filterer(options: FiltererVideoOptions | FiltererAudioOptions): Promise<Filterer>

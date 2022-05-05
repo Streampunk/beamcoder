@@ -1,7 +1,5 @@
 import { Packet } from "./Packet"
-import { InputFormat, FormatContextBase } from "./FormatContext"
-import { FormatContextIn } from "./FormatContextIn"
-import { FormatContextOut } from "./FormatContextOut"
+import { InputFormat, FormatContext } from "./FormatContext"
 
 export interface SeekOptions {
 	/**
@@ -45,15 +43,16 @@ export interface SeekOptions {
  * The process of demuxing (de-multiplexing) extracts time-labelled packets of data 
  * contained in a media stream or file.
  */
-export interface Demuxer extends FormatContextBase, FormatContextOut , FormatContextIn {
-	// { read: () => Promise<Packet | null>, streams: Array<{time_base: [number, number]}> }
+export interface Demuxer extends Omit<FormatContext,
+	'oformat' | 'max_interleave_delta' | 'avoid_negative_ts' | 'audio_preload' |
+  'max_chunk_duration' | 'max_chunk_size' | 'flush_packets' | 'metadata_header_padding'
+> {
 	/** Object name. */
-	// readonly type: 'demuxer'
-	// readonly iformat: InputFormat
-	 // readonly url: string
-	// readonly duration: number
+	readonly type: 'demuxer'
+	readonly iformat: InputFormat
+	readonly url: string
+	readonly duration: number
 
-	interleaved: boolean,
 	/**
 	 * Beam coder offers FFmpeg's many options for seeking a particular frame in a file,
 	 * either by time reference, frame count or file position.
@@ -79,6 +78,25 @@ export interface Demuxer extends FormatContextBase, FormatContextOut , FormatCon
 	forceClose(): undefined
 }
 
+/**
+ * Provides a list and details of all the available demuxer input formats
+ * @returns an object with details of all the available demuxer input formats
+ */
+export function demuxers(): { [key: string]: InputFormat }
+
+/**
+ * Create a demuxer to read from a URL or filename
+ * @param url a string describing the source to be read from (may contain %d for a sequence of numbered files).
+ * @returns a promise that resolves to a Demuxer when it has determined sufficient 
+ * format details by consuming data from the source. The promise will wait indefinitely 
+ * until sufficient source data has been read.
+ */
+ // this code look to have error....
+ // duplicate governor splot
+ // TODO FIX ME
+ export function demuxer(options: { governor?: Governor, url?: string, iformat?: InputFormat, options?: { governor: Governor } } | string): Promise<Demuxer>
+//export function demuxer(url: string): Promise<Demuxer>
+
 
 /** Object to provide additional metadata on Demuxer creation */
 export interface DemuxerCreateOptions {
@@ -89,3 +107,12 @@ export interface DemuxerCreateOptions {
 	/** Object allowing additional information to be provided */
 	options?: { [key: string]: any }
 }
+/**
+ * For formats that require additional metadata, such as the rawvideo format,
+ * it may be necessary to pass additional information such as image size or pixel format to Demuxer creation.
+ * @param options a DemuxerCreateOptions object
+ * @returns a promise that resolves to a Demuxer when it has determined sufficient 
+ * format details by consuming data from the source. The promise will wait indefinitely 
+ * until sufficient source data has been read.
+ */
+export function demuxer(options: DemuxerCreateOptions): Promise<Demuxer>

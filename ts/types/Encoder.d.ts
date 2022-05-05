@@ -1,8 +1,9 @@
 import { CodecPar } from "./CodecPar"
 import { Packet } from "./Packet";
 import { Frame } from "./Frame";
-import { CodecContextBaseMin } from "./CodecContext"
-import { TotalTimed, Timable } from "./time";
+import { Codec } from "./Codec"
+import { CodecContext } from "./CodecContext"
+import { Timable, TotalTimed } from "./time";
 
 /** The EncodedPackets object is returned as the result of a encode operation */
 export interface EncodedPackets extends Timable, TotalTimed {
@@ -10,20 +11,28 @@ export interface EncodedPackets extends Timable, TotalTimed {
 	readonly type: 'packets'
   /** 
 	 * Encoded packets that are now available. If the array is empty, the encoder has buffered
-   * the frame as part of the process of prodfcodec_tagucing future packets
+   * the frame as part of the process of producing future packets
 	 */
 	readonly packets: Array<Packet>
+	/** Total time in microseconds that the encode operation took to complete */
+	readonly total_time: number
 }
 /**
  * Encoder takes a stream of uncompressed data in the form of Frames and converts them into coded Packets.
  * Encoding takes place on a single type of stream, for example audio or video.
  */
-export interface Encoder extends CodecContextBaseMin {
+export interface Encoder extends Omit<CodecContext,
+	'coded_width' |	'coded_height' | 'slice_flags' | 'skip_top' | 'skip_bottom' |
+	'request_channel_layout' | 'request_sample_fmt' | 'error_concealment' | 'err_recognition' |
+	'reordered_opaque' | 'skip_loop_filter' | 'skip_idct' | 'skip_frame' | 'sw_pix_fmt' |
+	'pkt_timebase' | 'codec_descriptor' | 'sub_charenc' | 'sub_charenc_mode' | 'skip_alpha' |
+	'codec_whitelist' | 'properties' | 'sub_text_format' | 'hwaccel_flags' | 'apply_cropping' |	'extra_hw_frames'
+> {
 	readonly type: 'encoder'
-	// readonly extradata: Buffer | null
-	// readonly slice_count: number
-	// readonly slice_offset: Array<number> | null
-	// readonly bits_per_coded_sample: number
+	readonly extradata: Buffer | null
+	readonly slice_count: number
+	readonly slice_offset: Array<number> | null
+	readonly bits_per_coded_sample: number
 
 	/**
 	 * Encode a Frame or array of Frames and create a compressed Packet or Packets.
@@ -56,7 +65,7 @@ export interface Encoder extends CodecContextBaseMin {
 	 * Extract the CodecPar object for the Encoder
 	 * @returns A CodecPar object
 	 */
-	extractParams(): CodecPar
+	extractParams(): any
 	/** 
 	 * Initialise the encoder with parameters from a CodecPar object
 	 * @param param The CodecPar object that is to be used to override the current Encoder parameters
@@ -65,3 +74,23 @@ export interface Encoder extends CodecContextBaseMin {
 	useParams(params: CodecPar): Encoder
 }
 
+/**
+ * Provides a list and details of all the available encoders
+ * @returns an object with name and details of each of the available encoders
+ */
+export function encoders(): { [key: string]: Codec }
+/** 
+ * Create an encoder by name
+ * @param name The codec name required
+ * @param ... Any non-readonly parameters from the Encoder object as required
+ * @returns An Encoder object - note creation is synchronous
+ */
+// export function encoder(options: { name: string, [key: string]: any }): Encoder
+export function encoder(options: { name: string } & Partial<Omit<CodecContext, 'codec_id'>>): Encoder
+/**
+ * Create an encoder by codec_id
+ * @param codec_id The codec ID from AV_CODEC_ID_xxx
+ * @param ... Any non-readonly parameters from the Encoder object as required
+ * @returns An Encoder object - note creation is synchronous
+ */
+export function encoder(options: { codec_id: number } & Partial<Omit<CodecContext, 'name'>>): Encoder

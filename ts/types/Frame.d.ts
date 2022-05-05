@@ -34,23 +34,23 @@ export interface Frame extends Timable, toJSONAble {
 	width: number
 	height: number
 	/** number of audio samples (per channel) described by this frame */
-    nb_samples: number
+  nb_samples: number
 	/** format of the frame, null if unknown or unset */
 	format: string | null
 	/** Whether this frame is a keyframe */
 	key_frame: boolean
-    /** Picture type of the frame. */
+  /** Picture type of the frame. */
 	pict_type: 'I' | 'P' | 'B' | 'S' | 'SI' | 'SP' | 'BI' | null
-    /** Sample aspect ratio for the video frame, 0/1 if unknown/unspecified. */
-	sample_aspect_ratio: [number, number]
-    /** Presentation timestamp in time_base units (time when frame should be shown to user). */
-	pts: number | null
+  /** Sample aspect ratio for the video frame, 0/1 if unknown/unspecified. */
+	sample_aspect_ratio: Array<number>
+  /** Presentation timestamp in time_base units (time when frame should be shown to user). */
+	pts: number
 	/**
 	 * DTS copied from the Packet that triggered returning this frame. (if frame threading isn't used)
 	 * This is also the Presentation time of this Frame calculated from
 	 * only Packet.dts values without pts values.
 	 */
-	pkt_dts: number | null
+	pkt_dts: number
 	/** picture number in bitstream order */
 	coded_picture_number: number
 	/** picture number in display order */
@@ -81,7 +81,7 @@ export interface Frame extends Timable, toJSONAble {
   /** Sample rate of the audio data. */
 	sample_rate: number
   /** Channel layout of the audio data. */
-	channel_layout: string | '0 channels'
+	channel_layout: string
 	/**
 	 * Raw data for the picture/channel planes.
 	 *
@@ -102,13 +102,13 @@ export interface Frame extends Timable, toJSONAble {
 		DISCARD?: boolean
 	}
 	/** MPEG vs JPEG YUV range. */
-	color_range: string | "unknown"
+	color_range: string
 	/** Chromaticity coordinates of the source primaries. */
-	color_primaries: string | "unknown"
+	color_primaries?: string
 	/** Color Transfer Characteristic. */
-	color_trc: string | "unknown"
+	color_trc: string
 	/** YUV colorspace type. */
-	colorspace: string | "unknown"
+	colorspace: string
 	/**
 	 * Location of chroma samples.
 	 *
@@ -127,12 +127,12 @@ export interface Frame extends Timable, toJSONAble {
 	 */
 	chroma_location: 'unspecified' | 'left' | 'center' | 'topleft' | 'top' | 'bottomleft' | 'bottom'
   /** frame timestamp estimated using various heuristics, in stream time base */
-	best_effort_timestamp: number | null
+	best_effort_timestamp: number
   /** reordered pos from the last AVPacket that has been input into the decoder */
 	pkt_pos: number
   /** duration of the corresponding packet, expressed in Stream->time_base units, 0 if unknown. */
 	pkt_duration: number
-	metadata: { [key: string]: string } | null
+	metadata: { [key: string]: string }
 	/**
 	 * decode error flags of the frame, set if the decoder produced a frame, but there
 	 * were errors during the decoding.
@@ -152,7 +152,7 @@ export interface Frame extends Timable, toJSONAble {
 	 * For hwaccel-format frames, this should be a reference to the
 	 * HWFramesContext describing the frame.
 	 */
-	hw_frames_ctx: HWFramesContext | null
+	hw_frames_ctx: HWFramesContext
 	/**
 	* Video frames only. The number of pixels to discard from the the
 	* top/bottom/left/right border of the frame to obtain the sub-rectangle of
@@ -176,10 +176,13 @@ export interface Frame extends Timable, toJSONAble {
 	 * `let f = beamcoder.frame({ width: 1920, height: 1080, format: 'yuv422p' }).alloc()`
 	 */
 	alloc(): Frame
-
-	// internal
-	readonly _frame: {};
 }
+
+/**
+ * Create a frame for encoding or filtering
+ * Set parameters as required from the Frame object
+ */
+export function frame(options?: { [key: string]: any, data?: Array<Buffer> } | string): Frame
 
 /** Pixel format description */
 export interface PixelFormat {
@@ -266,6 +269,8 @@ export interface PixelFormat {
 	/** Alternative comma-separated names. */
 	alias: string
 }
+/** Format details for all supported pixel format names */
+export function pix_fmts(): { [key: string]: PixelFormat }
 
 /** Audio sample formats */
 export interface SampleFormat {
@@ -280,4 +285,12 @@ export interface SampleFormat {
 	/** Whether the sample format is planar. */
 	is_planar: boolean
 }
+/** Format details for all supported sample format names */
+export function sample_fmts(): { [key: string]: SampleFormat }
 
+/**
+ * Note that when creating buffers from Javascript,
+ * FFmpeg recommends that a small amount of headroom is added to the minimum length of each buffer.
+ * The minimum amount of padding is exposed to Javascript as constant
+ */
+export const AV_INPUT_BUFFER_PADDING_SIZE: number

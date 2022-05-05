@@ -1,34 +1,28 @@
+import { toJSONAble } from "./time"
+
 /**
  * CodecPar describes the properties of an encoded stream.
  */
 export interface CodecPar extends toJSONAble {
 	/** Object name. */
-	readonly type: 'CodecParameters'
-
+  readonly type: 'CodecParameters'
 	/** General type of the encoded data. */
-	codec_type: string | 'data' | 'video'
-
+	codec_type: string
 	/** Specific type of the encoded data (the codec used). */
 	codec_id: number
-
 	/** The name corresponding to the codec_id. */
-	name: 'node' | 'h264' | string
-
+	name: string
 	/** Additional information about the codec (corresponds to the AVI FOURCC). */
-	codec_tag: number | string
-
+	codec_tag: string
 	/** Extra binary data needed for initializing the decoder, codec-dependent. */
-	extradata: Buffer | null
-
+	extradata: Buffer
 	/**
 	 * - video: the pixel format.
 	 * - audio: the sample format.
 	 */
-	format: string | null
-
+	format: string
 	/** The average bitrate of the encoded data (in bits per second). */
 	bit_rate: number
-
 	/**
 	 * The number of bits per sample in the codedwords.
 	 *
@@ -41,7 +35,6 @@ export interface CodecPar extends toJSONAble {
 	 * Can be 0
 	 */
 	bits_per_coded_sample: number
-
 	/**
 	 * This is the number of valid bits in each output sample. If the
 	 * sample format has more bits, the least significant bits are additional
@@ -54,18 +47,13 @@ export interface CodecPar extends toJSONAble {
 	 * Can be 0
 	 */
 	bits_per_raw_sample: number
-
 	/** Codec-specific bitstream restrictions that the stream conforms to. */
 	profile: string | number
-
 	level: number
-
 	/** Video only. The video frame width in pixels. */
 	width: number
-
 	/** Video only. The video frame height in pixels. */
-	height: number
-
+  height: number
 	/**
 	 * Video only. The aspect ratio (width / height) which a single pixel
 	 * should have when displayed.
@@ -73,42 +61,23 @@ export interface CodecPar extends toJSONAble {
 	 * When the aspect ratio is unknown / undefined, the numerator should be
 	 * set to 0 (the denominator may have any value).
 	 */
-	sample_aspect_ratio: [number, number]
-
+	sample_aspect_ratio: Array<number>
 	/** Video only. The order of the fields in interlaced video. */
-	field_order: string | 'unknown' | 'progressive'
-
+	field_order: string
 	/** Video only. Additional colorspace characteristics. */
-	color_range: string | 'unknown' | 'pc'
-
-	/** Video only. Additional colorspace characteristics. */
-	color_primaries: string | 'unknown' | 'bt709'
-
-	/** Video only. Additional colorspace characteristics. */
-	color_trc: string | 'unknown' | 'bt709'
-
-	/** Video only. Additional colorspace characteristics. */
-	color_space: string | 'unknown' | 'bt709'
-
-	/** Video only. Additional colorspace characteristics. */
-	chroma_location: string | 'unspecified' | 'left'
-
+	color_range: string
+  color_primaries: string
+  color_trc: string
+  color_space: string
+  chroma_location: string
 	/** Video only. Number of delayed frames. */
 	video_delay: number
-
-	/**
-	 * Audio only. A description of the channel layout.
-	 * ex: "0 channels"
-	 */
-	channel_layout: string | '0 channels'
-
-
+	/** Audio only. A description of the channel layout. */
+	channel_layout: string
 	/** Audio only. The number of audio channels. */
 	channels: number
-
 	/** Audio only. The number of audio samples per second. */
 	sample_rate: number
-
 	/**
 	 * Audio only. The number of bytes per coded audio frame, required by some
 	 * formats.
@@ -116,10 +85,8 @@ export interface CodecPar extends toJSONAble {
 	 * Corresponds to nBlockAlign in WAVEFORMATEX.
 	 */
 	block_align: number
-
 	/** Audio only. Audio frame size, if known. Required by some formats to be static. */
 	frame_size: number
-
 	/**
 	 * Audio only. The amount of padding (in samples) inserted by the encoder at
 	 * the beginning of the audio. I.e. this number of leading decoded samples
@@ -127,13 +94,19 @@ export interface CodecPar extends toJSONAble {
 	 * padding.
 	 */
 	initial_padding: number
-
+	/**
+	 * Audio only. The amount of padding (in samples) appended by the encoder to
+	 * the end of the audio. I.e. this number of decoded samples must be
+	 * discarded by the caller from the end of the stream to get the original
+	 * audio without any trailing padding.
+	 */
 	trailing_padding: number
-
 	/** Audio only. Number of samples to skip after a discontinuity. */
 	seek_preroll: number
-
 	// native code;
 	readonly _codecPar: {};
+
 }
 
+export function codecParameters(options?: string | { [key: string]: any }): CodecPar;
+//                             (options?: string | Partial<Omit<CodecPar, 'type' | '_codecPar' | 'toJSON'>>)

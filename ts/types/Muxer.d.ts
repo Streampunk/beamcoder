@@ -1,10 +1,15 @@
 import { Packet } from "./Packet"
 import { Frame } from "./Frame"
-import { OutputFormat } from "./FormatContext"
-import { FormatContextBase } from "./FormatContext"
-import { FormatContextOut } from "./FormatContextOut"
+import { OutputFormat, FormatContext } from "./FormatContext"
 
-export interface Muxer extends FormatContextBase, FormatContextOut {
+export interface Muxer extends Omit<FormatContext,
+	'iformat' | 'start_time' | 'probesize' | 'max_analyze_duration' | 'max_index_size' |
+	'fps_probe_size' | 'error_recognition' | 'max_ts_probe' | 'use_wallclock_as_timestamps' |
+	'avio_flags' | 'duration_estimation_method' | 'skip_initial_bytes' | 'correct_ts_overflow' |
+	'seek2any' | 'probe_score' | 'format_probesize' | 'codec_whitelist' | 'format_whitelist' |
+  'io_repositioned' | 'output_ts_offset' | 'protocol_whitelist' | 'protocol_blacklist' |
+  'max_streams' | 'skip_estimate_duration_from_pts'
+> {
 	/** Object name. */
 	type: 'muxer'
 
@@ -31,7 +36,7 @@ export interface Muxer extends FormatContextBase, FormatContextOut {
 			NONBLOCK?: boolean
 			DIRECT?: boolean
 		}
-	}): Promise<undefined | { unset: { [key: string]: any } }>
+	}): Promise<undefined | { unset: {[key: string]: any}}>
 
 	/**
 	 * In some cases, it is necessary to initialize the structures of the muxer before writing the header.
@@ -39,9 +44,9 @@ export interface Muxer extends FormatContextBase, FormatContextOut {
 	 * @returns Promise that resolves to an object that indicates whether the stream parameters were
 	 * intialised in writeHeader or initOutput, together with an unset property if any properties could not be set
 	 */
-	initOutput(options?: { [key: string]: any }): Promise<{
+	initOutput(options?: { [key:string]: any }) : Promise<{
 		INIT_IN: 'WRITE_HEADER' | 'INIT_OUTPUT'
-		unset?: { [key: string]: any }
+		unset?: {[key: string]: any} 
 	}>
 	/**
 	 * Write the header to the file, optionally passing in private data to set private options of the muxer.
@@ -50,38 +55,38 @@ export interface Muxer extends FormatContextBase, FormatContextOut {
 	 * @returns Promise that resolves to an object that indicates whether the stream parameters were
 	 * intialised in writeHeader or initOutput, together with an unset property if any properties could not be set
 	 */
-	writeHeader(options?: { [key: string]: any }): Promise<{
+	writeHeader(options?: { [key:string]: any }) : Promise<{
 		INIT_IN: 'WRITE_HEADER' | 'INIT_OUTPUT'
-		unset?: { [key: string]: any }
+		unset?: {[key: string]: any} 
 	}>
 
-	/**
-	   * Write media data to the file by sending a packet containing data for a media stream.
-	   * @param packet Packet of compressed data, must contain the stream index and timestamps measured in the
-	   * `time_base` of the stream.
-	   * @returns Promise that resolves to _undefined_ on success
-	   */
-	writeFrame(packet: Packet): Promise<undefined>
-	/**
-	   * Write media data to the file by sending a packet containing data for a media stream.
-	   * @param options Object containing a packet property of a compressed data Packet, must contain the
-	   * stream index and timestamps measured in the `time_base` of the stream.
-	   * @returns Promise that resolves to _undefined_ on success
-	   */
-	writeFrame(options: { packet: Packet }): Promise<undefined>
-	/**
-	   * Write media data to the file by sending a packet containing data for a media stream.
-	   * @param options Object containing a stream index property and a frame property of an
-	   * uncompressed Frame, which must contain the timestamps measured in the `time_base` of the stream.
-	   * @returns Promise that resolves to _undefined_ on success
-	   */
-	writeFrame(options: { frame: Frame, stream_index: number }): Promise<undefined>
+  /**
+	 * Write media data to the file by sending a packet containing data for a media stream.
+	 * @param packet Packet of compressed data, must contain the stream index and timestamps measured in the
+	 * `time_base` of the stream.
+	 * @returns Promise that resolves to _undefined_ on success
+	 */
+	writeFrame(packet: Packet) : Promise<undefined>
+  /**
+	 * Write media data to the file by sending a packet containing data for a media stream.
+	 * @param options Object containing a packet property of a compressed data Packet, must contain the
+	 * stream index and timestamps measured in the `time_base` of the stream.
+	 * @returns Promise that resolves to _undefined_ on success
+	 */
+	writeFrame(options: { packet: Packet }) : Promise<undefined>
+  /**
+	 * Write media data to the file by sending a packet containing data for a media stream.
+	 * @param options Object containing a stream index property and a frame property of an
+	 * uncompressed Frame, which must contain the timestamps measured in the `time_base` of the stream.
+	 * @returns Promise that resolves to _undefined_ on success
+	 */
+	writeFrame(options: { frame: Frame, stream_index: number }) : Promise<undefined>
 
-	/**
-	   * Write the trailer at the end of the file or stream. It is written after the muxer has drained its
-	   * buffers of all remaining packets and frames. Writing the trailer also closes the file or stream.
-	   * @returns Promise that resolves to _undefined_ on success
-	   */
+  /**
+	 * Write the trailer at the end of the file or stream. It is written after the muxer has drained its
+	 * buffers of all remaining packets and frames. Writing the trailer also closes the file or stream.
+	 * @returns Promise that resolves to _undefined_ on success
+	 */
 	writeTrailer(): Promise<undefined>
 
 	/**
@@ -90,10 +95,16 @@ export interface Muxer extends FormatContextBase, FormatContextOut {
 	forceClose(): undefined
 }
 
+/**
+ * Provides a list and details of all the available muxer output formats
+ * @returns an object with details of all the available muxer output formats
+ */
+export function muxers(): { [key: string]: OutputFormat }
+
 /** Object to provide additional metadata on Muxer creation */
 export interface MuxerCreateOptions {
 	/** The name of a chosen OutputFormat */
-	name?: string
+  name?: string
 	format_name?: string
 	/** String describing the destinatione to be written to (may contain %d for a sequence of numbered files). */
 	filename?: string
@@ -102,3 +113,9 @@ export interface MuxerCreateOptions {
 	/** Object allowing additional information to be provided */
 	[key: string]: any
 }
+/**
+ * Create a muxer to write to a URL or filename
+ * @param options a MuxerCreateOptions object
+ * @returns A Muxer object
+ */
+export function muxer(options: MuxerCreateOptions): Muxer
