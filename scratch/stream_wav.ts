@@ -19,18 +19,17 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-import beamcoder from '../ts/index';
-import { getMedia } from './common';
+import beamcoder from '..';
 
 async function run() {
-  const url = `file:${getMedia('sound/Countdown.wav')}`;
+  const urls = [ 'file:../Media/sound/Countdown.wav' ];
   const spec = { start: 50, end: 58 };
   const params = {
     video: [],
     audio: [
       {
         sources: [
-          { url, ms: spec, streamIndex: 0 }
+          { url: urls[0], ms: spec, streamIndex: 0 }
         ],
         filterSpec: '[in0:a] \
                      volume=precision=float:volume=0.8 \

@@ -19,12 +19,10 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-import beamcoder from '../ts/index';
-import { Packet } from '../ts/types/Packet';
-import { getMedia } from './common';
+import beamcoder, { Packet } from '..';
 
 async function run() {
-  let demuxer = await beamcoder.demuxer(getMedia('sound/BBCNewsCountdown.wav'));
+  let demuxer = await beamcoder.demuxer('../media/sound/BBCNewsCountdown.wav');
   console.log(demuxer.streams[0].codecpar);
   let muxer = beamcoder.muxer({ filename: 'file:test.wav' });
   let stream = muxer.newStream({
@@ -59,7 +57,7 @@ async function run() {
   // stream.codecpar = demuxer.streams[0].codecpar;
   await muxer.openIO({ options: { blocksize: 8192 }}).then(console.log);
   await muxer.writeHeader({ options: { write_bext: true, write_peak: 'on', peak_format: 2 }}).then(console.log);
-  let packet: Packet = {} as Packet;
+  let packet = {} as Packet;
   for ( let x = 0 ; x < 100 && packet !== null ; x++ ) {
     packet = await demuxer.read();
     await muxer.writeFrame(packet);

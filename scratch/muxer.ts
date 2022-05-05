@@ -21,7 +21,7 @@
 
 // Work in progress
 
-import beamcoder from '../ts/index';
+import beamcoder from '..';
 
 const STREAM_FRAME_RATE = 25;
 
@@ -52,7 +52,7 @@ async function addStream(stream, muxer, codecID: number) { // eslint-disable-lin
   // @ts-ignore
   switch (codec.media_type) {
   case 'video':
-    // @ts-ignore
+  // @ts-ignore
     codec.setParameters({
       codec_id: codecID,
       bit_rate: 400000,

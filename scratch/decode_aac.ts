@@ -19,12 +19,10 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-import beamcoder from '../ts/index';
-import { Packet } from '../ts/types/Packet';
-import { getMedia } from './common';
-// Ok
+import beamcoder, { Packet } from '..';
+
 async function run() {
-  let demuxer = await beamcoder.demuxer({ url: getMedia('bbb_1080p_c.ts')});
+  let demuxer = await beamcoder.demuxer({ url: '../media/bbb_1080p_c.ts'});
   let decoder = beamcoder.decoder({ name: 'aac' });
   let packet: Packet = {} as Packet;
   for ( let x = 0 ; packet !== null && x < 100 ; x++ ) {
