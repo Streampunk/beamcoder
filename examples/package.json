@@ -2,14 +2,16 @@
   "name": "examples",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "jpeg_filter_app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/koa": "^2.13.4",
     "koa": "^2.13.4"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.13.4"
   }
 }
