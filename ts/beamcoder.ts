@@ -19,8 +19,9 @@
   https://www.streampunk.media/ mailto:furnace@streampunk.media
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
-import bindings from 'bindings';
-import { BeamcoderType } from './types/BeamcoderType';
 
+import bindings from 'bindings';
+import type * as Beamcodere from './types';
+declare type BeamcoderType = typeof Beamcodere;
 const beamcoder = bindings('beamcoder') as BeamcoderType;
 export default beamcoder;

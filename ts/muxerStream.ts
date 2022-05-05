@@ -19,20 +19,49 @@
   https://www.streampunk.media/ mailto:furnace@streampunk.media
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
-import { ReadableMuxerStream } from './types/Beamstreams';
 import beamcoder from './beamcoder'
-import createBeamReadableStream from './createBeamReadableStream';
+import { Readable } from 'stream';
+import { governor, Muxer, MuxerCreateOptions } from './types';
 
-export default function muxerStream(params: { highwaterMark: number }): ReadableMuxerStream {
-    const governor = new beamcoder.governor({ highWaterMark: 1 });
-    const stream = createBeamReadableStream(params, governor) as ReadableMuxerStream;
-    stream.on('end', () => governor.finish());
-    stream.on('error', console.error);
-    stream.muxer = (options) => {
-      options = options || {};
-      options.governor = governor;
-      return beamcoder.muxer(options);
-    };
-    return stream;
+/**
+ * Create a ReadableMuxerStream to allow streaming from a Muxer
+ * 
+ * A [Node.js Readable stream](https://nodejs.org/docs/latest-v12.x/api/stream.html#stream_readable_streams)
+ * allowing data to be streamed from the muxer to a file or other stream destination such as a network connection
+ * 
+ * @param options.highwaterMark The maximum number of bytes to store in the internal buffer before ceasing to read from the underlying resource.
+ * @returns A ReadableMuxerStream that can be streamed from.
+ */
+export default class MuxerStream extends Readable {
+  private governor = new beamcoder.governor({ highWaterMark: 1 });
+  constructor(params: { highwaterMark: number }) {
+    super({
+      highWaterMark: params.highwaterMark || 16384,
+      read: size => {
+        (async () => {
+          const chunk = await this.governor.read(size);
+          if (0 === chunk.length)
+            this.push(null);
+          else
+            this.push(chunk);
+        })
+      }
+    })
+    this.on('end', () => this.governor.finish());
+    this.on('error', console.error);
   }
-  
+
+
+  /**
+   * Create a demuxer for this source
+   * @param options a DemuxerCreateOptions object
+   * @returns a promise that resolves to a Demuxer when it has determined sufficient
+   * format details by consuming data from the source. The promise will wait indefinitely 
+   * until sufficient source data has been read.
+   */
+  public muxer(options?: MuxerCreateOptions & { governor?: governor }): Muxer {
+    options = options || {};
+    options.governor = this.governor;
+    return beamcoder.muxer(options);
+  };
+}

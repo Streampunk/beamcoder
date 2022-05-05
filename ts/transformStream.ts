@@ -22,8 +22,6 @@
 import { Transform } from 'stream';
 import { Timable } from './types/time'
 
-// SRC = Frame | Frame[] | Packet
-// DST = Promise<DecodedFrames>, DecodedFrames
 export default function transformStream<SRC extends Timable, DST extends Timable>(
     params: { name: 'encode' | 'dice' | 'decode' | 'filter', highWaterMark: number },
     processFn: (val: SRC) => DST,

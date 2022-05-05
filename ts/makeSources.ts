@@ -1,3 +1,4 @@
+
 /*
   Aerostat Beam Coder - Node.js native bindings to FFmpeg
   Copyright (C) 2019 Streampunk Media Ltd.
@@ -19,51 +20,42 @@
   https://www.streampunk.media/ mailto:furnace@streampunk.media
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
-import { BeamstreamChannel, BeamstreamParams, BeamstreamSource } from './types/Beamstreams';
-import beamcoder from './beamcoder'
-import { readStream } from './readStream';
 
+import beamcoder from './beamcoder'
+import { BeamstreamParams, BeamstreamSource, Demuxer } from './types';
+import readStream from './readStream';
+import DemuxerStream from './DemuxerStream';
+
+/**
+ * Initialise the sources for the beamstream process.
+ * Note - the params object is updated by the function.
+ */
 export default async function makeSources(params: BeamstreamParams): Promise<void> {
-    if (!params.video) params.video = [];
-    if (!params.audio) params.audio = [];
-    params.video.forEach(p => p.sources.forEach((src: BeamstreamSource) => {
-      if (src.input_stream) {
-        const demuxerStream = beamcoder.demuxerStream({ highwaterMark: 1024 });
-        src.input_stream.pipe(demuxerStream);
-        src.formatP = demuxerStream.demuxer({ iformat: src.iformat, options: src.options });
-      } else
-        src.formatP = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options });
-    }));
-    params.audio.forEach(p => p.sources.forEach((src: BeamstreamSource) => {
-      if (src.input_stream) {
-        const demuxerStream = beamcoder.demuxerStream({ highwaterMark: 1024 });
-        src.input_stream.pipe(demuxerStream);
-        src.formatP = demuxerStream.demuxer({ iformat: src.iformat, options: src.options });
-      } else
-        src.formatP = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options });
-    }));
-  
-    for (const video of params.video) {
-      for (const src of video.sources) {
-        src.format = await src.formatP;
-        if (src.ms && !src.input_stream)
-          src.format.seek({ time: src.ms.start });
-        await src.formatP;
-      }
-    }
-  
-    for (const audio of params.audio) {
-      for (const src of audio.sources) {
-        src.format = await src.formatP;
-        if (src.ms && !src.input_stream)
-          src.format.seek({ time: src.ms.start });
-        await src.formatP;
-      }
-    }
-  
-    params.video.forEach((p: BeamstreamChannel) => p.sources.forEach(src =>
-      src.stream = readStream({ highWaterMark: 1 }, src.format, src.ms, src.streamIndex)));
-    params.audio.forEach((p: BeamstreamChannel) => p.sources.forEach(src =>
-      src.stream = readStream({ highWaterMark: 1 }, src.format, src.ms, src.streamIndex)));
+  if (!params.video) params.video = [];
+  if (!params.audio) params.audio = [];
+  // collect All source stream from video and audio channels
+  const sources: Array<BeamstreamSource> = [];
+  for (const channel of [...params.video, ...params.audio]){
+    channel.sources.forEach(src => sources.push(src));
   }
-  
+  // demult all channels
+  const promises = sources.map((src: BeamstreamSource) => {
+    let p: Promise<Demuxer>;
+    if (src.input_stream) {
+      const demuxerStream = new DemuxerStream({ highwaterMark: 1024 });
+      src.input_stream.pipe(demuxerStream);
+      p = demuxerStream.demuxer({ iformat: src.iformat, options: src.options });
+    } else {
+      p = beamcoder.demuxer({ url: src.url, iformat: src.iformat, options: src.options });
+    }
+    p = p.then((fmt) => {
+      src.format = fmt;
+      if (src.ms && !src.input_stream)
+        src.format.seek({ time: src.ms.start });
+      return fmt;
+    })
+    return p;
+  });
+  await Promise.all(promises);
+  sources.forEach((src) => src.stream = readStream({ highWaterMark: 1 }, src.format, src.ms, src.streamIndex));
+}

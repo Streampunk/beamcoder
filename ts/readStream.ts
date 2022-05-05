@@ -23,8 +23,7 @@ import { Readable } from 'stream';
 import { Demuxer } from './types/Demuxer';
 import { Packet } from './types/Packet';
 
-
-export function readStream(params: { highWaterMark?: number }, demuxer: Demuxer, ms: { end: number }, index: number): Readable {
+export default function readStream(params: { highWaterMark?: number }, demuxer: Demuxer, ms: { end: number }, index: number): Readable {
     const time_base = demuxer.streams[index].time_base;
     const end_pts = ms ? ms.end * time_base[1] / time_base[0] : Number.MAX_SAFE_INTEGER;
     async function getPacket(): Promise<Packet | null> {

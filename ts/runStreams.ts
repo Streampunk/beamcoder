@@ -21,10 +21,10 @@
 */
 import teeBalancer from './teeBalancer';
 import { BalanceResult } from './teeBalancer';
-import { localFrame, parallelBalancer } from './parallelBalancer';
+import { default as parallelBalancer, localFrame } from './parallelBalancer';
 import serialBalancer from './serialBalancer';
 import { Stream } from './types/Stream';
-import { DecodedFrames } from './types/DecodedFrames';
+import { DecodedFrames } from './types/Decoder';
 import { Frame } from './types/Frame';
 import { Packet } from './types/Packet';
 import { TotalTimed } from './types/time';
@@ -50,7 +50,7 @@ export default function runStreams(
         return resolve();
   
       const timeBaseStream: Stream = sources[0].format.streams[sources[0].streamIndex];
-      const filterBalancer = parallelBalancer({ name: 'filterBalance', highWaterMark: 1 }, streamType, sources.length);
+      const filterBalancer = new parallelBalancer({ name: 'filterBalance', highWaterMark: 1 }, streamType, sources.length);
   
       sources.forEach((src: BeamstreamSource, srcIndex: number) => {
         const decStream = transformStream<Packet, Timable & Promise<DecodedFrames>>(
@@ -72,6 +72,7 @@ export default function runStreams(
   
       const filtStream = transformStream<Timables<DecodedFrames>, Timable & Promise<Array<FiltererResult> & TotalTimed>>({ name: 'filter', highWaterMark: 1 }, (frms: Timables<DecodedFrames>) => {
         if (filterer.cb) filterer.cb(frms[0].frames[0].pts);
+        // @ts-ignore
         return filterer.filter(frms);
       }, () => { }, reject);
   

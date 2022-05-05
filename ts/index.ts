@@ -1,7 +1,6 @@
 /*
   Aerostat Beam Coder - Node.js native bindings to FFmpeg
   Copyright (C) 2019 Streampunk Media Ltd.
-  Copyright (C) 2022 Chemouni Uriel.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,46 +19,37 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 
-import demuxerStream from './demuxerStream';
-import muxerStream from './muxerStream';
-import makeSources from './makeSources';
-import makeStreams from './makeStreams';
-import { BeamcoderType } from './types/BeamcoderType';
-import bindings from 'bindings';
+import beamcoder from './beamcoder';
 
-const beamcoder = bindings('beamcoder') as BeamcoderType;
-// import * as beamstreams from './beamstreams.js';
+export { default as demuxerStream } from './DemuxerStream';
+export { default as muxerStream } from './MuxerStream';
+
+export { default as DemuxerStream } from './DemuxerStream';
+export { default as MuxerStream } from './MuxerStream';
+
+export { default as makeSources } from './makeSources';
+export { default as makeStreams } from './makeStreams';
+
+export { getRaw, getHTML } from './utils';
 
 // Provide useful debug on segfault-related crash
 import SegfaultHandler from 'segfault-handler';
 SegfaultHandler.registerHandler('crash.log');
 
-const splash = `Aerostat Beam Coder  Copyright (C) 2019  Streampunk Media Ltd
-GPL v3.0 or later license. This program comes with ABSOLUTELY NO WARRANTY.
-This is free software, and you are welcome to redistribute it
-under certain conditions. Conditions and warranty at:
-https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
+export function splash() {
+  const splash = `Aerostat Beam Coder  Copyright (C) 2019  Streampunk Media Ltd
+  GPL v3.0 or later license. This program comes with ABSOLUTELY NO WARRANTY.
+  This is free software, and you are welcome to redistribute it
+  under certain conditions. Conditions and warranty at:
+  https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
+  
+  console.log(splash);
+  console.log('Using FFmpeg version', beamcoder.avVersionInfo());  
+}
 
-console.log(splash);
-console.log('Using FFmpeg version', beamcoder.avVersionInfo());
-
-// export {demuxerStream, muxerStream, makeSources, makeStreams} from './beamstreams.js';
-
-beamcoder.demuxerStream = demuxerStream;
-beamcoder.muxerStream = muxerStream;
-
-beamcoder.makeSources = makeSources;
-beamcoder.makeStreams = makeStreams;
+export { Codec, CodecContext, CodecPar, Decoder, DecodedFrames, Demuxer, EncodedPackets, Encoder, Filter } from './types';
+export { MediaType, FilterLink, FilterContext, FilterGraph, Filterer, InputFormat, OutputFormat, Frame } from './types';
+export { SampleFormat, HWDeviceContext, HWFramesContext, Muxer, Packet, PrivClass, Disposition, Stream } from './types';
+export type { governor} from './types';
 
 export default beamcoder;
-
-export { CodecPar } from './types/CodecPar';
-export { Decoder } from './types/Decoder';
-export { Demuxer } from './types/Demuxer';
-export { Muxer } from './types/Muxer';
-export { Stream } from './types/Stream';
-export { Encoder } from './types/Encoder';
-export { Filterer, Filter } from './types/Filter';
-export { FormatContext } from './types/FormatContext';
-export { Frame } from './types/Frame';
-export { DecodedFrames } from './types/DecodedFrames';

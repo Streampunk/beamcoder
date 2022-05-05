@@ -23,61 +23,12 @@
 import os from 'os';
 import fs from 'fs';
 import util from 'util';
-import https from 'https';
 import child_process, { ChildProcess } from 'child_process';
+import { getHTML, getRaw } from './utils';
 
 const { mkdir, access, rename } = fs.promises;
 
 const [ execFile, exec ] = [ child_process.execFile, child_process.exec ].map(util.promisify);
-
-async function get(ws: NodeJS.WritableStream, url: string, name: string): Promise<void> {
-  let received = 0;
-  let totalLength = 0;
-  return new Promise((comp, err) => {
-    https.get(url, res => {
-      if (res.statusCode === 301 || res.statusCode === 302) {
-        err({ name: 'RedirectError', message: res.headers.location });
-      } else {
-        res.pipe(ws);
-        if (totalLength == 0) {
-          totalLength = +(res.headers['content-length'] as string);
-        }
-        res.on('end', () => {
-          process.stdout.write(`Downloaded 100% of '${name}'. Total length ${received} bytes.\n`);
-          comp();
-        });
-        res.on('error', err);
-        res.on('data', x => {
-          received += x.length;
-          process.stdout.write(`Downloaded ${received * 100/ totalLength | 0 }% of '${name}'.\r`);
-        });
-      }
-    }).on('error', err);
-  });
-}
-
-async function getHTML(url: string, name: string): Promise<Buffer> {
-  let received = 0;
-  let totalLength = 0;
-  return new Promise((resolve, reject) => {
-    https.get(url, res => {
-      const chunks: Array<Uint8Array> = [];
-      if (totalLength == 0) {
-        totalLength = +(res.headers['content-length'] as string);
-      }
-      res.on('end', () => {
-        process.stdout.write(`Downloaded 100% of '${name}'. Total length ${received} bytes.\n`);
-        resolve(Buffer.concat(chunks));
-      });
-      res.on('error', reject);
-      res.on('data', (chunk) => {
-        chunks.push(chunk);
-        received += chunk.length;
-        process.stdout.write(`Downloaded ${received * 100/ totalLength | 0 }% of '${name}'.\r`);
-      });
-    }).on('error', reject);
-  });
-}
 
 async function inflate(rs: NodeJS.ReadableStream, folder: string, name: string): Promise<void> {
   const unzip = require('unzipper');
@@ -117,11 +68,11 @@ async function win32(): Promise<void> {
     const downloadSource = autoStr.substring(sharedStartPos, sharedEndPos);
 
     let ws_shared = fs.createWriteStream(`ffmpeg/${ffmpegFilename}.zip`);
-    await get(ws_shared, downloadSource, `${ffmpegFilename}.zip`)
+    await getRaw(ws_shared, downloadSource)
       .catch(async (err) => {
         if (err.name === 'RedirectError') {
           const redirectURL = err.message;
-          await get(ws_shared, redirectURL, `${ffmpegFilename}.zip`);
+          await getRaw(ws_shared, redirectURL, `${ffmpegFilename}.zip`);
         } else console.error(err);
       });
 

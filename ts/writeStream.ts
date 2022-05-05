@@ -20,7 +20,7 @@
   14 Ormiscaig, Aultbea, Achnasheen, IV22 2JJ  U.K.
 */
 import { Writable } from 'stream';
-import type { ffStats } from './types';
+import type { ffStats } from './calcStats';
 import { Timing, Timable } from './types/time';
 
 import calcStats from './calcStats';
@@ -32,21 +32,23 @@ export default function writeStream<T extends Timable, R>(params: { name: string
   return new Writable({
     objectMode: true,
     highWaterMark: params.highWaterMark ? params.highWaterMark || 4 : 4,
-    write(val: T, encoding: BufferEncoding, cb: (error?: Error | null, result?: any) => void) {
+    write(val: T, encoding: BufferEncoding, cb: (error?: Error | null, result?: R) => void) {
       (async () => {
         const start = process.hrtime();
         const reqTime = start[0] * 1e3 + start[1] / 1e6;
         const result = await processFn(val);
         if ('mux' === params.name) {
           const pktTimings = val.timings;
-          pktTimings[params.name] = { reqTime: reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
-          if (doTimings)
-            timings.push(pktTimings);
+          if (pktTimings) {
+            pktTimings[params.name] = { reqTime: reqTime, elapsed: process.hrtime(start)[1] / 1000000 };
+            if (doTimings)
+              timings.push(pktTimings);
+          }
         }
         cb(null, result);
       })().catch(cb);
     },
-    final(cb: (error?: Error | null, result?: any) => void) {
+    final(cb: (error?: Error | null, result?: R | null) => void) {
       (async () => {
         const result = finalFn ? await finalFn() : null;
         if (doTimings && ('mux' === params.name)) {
