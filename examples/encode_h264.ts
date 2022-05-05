@@ -43,8 +43,8 @@ async function run() {
     gop_size: 10,
     max_b_frames: 1,
     pix_fmt: 'yuv420p',
-    priv_data: { preset: 'slow' }
-  };
+    priv_data: { preset: 'slow' },
+  } as const;
 
   let encoder = beamcoder.encoder(encParams);
   console.log('Encoder', encoder);

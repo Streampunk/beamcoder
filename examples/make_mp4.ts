@@ -25,12 +25,9 @@
 
   Output can be viewed in VLC. Make sure "All Files" is selected to see the file.
 */
+
+import beamcoder from '..'; // Use require('beamcoder') externally
 import fs from 'fs';
-
-import beamcoder from '../ts/index';
-
-// const beamcoder = require('../index.js'); // Use require('beamcoder') externally
-// const fs = require('fs');
 
 let endcode = Buffer.from([0, 0, 1, 0xb7]);
 
@@ -49,7 +46,7 @@ async function run() {
     priv_data: { preset: 'slow' }
   };
 
-  let encoder = beamcoder.encoder(encParams);
+  let encoder = await beamcoder.encoder(encParams);
   console.log('Encoder', encoder);
 
   const mux = beamcoder.muxer({ format_name: 'mp4' });
@@ -63,7 +60,10 @@ async function run() {
     format: 'yuv420p'
   });
   console.log(vstr);
-  await mux.openIO({ url: 'file:test.mp4' });
+  await mux.openIO({
+    url: 'file:test.mp4'
+  });
+  await mux.writeHeader();
 
   let outFile = fs.createWriteStream(process.argv[2]);
 
