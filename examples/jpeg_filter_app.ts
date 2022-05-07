@@ -108,7 +108,6 @@ app.use(async (ctx) => { // Assume HTTP GET with path /<file_name>/<time_in_s>
   ctx.body = {
     message: err.message
   };
-  // console.log(err);
 }
 });
 
