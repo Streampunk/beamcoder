@@ -45,7 +45,7 @@ function allocPicture(pixelFmt: string, width: number, height: number) { // esli
 }
 
 async function addStream(stream, muxer, codecID: number) { // eslint-disable-line
-  let codec = await beamcoder.encoder({ codec_id: codecID });
+  let codec = beamcoder.encoder({ codec_id: codecID });
 
   stream.st = muxer.newStream();
   stream.enc = codec;

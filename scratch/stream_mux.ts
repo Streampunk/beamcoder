@@ -24,8 +24,10 @@ import fs from 'fs';
 
 async function run() {
   let demuxer = await beamcoder.demuxer('../../media/sound/BBCNewsCountdown.wav');
+
   let muxerStream = new MuxerStream({ highwaterMark: 65536 });
   muxerStream.pipe(fs.createWriteStream('test.wav'));
+
   let muxer = muxerStream.muxer({ format_name: 'wav' });
   let stream = muxer.newStream(demuxer.streams[0]); // eslint-disable-line
   // stream.time_base = demuxer.streams[0].time_base;

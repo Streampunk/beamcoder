@@ -120,6 +120,7 @@ async function run() {
   }
   let frames = await decoder.flush();
   console.log('flush', frames.total_time, frames.frames.length);
+  
   demuxerStream.destroy();
 }
 
