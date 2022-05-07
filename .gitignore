@@ -72,11 +72,10 @@ ffmpeg/
 
 # Editors and IDE's
 *.swp
-beamstreams.js
-index.js
-install_ffmpeg.js
 ts/*.js
 ts/*.d.ts
-examples/capture
-scratch/test.wav
+examples/pnpm-lock.yaml
+examples/capture/
+*.torrent
+*.jpg
 scratch/wibble.h264
