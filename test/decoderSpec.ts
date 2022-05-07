@@ -20,10 +20,10 @@
 */
 
 import test from 'tape';
-import beamcoder, { Decoder } from '..';
+import beamcoder from '..';
 
 test('Creating a decoder', t => {
-  let dec: Decoder = beamcoder.decoder({ name: 'h264' });
+  let dec = beamcoder.decoder({ name: 'h264' });
   t.ok(dec, 'is truthy.');
   t.equal(dec.name, 'h264', 'has the expected name.');
   t.equal(dec.codec_id, 27, 'has the expected codec_id.');
@@ -48,6 +48,7 @@ test('Checking the A properties:', t => {
 
   t.equals(dec.audio_service_type, 'main',
     'audio_service_type has expected default value.');
+  // @ts-expect-error:next-line
   t.throws(() => { dec.audio_service_type = 'dialogue'; },
     /decoding/, 'cannot be updated when deocoding.');
 

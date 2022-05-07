@@ -25,7 +25,7 @@ import beamcoder from '..';
 test('Creating a muxer', t => {
   let mx = beamcoder.muxer({ name: 'mpegts' });
   t.ok(mx, 'is truthy.');
-  // @ts-expect-error:next-line
+  // @ts-expect-error
   t.equal(typeof mx.iformat, 'undefined', 'input format is undefined.');
   t.ok(mx.oformat, 'has output format.');
   t.equal(mx.oformat.name, 'mpegts', 'output format is mpegts.');

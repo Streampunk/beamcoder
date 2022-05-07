@@ -20,12 +20,13 @@
 */
 
 import test from 'tape';
-import beamcoder, { Demuxer } from '..';
+import beamcoder from '..';
 
 test('Creating a demuxer', async t => {
-  let dm: Demuxer = await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
+  let dm = await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
   t.ok(dm, 'is truthy.');
   t.equal(dm.type, 'demuxer', 'type name says demuxer.');
+  // @ts-expect-error:next-line
   t.equal(typeof dm.oformat, 'undefined', 'output format is undefined.');
   t.ok(dm.iformat, 'has an input format.');
   t.equal(dm.iformat.name, 'mpegts', 'input format is mpegts.');

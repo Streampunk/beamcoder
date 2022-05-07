@@ -20,14 +20,13 @@
 */
 
 import test from 'tape';
-import beamcoder, { FormatContext } from '..';
+import beamcoder from '..';
 
 const isExternal = (o: any) => (Object as any).toString(o).indexOf('native code') >= 0;
-//const isExternal = o => Object.toString.apply(o).indexOf('native code') >= 0;
-// Object.toString.apply(Object)
+// const isExternal = o => Object.toString(o).indexOf('native code') >= 0;
 
 test('Creating a format', t => {
-  let fmt: FormatContext = beamcoder.format();
+  let fmt = beamcoder.format();
   t.ok(fmt, 'is truthy.');
   t.equal(fmt.type, 'format', 'calls itself type format.');
   t.equal(fmt.iformat, null, 'has no input format.');
@@ -41,13 +40,11 @@ test('Creating a format', t => {
   t.end();
 });
 
-const stripNewStream = (ctxt: FormatContext) => {
-  const { newStream, ...others } = ctxt;
-  return { ...others }
-};
+// @ts-ignore
+const stripNewStream = ({ newStream, ...others }) => ({ ...others });
 
 test('Minimal JSON serialization', t => {
-  let fmt: FormatContext = beamcoder.format();
+  let fmt = beamcoder.format();
   let fmts = JSON.stringify(fmt);
   t.equal(typeof fmts, 'string', 'stringify creates a string.');
   let fmtj = JSON.parse(fmts);
@@ -130,7 +127,7 @@ test('Minimal JSON serialization', t => {
 });
 
 test('Maximal JSON serialization', t => {
-  let fmt: FormatContext = beamcoder.format({
+  let fmt = beamcoder.format({
     type: 'format',
     oformat: null,
     iformat: null,

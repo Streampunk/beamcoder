@@ -20,10 +20,10 @@
 */
 
 import test from 'tape';
-import beamcoder, { Filterer } from '..';
+import beamcoder from '..';
 
 test('Create a filterer', async t => {
-  let flt: Filterer = await beamcoder.filterer({
+  let flt = await beamcoder.filterer({
     filterType: 'audio',
     inputParams: [
       {

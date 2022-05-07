@@ -72,6 +72,7 @@ test('Minimal JSON serialization', t => {
 });
 
 test('Maximal JSON serialization', t => {
+  //@ts-ignore
   let pkt = beamcoder.packet({ type: 'Packet',
     pts: 42,
     dts: 43,

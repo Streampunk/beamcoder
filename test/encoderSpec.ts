@@ -20,10 +20,10 @@
 */
 
 import test from 'tape';
-import beamcoder, { Encoder } from '..';
+import beamcoder from '..';
 
 test('Creating a video encoder', t => {
-  let enc: Encoder = beamcoder.encoder({ name: 'h264' });
+  let enc = beamcoder.encoder({ name: 'h264' });
   t.ok(enc, 'is truthy.');
   t.equal(enc.name, 'libx264', 'has the expected name.');
   t.equal(enc.codec_id, 27, 'has the expected codec_id.');
@@ -43,13 +43,14 @@ test('Creating an audio encoder', t => {
 });
 
 test('Checking the A properties:', t => {
-  let enc: Encoder = beamcoder.encoder({ name: 'h264' });
+  let enc = beamcoder.encoder({ name: 'h264' });
 
   t.deepEqual(enc.active_thread_type, { FRAME: false, SLICE: false},
     'active_thread_type has expected default.');
   // @ts-expect-error:next-line
   t.throws(() => { enc.active_thread_type = { FRAME: true }; }, /User cannot/,
     'active_thread_type cannot be set.');
+
   // @ts-expect-error:next-line
   t.notOk(enc.apply_cropping, 'apply_cropping not defined for encoding.');
   // @ts-expect-error:next-line
