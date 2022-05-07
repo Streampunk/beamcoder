@@ -78,4 +78,5 @@ examples/pnpm-lock.yaml
 examples/capture/
 *.torrent
 *.jpg
-scratch/wibble.h264
+scratch/*.h264
+scratch/*.wav
