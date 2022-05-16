@@ -1,6 +1,6 @@
 {
   "name": "@u4/beamcoder",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Node.js native bindings to FFmpeg in Typescript",
   "main": "ts/index.js",
   "types": "ts/index.d.ts",
@@ -60,6 +60,7 @@
   "gypfile": true,
   "files": [
     "src",
-    "ts"
+    "ts",
+    "binding.gyp"
   ]
 }

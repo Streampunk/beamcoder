@@ -22,7 +22,7 @@ export async function getRaw(ws: NodeJS.WritableStream, url: string, name?: stri
             totalLength = +(res.headers['content-length'] as string);
           }
           res.on('end', () => {
-            process.stdout.write(`Downloaded 100% of '${name}'. Total length ${received} bytes.\n`);
+            process.stdout.write(`Downloaded Done of '${name}'. Total length ${received} bytes.\n`);
             comp();
           });
           res.on('error', err);
@@ -50,7 +50,7 @@ export async function getHTML(url: string, name: string): Promise<Buffer> {
           totalLength = +(res.headers['content-length'] as string);
         }
         res.on('end', () => {
-          process.stdout.write(`Downloaded 100% of '${name}'. Total length ${received} bytes.\n`);
+          process.stdout.write(`Downloaded Done of '${name}'. Total length ${received} bytes.\n`);
           resolve(Buffer.concat(chunks));
         });
         res.on('error', reject);
