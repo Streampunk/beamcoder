@@ -22,23 +22,24 @@
 
 import os from 'os';
 import fs from 'fs';
+import path from 'path';
 import util from 'util';
 import child_process, { ChildProcess } from 'child_process';
 import { getHTML, getRaw } from './utils';
-
 const { mkdir, access, rename } = fs.promises;
-
-const [ execFile, exec ] = [ child_process.execFile, child_process.exec ].map(util.promisify);
+const [execFile, exec] = [child_process.execFile, child_process.exec].map(util.promisify);
+import unzip from 'unzipper';
 
 async function inflate(rs: NodeJS.ReadableStream, folder: string, name: string): Promise<void> {
-  const unzip = require('unzipper');
+  // const unzip = require('unzipper');
   const directory = await unzip.Open.file(`${folder}/${name}.zip`);
+  const dest = path.resolve(`./${folder}/${name}`);
   const directoryName = directory.files[0].path;
   return new Promise((comp, err) => {
     console.log(`Unzipping '${folder}/${name}.zip'.`);
     rs.pipe(unzip.Extract({ path: folder }).on('close', async () => {
-      await rename(`./${folder}/${directoryName}`, `./${folder}/${name}`)
-      console.log(`Unzipping of '${folder}/${name}.zip' completed.`);
+      await rename(`./${folder}/${directoryName}`, dest)
+      console.log(`Unzipping of '${folder}/${name}.zip' to ${dest} completed.`);
       comp();
     }));
     rs.on('error', err);
@@ -47,79 +48,54 @@ async function inflate(rs: NodeJS.ReadableStream, folder: string, name: string):
 
 async function win32(): Promise<void> {
   console.log('Checking/Installing FFmpeg dependencies for Beam Coder on Windows.');
-
-  await mkdir('ffmpeg').catch(e => {
-    if (e.code === 'EEXIST') return;
-    else throw e;
-  });
-  
+  try {
+    await mkdir('ffmpeg');
+  } catch (e) {
+    if (e.code !== 'EEXIST') {
+      throw e;
+    }
+  };
   const ffmpegFilename = 'ffmpeg-5.x-win64-shared';
-  await access(`ffmpeg/${ffmpegFilename}`, fs.constants.R_OK).catch(async () => {
+  try {
+    const file = `ffmpeg/${ffmpegFilename}`;
+    await access(file, fs.constants.R_OK)
+    console.log(`${path.resolve(file)} Present, Ok`)
+  } catch (e) {
     const html = await getHTML('https://github.com/BtbN/FFmpeg-Builds/wiki/Latest', 'latest autobuilds');
     const htmlStr = html.toString('utf-8');
-    const autoPos = htmlStr.indexOf('<p><a href=');
-    const endPos = htmlStr.indexOf('</div>', autoPos);
-    const autoStr = htmlStr.substring(autoPos, endPos);
-    const sharedEndPos = autoStr.lastIndexOf('">win64-gpl-shared-5.');
-    if (sharedEndPos === -1)
-      throw new Error('Failed to find latest v4.x autobuild from "https://github.com/BtbN/FFmpeg-Builds/wiki/Latest"');
-    const startStr = '<p><a href="';
-    const sharedStartPos = autoStr.lastIndexOf(startStr, sharedEndPos) + startStr.length;
-    const downloadSource = autoStr.substring(sharedStartPos, sharedEndPos);
-
-    let ws_shared = fs.createWriteStream(`ffmpeg/${ffmpegFilename}.zip`);
-    await getRaw(ws_shared, downloadSource)
-      .catch(async (err) => {
-        if (err.name === 'RedirectError') {
-          const redirectURL = err.message;
-          await getRaw(ws_shared, redirectURL, `${ffmpegFilename}.zip`);
-        } else console.error(err);
-      });
-
-    await exec('npm install unzipper --no-save');
-    let rs_shared = fs.createReadStream(`ffmpeg/${ffmpegFilename}.zip`);
+    const m = htmlStr.match(/<p><a href="([^"]+)">win64-gpl-shared-5[0-9.]+<\/a><\/p>/);
+    if (!m) {
+      throw new Error('Failed to find latest v5.x autobuild from "https://github.com/BtbN/FFmpeg-Builds/wiki/Latest"');
+    }
+    const downloadSource = m[1];
+    const destZip = path.resolve(`ffmpeg/${ffmpegFilename}.zip`);
+    console.log(`Downloading ffmpeg zip to ${destZip}`);
+    let ws_shared = fs.createWriteStream(destZip);
+    try {
+      await getRaw(ws_shared, downloadSource, `${ffmpegFilename}.zip`)
+    } catch (err) {
+      if (err.name === 'RedirectError') {
+        const redirectURL = err.message;
+        await getRaw(ws_shared, redirectURL, `${ffmpegFilename}.zip`);
+      } else
+        throw err;
+    }
+    // await exec('npm install unzipper --no-save');
+    let rs_shared = fs.createReadStream(destZip);
     await inflate(rs_shared, 'ffmpeg', `${ffmpegFilename}`);
-  });
+  };
 }
 
 async function linux(): Promise<number> {
   console.log('Checking FFmpeg dependencies for Beam Coder on Linux.');
   const { stdout } = await execFile('ldconfig', ['-p']).catch(console.error);
   let result = 0;
-
-  if (stdout.indexOf('libavcodec.so.59') < 0) {
-    console.error('libavcodec.so.59 is not installed.');
-    result = 1;
+  for (const fn of ['avcodec.so.59', 'avformat.so.59', 'avdevice.so.59', 'avfilter.so.8', 'avutil.so.57', 'postproc.so.56', 'swresample.so.4', 'swscale.so.6']) {
+    if (stdout.indexOf(`lib${fn}`) < 0) {
+      console.error(`lib${fn} is not installed.`);
+      result = 1;
+    }
   }
-  if (stdout.indexOf('libavformat.so.59') < 0) {
-    console.error('libavformat.so.59 is not installed.');
-    result = 1;
-  }
-  if (stdout.indexOf('libavdevice.so.59') < 0) {
-    console.error('libavdevice.so.59 is not installed.');
-    result = 1;
-  }
-  if (stdout.indexOf('libavfilter.so.8') < 0) {
-    console.error('libavfilter.so.8 is not installed.');
-    result = 1;
-  }
-  if (stdout.indexOf('libavutil.so.57') < 0) {
-    console.error('libavutil.so.57 is not installed.');
-    result = 1;
-  }
-  if (stdout.indexOf('libpostproc.so.56') < 0) {
-    console.error('libpostproc.so.56 is not installed.');
-    result = 1;
-  }
-  if (stdout.indexOf('libswresample.so.4') < 0) {
-    console.error('libswresample.so.4 is not installed.');
-    result = 1;
-  }
-  if (stdout.indexOf('libswscale.so.6') < 0) {
-    console.error('libswscale.so.6 is not installed.');
-    result = 1;
-  }
-
   if (result === 1) {
     console.log(`Try running the following (Ubuntu/Debian):
 sudo add-apt-repository ppa:jonathonf/ffmpeg-4
@@ -133,7 +109,7 @@ async function darwin(): Promise<0> {
   console.log('Checking for FFmpeg dependencies via HomeBrew.');
   let output: ChildProcess;
   let returnMessage: string;
-  
+
   try {
     output = await exec('brew list ffmpeg');
     returnMessage = 'FFmpeg already present via Homebrew.';
@@ -143,7 +119,6 @@ async function darwin(): Promise<0> {
       console.log('Either Homebrew is not installed or something else is wrong.\nExiting');
       process.exit(1);
     }
-
     console.log('FFmpeg not installed. Attempting to install via Homebrew.');
     try {
       output = await exec('brew install nasm pkg-config texi2html ffmpeg');
@@ -154,39 +129,37 @@ async function darwin(): Promise<0> {
       process.exit(1);
     }
   }
-
   console.log(output.stdout);
   console.log(returnMessage);
-
   return 0;
 }
 
 switch (os.platform()) {
-case 'win32':
-  if (os.arch() != 'x64') {
-    console.error('Only 64-bit platforms are supported.');
-    process.exit(1);
-  } else {
-    win32().catch(console.error);
-  }
-  break;
-case 'linux':
-  if (os.arch() != 'x64' && os.arch() != 'arm64') {
-    console.error('Only 64-bit platforms are supported.');
-    process.exit(1);
-  } else {
-    linux();
-  }
-  break;
-case 'darwin':
-  if (os.arch() != 'x64' && os.arch() != 'arm64') {
-    console.error('Only 64-bit platforms are supported.');
-    process.exit(1);
-  } else {
-    darwin();
-  }
-  break;
-default:
-  console.error(`Platfrom ${os.platform()} is not supported.`);
-  break;
+  case 'win32':
+    if (os.arch() != 'x64') {
+      console.error('Only 64-bit platforms are supported.');
+      process.exit(1);
+    } else {
+      win32().catch(console.error);
+    }
+    break;
+  case 'linux':
+    if (os.arch() != 'x64' && os.arch() != 'arm64') {
+      console.error('Only 64-bit platforms are supported.');
+      process.exit(1);
+    } else {
+      linux();
+    }
+    break;
+  case 'darwin':
+    if (os.arch() != 'x64' && os.arch() != 'arm64') {
+      console.error('Only 64-bit platforms are supported.');
+      process.exit(1);
+    } else {
+      darwin();
+    }
+    break;
+  default:
+    console.error(`Platfrom ${os.platform()} is not supported.`);
+    break;
 }
