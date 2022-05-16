@@ -12,6 +12,7 @@ export async function getRaw(ws: NodeJS.WritableStream, url: string, name?: stri
     if (!name)
         name = new URL(url).pathname.replace(/.*\//g, '')
     return new Promise((comp, err) => {
+      let prevMsg = '';
       https.get(url, res => {
         if (res.statusCode === 301 || res.statusCode === 302) {
           err({ name: 'RedirectError', message: res.headers.location });
@@ -27,7 +28,11 @@ export async function getRaw(ws: NodeJS.WritableStream, url: string, name?: stri
           res.on('error', err);
           res.on('data', x => {
             received += x.length;
-            process.stdout.write(`Downloaded ${received * 100/ totalLength | 0 }% of '${name}'.\r`);
+            const msg = `Downloaded ${received * 100 / totalLength | 0 }% of '${name}'.\r`;
+            if (msg !== prevMsg) {
+              prevMsg = msg;
+              process.stdout.write(msg);
+            }
           });
         }
       }).on('error', err);
@@ -39,6 +44,7 @@ export async function getHTML(url: string, name: string): Promise<Buffer> {
     let totalLength = 0;
     return new Promise((resolve, reject) => {
       https.get(url, res => {
+        let prevMsg = '';
         const chunks: Array<Uint8Array> = [];
         if (totalLength == 0) {
           totalLength = +(res.headers['content-length'] as string);
@@ -51,7 +57,11 @@ export async function getHTML(url: string, name: string): Promise<Buffer> {
         res.on('data', (chunk) => {
           chunks.push(chunk);
           received += chunk.length;
-          process.stdout.write(`Downloaded ${received * 100/ totalLength | 0 }% of '${name}'.\r`);
+          const msg = `Downloaded ${received * 100 / totalLength | 0 }% of '${name}'.\r`;
+          if (msg !== prevMsg) {
+            prevMsg = msg;
+            process.stdout.write(msg);
+          }
         });
       }).on('error', reject);
     });
