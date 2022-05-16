@@ -1,11 +1,12 @@
 {
   "name": "beamcoder",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Node.js native bindings to FFmpeg.",
   "main": "ts/index.js",
   "types": "ts/index.d.ts",
   "scripts": {
-    "postinstall": "tsc -p . && node ts/install_ffmpeg.js && node-gyp rebuild",
+    "prepack": "tsc -p .",
+    "postinstall": "node ts/install_ffmpeg.js && node-gyp rebuild",
     "build": "tsc -p .",
     "clean": "rimraf ts/*.js ts/*.d.ts temp.mp4",
     "test": "ts-node node_modules/tape/bin/tape test/*.ts",
