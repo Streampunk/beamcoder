@@ -1,4 +1,4 @@
-import beamcoder, { demuxerStream } from '..'; // Use require('beamcoder') externally
+import beamcoder, { DemuxerStream } from '..'; // Use require('beamcoder') externally
 import path from 'path';
 import fs from 'fs';
 import { Demuxer, getRaw } from '..';
@@ -36,33 +36,40 @@ async function getFiles(): Promise<string[]> {
 
 async function run() {
     const filelist = await getFiles();
-    const stream = new demuxerStream({ highwaterMark: 3600 });
+    const stream = new DemuxerStream({ highwaterMark: 3600 });
     const demuxPromise = stream.demuxer({})
     demuxPromise.then(async (demuxer: Demuxer) => {
-        const packet = await demuxer.read();
         let dec = beamcoder.decoder({ demuxer, stream_index: 0 }); // Create a decoder
-        let decResult = await dec.decode(packet); // Decode the frame
-        if (decResult.frames.length === 0) // Frame may be buffered, so flush it out
-            decResult = await dec.flush();
-        // Filtering could be used to transform the picture here, e.g. scaling
-        let enc = beamcoder.encoder({ // Create an encoder for JPEG data
-            name: 'mjpeg', // FFmpeg does not have an encoder called 'jpeg'
-            width: dec.width,
-            height: dec.height,
-            pix_fmt: dec.pix_fmt.indexOf('422') >= 0 ? 'yuvj422p' : 'yuvj420p',
-            time_base: [1, 1]
-        });
-        let jpegResult = await enc.encode(decResult.frames[0]); // Encode the frame
-        await enc.flush(); // Tidy the encoder
-        const jpgDest = 'capture.jpg';
-        fs.writeFileSync(jpgDest, jpegResult.packets[0].data);
-        const sumDest = await md5File(jpgDest);
-        const expectedMd5Mac = '63a5031f882ad85a964441f61333240c';
-        const expectedMd5PC = 'e16f49626e71b4be46a3211ed1d4e471';
-        if (expectedMd5Mac !== sumDest && expectedMd5PC !== sumDest) {
-            console.error(`MD5 missmatch get ${sumDest}`)
+        let frameId = 0;
+        while (true) {
+            const packet = await demuxer.read();
+            let decResult = await dec.decode(packet); // Decode the frame
+            if (decResult.frames.length === 0) // Frame may be buffered, so flush it out
+                decResult = await dec.flush();
+            // Filtering could be used to transform the picture here, e.g. scaling
+            let enc = beamcoder.encoder({ // Create an encoder for JPEG data
+                name: 'mjpeg', // FFmpeg does not have an encoder called 'jpeg'
+                width: dec.width,
+                height: dec.height,
+                pix_fmt: dec.pix_fmt.indexOf('422') >= 0 ? 'yuvj422p' : 'yuvj420p',
+                time_base: [1, 1]
+            });
+            let jpegResult = await enc.encode(decResult.frames[0]); // Encode the frame
+            await enc.flush(); // Tidy the encoder
+            frameId++;
+            const jpgDest = `capture${frameId % 10}.jpg`;
+            // if (frameId % 10 === 1)
+            fs.writeFileSync(jpgDest, jpegResult.packets[0].data);
+            const sumDest = await md5File(jpgDest);
+            if (frameId === 1) {
+                const expectedMd5Mac = '63a5031f882ad85a964441f61333240c';
+                const expectedMd5PC = 'e16f49626e71b4be46a3211ed1d4e471';
+                if (expectedMd5Mac !== sumDest && expectedMd5PC !== sumDest) {
+                    console.error(`MD5 missmatch get ${sumDest}`)
+                }
+            }
+            console.log(`saving in stream img as ${jpgDest} pos: ${packet.pos} md5: ${sumDest}`);
         }
-        console.log(`saving in stream img as ${jpgDest}`);
         demuxer.forceClose();
     });
     // https://github.com/awslabs/amazon-kinesis-video-streams-producer-c/raw/master/samples/h264SampleFrames/frame-001.h264
