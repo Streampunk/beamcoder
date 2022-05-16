@@ -1,7 +1,7 @@
 {
-  "name": "beamcoder",
+  "name": "@u4/beamcoder",
   "version": "0.7.2",
-  "description": "Node.js native bindings to FFmpeg.",
+  "description": "Node.js native bindings to FFmpeg in Typescript",
   "main": "ts/index.js",
   "types": "ts/index.d.ts",
   "scripts": {
@@ -15,6 +15,10 @@
     "lint-html": "eslint **/*.js -f html -o ./reports/lint-results.html",
     "lint-fix": "eslint --fix **/*.js"
   },
+  "contributors": [
+    "Streampunk Media Ltd (https://www.streampunk.media/)",
+    "Uriel Chemouni <uchemouni@gmail.com> (https://urielch.github.io/)"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Streampunk/beamcoder.git"
@@ -33,9 +37,9 @@
   "author": "Streampunk Media Ltd",
   "license": "GPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/Streampunk/beamcoder/issues"
+    "url": "https://github.com/UrielCh/beamcoder/issues"
   },
-  "homepage": "https://github.com/Streampunk/beamcoder#readme",
+  "homepage": "https://github.com/UrielCh/beamcoder#readme",
   "dependencies": {
     "bindings": "^1.5.0",
     "segfault-handler": "^1.3.0"
@@ -53,5 +57,9 @@
     "typescript": "^4.6.4",
     "webtorrent": "^1.8.16"
   },
-  "gypfile": true
+  "gypfile": true,
+  "files": [
+    "src",
+    "ts"
+  ]
 }
