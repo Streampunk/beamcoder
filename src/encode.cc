@@ -206,12 +206,11 @@ void encodeExecute(napi_env env, void* data) {
     ret = avcodec_receive_packet(c->encoder, packet);
     if (ret == 0) {
       c->packets.push_back(packet);
-      packet = av_packet_alloc();
     } else {
+      av_packet_free(&packet);
       //printf("Receive packet got status %i\n", ret);
     }
   } while (ret == 0);
-  av_packet_free(&packet);
 
   c->totalTime = microTime(encodeStart);
   /* if (!c->frames.empty()) {

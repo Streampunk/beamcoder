@@ -283,8 +283,10 @@ void decodeExecute(napi_env env, void* data) {
         }
         c->frames.push_back(sw_frame);
         av_frame_free(&frame);
-      } else
+      } else {
         c->frames.push_back(frame);
+        av_frame_free(&sw_frame);
+      }
 
       frame = av_frame_alloc();
       sw_frame = av_frame_alloc();
