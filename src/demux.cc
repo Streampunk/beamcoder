@@ -115,6 +115,9 @@ void demuxerComplete(napi_env env,  napi_status asyncStatus, void* data) {
   tidyCarrier(env, c);
 }
 
+/**
+ * demuxer(options: DemuxerCreateOptions | string): Promise<Demuxer>
+ */
 napi_value demuxer(napi_env env, napi_callback_info info) {
   napi_value resourceName, promise, value, subValue;
   napi_valuetype type;
@@ -142,6 +145,7 @@ napi_value demuxer(napi_env env, napi_callback_info info) {
   REJECT_RETURN;
 
   if (type == napi_string) {
+    // demuxer(options: string): Promise<Demuxer>
     c->status = napi_get_value_string_utf8(env, args[0], nullptr, 0, &strLen);
     REJECT_RETURN;
     c->filename = (const char *) malloc((strLen + 1) * sizeof(char));
@@ -208,7 +212,7 @@ napi_value demuxer(napi_env env, napi_callback_info info) {
       REJECT_RETURN;
     }
   }
-
+  // end of arg reading
   if ((c->filename == nullptr) && (c->adaptor == nullptr)) {
     REJECT_ERROR_RETURN("Neither a filename nor an adaptor have been provided.",
       BEAMCODER_INVALID_ARGS);

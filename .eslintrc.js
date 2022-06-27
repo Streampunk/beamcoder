@@ -23,5 +23,6 @@ module.exports = {
     ],
     'no-console': 'off',
     'prefer-arrow-callback': 'error'
-  }
+  },
+  'ignorePatterns': [ '**/*.js' ]
 };

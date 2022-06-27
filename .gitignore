@@ -72,4 +72,11 @@ ffmpeg/
 
 # Editors and IDE's
 *.swp
-.vscode/
+ts/*.js
+ts/*.d.ts
+examples/pnpm-lock.yaml
+examples/capture/
+*.torrent
+*.jpg
+scratch/*.h264
+scratch/*.wav
