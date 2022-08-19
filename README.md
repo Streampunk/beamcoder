@@ -67,6 +67,8 @@ Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wi
 
 [![NPM](https://nodei.co/npm/beamcoder.png?downloads=true)](https://www.npmjs.com/package/beamcoder)
 
+[Click Here](https://www.scaler.com/topics/javascript/install-node-js/) to know more about Node.js installation.
+
 ### Pre-requisites
 
 Native packages require a build stage that needs some setup. This includes Python 3 and build tools.
