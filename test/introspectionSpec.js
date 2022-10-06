@@ -52,3 +52,11 @@ test('Muxer information', t => {
   t.ok(JSON.stringify(muxers), 'can be converted to JSON.');
   t.end();
 });
+
+test('Custom Logging', t => {
+  const cb = () => {
+    console.log('in callback')
+  };
+  beamcoder.setLoggingCallback(cb);
+  
+});

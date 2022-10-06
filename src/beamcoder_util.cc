@@ -1127,16 +1127,3 @@ std::unordered_map<int, std::string> beam_frame_side_data_type_fmap = {
   { AV_FRAME_DATA_S12M_TIMECODE, "s12m_timecode" }
 };
 const beamEnum* beam_frame_side_data_type = new beamEnum(beam_frame_side_data_type_fmap);
-
-std::unordered_map<int, std::string> beam_logging_level_fmap = {
-  { AV_LOG_QUIET, "quiet" },
-  { AV_LOG_PANIC, "panic" },
-  { AV_LOG_FATAL, "fatal" },
-  { AV_LOG_ERROR, "error" },
-  { AV_LOG_WARNING, "warning" },
-  { AV_LOG_INFO, "info" },
-  { AV_LOG_VERBOSE, "verbose" },
-  { AV_LOG_DEBUG, "debug" },
-  { AV_LOG_TRACE, "trace" }
-};
-const beamEnum* beam_logging_level = new beamEnum(beam_logging_level_fmap);
