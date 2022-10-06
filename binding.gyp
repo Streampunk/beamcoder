@@ -1,13 +1,14 @@
 {
   "targets": [{
     "target_name" : "beamcoder",
-    "sources" : [ "src/beamcoder.cc", "src/beamcoder_util.cc",
+    "sources" : [ "src/beamcoder.cc", "src/beamcoder_util.cc", 
+                  "src/log.cc" ,
                   "src/governor.cc", "src/demux.cc",
                   "src/decode.cc", "src/filter.cc",
                   "src/encode.cc", "src/mux.cc",
                   "src/packet.cc", "src/frame.cc",
                   "src/codec_par.cc", "src/format.cc",
-                  "src/codec.cc", "src/hwcontext.cc" ],
+                  "src/codec.cc", "src/hwcontext.cc"],
     "conditions": [
       ['OS!="win"', {
         "defines": [

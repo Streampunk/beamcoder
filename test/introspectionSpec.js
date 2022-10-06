@@ -53,10 +53,14 @@ test('Muxer information', t => {
   t.end();
 });
 
-test('Custom Logging', t => {
+test('Custom Logging', async t => {
+  let n = 0;
   const cb = () => {
+    n++;
     console.log('in callback')
   };
   beamcoder.setLoggingCallback(cb);
   
+  let dm = await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
+  t.ok(n > 2);
 });
