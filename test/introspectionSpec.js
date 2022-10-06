@@ -55,9 +55,9 @@ test('Muxer information', t => {
 
 test('Custom Logging', async t => {
   let n = 0;
-  const cb = () => {
+  const cb = (msg) => {
     n++;
-    console.log('in callback')
+    console.log('in callback', msg)
   };
   beamcoder.setLoggingCallback(cb);
   

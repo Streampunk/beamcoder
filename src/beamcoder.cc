@@ -891,7 +891,7 @@ napi_value Init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD("configurations", configurations),
     DECLARE_NAPI_METHOD("licenses", licenses),
     DECLARE_NAPI_METHOD("logging", logging),
-    // DECLARE_NAPI_METHOD("setLoggingCallback", setLoggingCallback),    
+    DECLARE_NAPI_METHOD("setLoggingCallback", setLoggingCallback),    
     DECLARE_NAPI_METHOD("governor", governor),
     DECLARE_NAPI_METHOD("format", makeFormat),
     DECLARE_NAPI_METHOD("decoder", decoder),
