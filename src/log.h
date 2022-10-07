@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <unordered_map>
 
+#define CHECK_STATUS_VOID if (checkStatus(env, status, __FILE__, __LINE__ - 1) != napi_ok) return
+
 extern const beamEnum* beam_logging_level;
 napi_value logging(napi_env env, napi_callback_info info);
 napi_value setLoggingCallback(napi_env env, napi_callback_info info);

@@ -75,7 +75,7 @@ napi_value logging(napi_env env, napi_callback_info info) {
   return result;
 }
 
-napi_threadsafe_function customCallback;
+napi_threadsafe_function threadSafeFunction;
 
 // Inspired from https://github.com/FFmpeg/FFmpeg/blob/321a3c244d0a89b2826c38611284cc403a9808fa/libavutil/log.c#L346
 #define LINE_SZ 1024
@@ -103,7 +103,11 @@ void av_log_custom_callback(void* ptr, int level, const char* fmt, va_list vl)
 		logCarrier* c = new logCarrier;
 		c->msg = line;
 		c->level = level;
-		napi_status status = napi_call_threadsafe_function(customCallback, c, napi_tsfn_blocking);	
+    napi_status status;
+    
+		status = napi_call_threadsafe_function(threadSafeFunction, c, napi_tsfn_nonblocking);	
+
+    return;
 }
 
 static void callJsCb(
@@ -119,15 +123,16 @@ static void callJsCb(
 	napi_status status;
 
 	status = napi_create_object(env, &jsThis);
-	if (checkStatus(env, status, __FILE__, __LINE__ - 1) != napi_ok) return;	
+	CHECK_STATUS_VOID;
+  	
 	napi_value jsStr;
 	status = napi_create_string_utf8(env, c->msg.c_str(), NAPI_AUTO_LENGTH, &jsStr);
-	if (checkStatus(env, status, __FILE__, __LINE__ - 1) != napi_ok) return;
+	CHECK_STATUS_VOID;
 
 	napi_value return_val;
 	status = napi_call_function(env, jsThis, jsCallback, 1, &jsStr, &return_val);
-	if (checkStatus(env, status, __FILE__, __LINE__ - 1) != napi_ok) return;
-	
+	CHECK_STATUS_VOID;
+
 	return;
 }
 
@@ -141,7 +146,7 @@ napi_value setLoggingCallback(napi_env env, napi_callback_info info){
 	CHECK_STATUS;
 
 	if (argc != 1) {
-		status = napi_throw_error(env, nullptr, "One argumentis required to set logging callback.");
+		status = napi_throw_error(env, nullptr, "One argument required to set logging callback.");
 		return nullptr;
 	}
 	napi_value callback = args[0];
@@ -155,9 +160,9 @@ napi_value setLoggingCallback(napi_env env, napi_callback_info info){
   }
 	
 	napi_value work_name;
-	status = napi_create_string_utf8(env,"Thread-safe Function For Libav Custom Logging",NAPI_AUTO_LENGTH, &work_name);
+	status = napi_create_string_utf8(env, "Thread-safe Function For Libav Custom Logging", NAPI_AUTO_LENGTH, &work_name);
 	CHECK_STATUS;
-		
+    
 	status = napi_create_threadsafe_function(
 		env,
     callback,
@@ -165,14 +170,17 @@ napi_value setLoggingCallback(napi_env env, napi_callback_info info){
     work_name,
     0,
     1,
-    NULL,
-    NULL,
-    NULL,
+    nullptr,
+    nullptr,
+    nullptr,
     callJsCb,
-    &customCallback
+    &threadSafeFunction
 	);
 	CHECK_STATUS;
-	
+  
+  status = napi_unref_threadsafe_function(env, threadSafeFunction);
+	CHECK_STATUS;
+  
 	av_log_set_callback(av_log_custom_callback);
 	return nullptr;
 }
