@@ -280,6 +280,11 @@ To control the level of logging from FFmpeg you can use the `beamcoder.logging()
 * `debug` - stuff which is only useful for libav* developers
 * `trace` - extremely verbose debugging for libav* developers
 
+To bypass the default ffmpeg logger you can use `beamcoder.setLoggingCallback()`. For example, to log all the messages using `console.log` :
+```javascript
+beamcoder.setLoggingCallback(msg => console.log(msg))
+```
+
 ### Demuxing
 
 The process of demuxing (de-multiplexing) extracts time-labelled packets of data contained in a media stream or file. FFmpeg provides a diverse range of demuxing capability with support for a wide range of input formats and protocols (`beamcoder.protocols()`).

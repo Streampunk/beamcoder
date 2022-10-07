@@ -57,10 +57,17 @@ test('Custom Logging', async t => {
   let n = 0;
   const cb = (msg) => {
     n++;
-    console.log('in callback', msg)
   };
   beamcoder.setLoggingCallback(cb);
   
   let dm = await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
-  t.ok(n > 2);
+  // Expected logs are :
+  // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
+  // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
+  // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
+  // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
+  // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
+  // [mpegts @ 0x7f1978000900] PES packet size mismatch
+  // [mpegts @ 0x7f1978000900] Packet corrupt (stream = 1, dts = 53647096)
+  t.ok(n > 5);
 });
