@@ -1640,14 +1640,18 @@ void filterExecute(napi_env env, void* data) {
       AVFrame *filtFrame = av_frame_alloc();
       AVFilterContext *sinkCtx = c->sinkCtxs->getContext(*it);
       if (!sinkCtx) {
+        av_frame_free(&filtFrame);
         c->status = BEAMCODER_INVALID_ARGS;
         c->errorMsg = "Sink name not found in sink contexts.";
         return;
       }
       ret = av_buffersink_get_frame(sinkCtx, filtFrame);
-      if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+      if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+        av_frame_free(&filtFrame);
         break;
+      }
       if (ret < 0) {
+        av_frame_free(&filtFrame);
         c->status = BEAMCODER_ERROR_FILTER_GET_FRAME;
         c->errorMsg = "Error while filtering.";
         return;

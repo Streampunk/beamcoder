@@ -3866,8 +3866,7 @@ void formatContextFinalizer(napi_env env, void* data, void* hint) {
       } */
     }
 
-    if (adaptor != nullptr) // crashes otherwise...
-      avformat_free_context(fc);
+    avformat_free_context(fc);
   }
 
   delete fmtRef;
