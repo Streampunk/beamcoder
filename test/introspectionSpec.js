@@ -55,12 +55,12 @@ test('Muxer information', t => {
 
 test('Custom Logging', async t => {
   let n = 0;
-  const cb = (msg) => {
+  const cb = () => {
     n++;
   };
   beamcoder.setLoggingCallback(cb);
   
-  let dm = await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
+  await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
   // Expected logs are :
   // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
   // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
