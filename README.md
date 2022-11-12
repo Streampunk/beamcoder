@@ -103,6 +103,7 @@ To ensure that sufficient threads are available to process several requests in p
 On Linux, use the appropriate package manager to install the FFmpeg 4.1 development dependencies first. An error will be printed if these cannot be found at expected locations. For example, on Ubuntu:
 
     sudo add-apt-repository ppa:jonathonf/ffmpeg-4
+    sudo add-apt-repository ppa:savoury1/ffmpeg5    
     sudo apt-get update
     sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev
 
