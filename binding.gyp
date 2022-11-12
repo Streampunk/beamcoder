@@ -21,7 +21,9 @@
         "cflags_cc": [
           "-std=c++11",
           "-fexceptions"
-        ],
+        ]
+      }],
+      ['OS!="win" and OS!="linux"', {
         "link_settings": {
           "libraries": [
             "-lavcodec",
@@ -73,6 +75,18 @@
               ]
             }
           ]
+    }],
+    ['OS=="linux"', {
+      "libraries": [
+        "<!(pkg-config --libs libavcodec)",
+        "<!(pkg-config --libs libavdevice)",
+        "<!(pkg-config --libs libavfilter)",
+        "<!(pkg-config --libs libavformat)",
+        "<!(pkg-config --libs libavutil)",
+        "<!(pkg-config --libs libpostproc)",
+        "<!(pkg-config --libs libswresample)",
+        "<!(pkg-config --libs libswscale)"
+      ]
     }],
     ['OS=="mac"', {
       "include_dirs" : [
