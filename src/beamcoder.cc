@@ -21,6 +21,7 @@
 
 #include "node_api.h"
 #include "beamcoder_util.h"
+#include "log.h"
 #include "governor.h"
 #include "format.h"
 #include "demux.h"
@@ -249,59 +250,6 @@ napi_value licenses(napi_env env, napi_callback_info info) {
   CHECK_STATUS;
   status = napi_set_named_property(env, result, "swscale", value);
   CHECK_STATUS;
-
-  return result;
-}
-
-napi_value logging(napi_env env, napi_callback_info info) {
-  napi_status status;
-  napi_value result;
-  int logLevel;
-  char* logLevelStr;
-  size_t strLen;
-
-  napi_value args[1];
-  size_t argc = 1;
-  status = napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
-  CHECK_STATUS;
-
-  if (argc == 0) {
-    logLevel = av_log_get_level();
-    status = napi_create_string_utf8(env,
-      (char*) beam_lookup_name(beam_logging_level->forward, logLevel),
-      NAPI_AUTO_LENGTH, &result);
-    CHECK_STATUS;
-  } else {
-    if (argc != 1) {
-      status = napi_throw_error(env, nullptr, "Wrong number of arguments to set log level.");
-      return nullptr;
-    }
-
-    napi_value params = args[0];
-    napi_valuetype t;
-    status = napi_typeof(env, params, &t);
-    CHECK_STATUS;
-    if (t != napi_string) {
-      status = napi_throw_type_error(env, nullptr, "Logging level parameter must be a string.");
-      return nullptr;
-    }
-
-    status = napi_get_value_string_utf8(env, args[0], nullptr, 0, &strLen);
-    CHECK_STATUS;
-    logLevelStr = (char*) malloc(sizeof(char) * (strLen + 1));
-    CHECK_STATUS;
-    status = napi_get_value_string_utf8(env, args[0], logLevelStr, strLen + 1, &strLen);
-    CHECK_STATUS;
-
-    logLevel = beam_lookup_enum(beam_logging_level->inverse, logLevelStr);
-    if (logLevel == BEAM_ENUM_UNKNOWN) {
-      NAPI_THROW_ERROR("Logging level string unrecognised");
-    }
-    av_log_set_level(logLevel);
-
-    status = napi_get_undefined(env, &result);
-    CHECK_STATUS;
-  }
 
   return result;
 }
@@ -943,6 +891,7 @@ napi_value Init(napi_env env, napi_value exports) {
     DECLARE_NAPI_METHOD("configurations", configurations),
     DECLARE_NAPI_METHOD("licenses", licenses),
     DECLARE_NAPI_METHOD("logging", logging),
+    DECLARE_NAPI_METHOD("setLoggingCallback", setLoggingCallback),    
     DECLARE_NAPI_METHOD("governor", governor),
     DECLARE_NAPI_METHOD("format", makeFormat),
     DECLARE_NAPI_METHOD("decoder", decoder),
