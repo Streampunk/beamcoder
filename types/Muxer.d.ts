@@ -92,7 +92,7 @@ export interface Muxer extends Omit<FormatContext,
 	/**
 	 * Abandon the muxing process and forcibly close the file or stream without completing it
 	 */
-	forceClose(): undefined
+	forceClose(): number
 }
 
 /**
