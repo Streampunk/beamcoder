@@ -53,6 +53,8 @@ void demuxerFinalizer(napi_env env, void* data, void* hint);
 void readBufferFinalizer(napi_env env, void* data, void* hint);
 
 napi_value forceCloseInput(napi_env env, napi_callback_info info);
+napi_value interrupt(napi_env env, napi_callback_info info);
+int interrupt_callback(void *opaque);
 
 struct demuxerCarrier : carrier {
   const char* filename = nullptr;
