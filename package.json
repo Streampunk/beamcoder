@@ -1,5 +1,5 @@
 {
-  "name": "beamcoder",
+  "name": "@antoinemopa/beamcoder",
   "version": "0.7.1",
   "description": "Node.js native bindings to FFmpeg.",
   "main": "index.js",
