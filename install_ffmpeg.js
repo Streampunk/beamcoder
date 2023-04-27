@@ -185,7 +185,8 @@ async function darwin() {
     output = await exec('brew list ffmpeg@5');
     returnMessage = 'FFmpeg already present via Homebrew.';
   } catch (err) {
-    if (err.stderr !== 'Error: No such keg: /usr/local/Cellar/ffmpeg@5\n') {
+    if (err.stderr.indexOf('Error: No such keg') === -1 &&
+        err.stderr.indexOf('ffmpeg@5') === -1) {
       console.error(err);
       console.log('Either Homebrew is not installed or something else is wrong.\nExiting');
       process.exit(1);
