@@ -265,8 +265,8 @@ export interface VideoInputParam extends InputParam {
 	height: number
 	pixelFormat: string
 	pixelAspect: Array<number>
-	hw_device_ctx: HWDeviceContext // Optional
-	swPixelFormat: string // Optional
+	hw_device_ctx?: HWDeviceContext // Optional
+	swPixelFormat?: string // Optional
 }
 /** The required parameters for setting up audio filter inputs */
 export interface AudioInputParam extends InputParam {

@@ -1,7 +1,7 @@
 {
   "targets": [{
     "target_name" : "beamcoder",
-    "sources" : [ "src/beamcoder.cc", "src/beamcoder_util.cc", 
+    "sources" : [ "src/beamcoder.cc", "src/beamcoder_util.cc",
                   "src/log.cc" ,
                   "src/governor.cc", "src/demux.cc",
                   "src/decode.cc", "src/filter.cc",
@@ -90,10 +90,12 @@
     }],
     ['OS=="mac"', {
       "include_dirs" : [
-        "/opt/homebrew/Cellar/ffmpeg/5.0/include"
+        "/usr/local/Cellar/ffmpeg@5/5.1.3/include/",
+        "/opt/homebrew/Cellar/ffmpeg@5/5.1.3/include/",
       ],
       "library_dirs": [
-        "/opt/homebrew/Cellar/ffmpeg/5.0/lib",
+        "/usr/local/Cellar/ffmpeg@5/5.1.3/lib/",
+        "/opt/homebrew/Cellar/ffmpeg@5/5.1.3/lib/",
       ]
     }],
   ]

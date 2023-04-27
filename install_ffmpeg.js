@@ -99,7 +99,7 @@ async function win32() {
     if (e.code === 'EEXIST') return;
     else throw e;
   });
-  
+
   const ffmpegFilename = 'ffmpeg-5.x-win64-shared';
   await access(`ffmpeg/${ffmpegFilename}`, fs.constants.R_OK).catch(async () => {
     const html = await getHTML('https://github.com/BtbN/FFmpeg-Builds/wiki/Latest', 'latest autobuilds');
@@ -180,12 +180,13 @@ async function darwin() {
   console.log('Checking for FFmpeg dependencies via HomeBrew.');
   let output;
   let returnMessage;
-  
+
   try {
-    output = await exec('brew list ffmpeg');
+    output = await exec('brew list ffmpeg@5');
     returnMessage = 'FFmpeg already present via Homebrew.';
   } catch (err) {
-    if (err.stderr !== 'Error: No such keg: /usr/local/Cellar/ffmpeg\n') {
+    if (err.stderr.indexOf('Error: No such keg') === -1 &&
+        err.stderr.indexOf('ffmpeg@5') === -1) {
       console.error(err);
       console.log('Either Homebrew is not installed or something else is wrong.\nExiting');
       process.exit(1);
@@ -193,7 +194,7 @@ async function darwin() {
 
     console.log('FFmpeg not installed. Attempting to install via Homebrew.');
     try {
-      output = await exec('brew install nasm pkg-config texi2html ffmpeg');
+      output = await exec('brew install nasm pkg-config texi2html ffmpeg@5');
       returnMessage = 'FFmpeg installed via Homebrew.';
     } catch (err) {
       console.log('Failed to install ffmpeg:\n');
