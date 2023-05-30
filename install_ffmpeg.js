@@ -24,6 +24,7 @@ const fs = require('fs');
 const util = require('util');
 const https = require('https');
 const cp = require('child_process');
+const { argv } = require('process');
 const [ mkdir, access, rename, execFile, exec ] = // eslint-disable-line
   [ fs.mkdir, fs.access, fs.rename, cp.execFile, cp.exec ].map(util.promisify);
 
@@ -83,7 +84,7 @@ async function inflate(rs, folder, name) {
   return new Promise((comp, err) => {
     console.log(`Unzipping '${folder}/${name}.zip'.`);
     rs.pipe(unzip.Extract({ path: folder }).on('close', () => {
-      fs.rename(`./${folder}/${directoryName}`, `./${folder}/${name}`, () => {
+      fs.rename(`${folder}/${directoryName}`, `${folder}/${name}`, () => {
         console.log(`Unzipping of '${folder}/${name}.zip' completed.`);
         comp();
       });
@@ -166,46 +167,65 @@ async function linux() {
     console.error('libswscale.so.6 is not installed.');
     result = 1;
   }
+  if (stdout.indexOf('libzimg.so.2') < 0) {
+    console.error('libzimg.so.2 is not installed.');
+    result = 1;
+  }
 
   if (result === 1) {
     console.log(`Try running the following (Ubuntu/Debian):
-sudo add-apt-repository ppa:jonathonf/ffmpeg-4
-sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev`);
+sudo add-apt-repository ppa:savoury1/ffmpeg4
+sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev libzimg-dev`);
     process.exit(1);
   }
   return result;
 }
 
 async function darwin() {
-  console.log('Checking for FFmpeg dependencies via HomeBrew.');
-  let output;
-  let returnMessage;
-  
-  try {
-    output = await exec('brew list ffmpeg');
-    returnMessage = 'FFmpeg already present via Homebrew.';
-  } catch (err) {
-    if (err.stderr !== 'Error: No such keg: /usr/local/Cellar/ffmpeg\n') {
-      console.error(err);
-      console.log('Either Homebrew is not installed or something else is wrong.\nExiting');
-      process.exit(1);
-    }
+  console.log('Checking/downloading ffmpeg shared libraries');
 
-    console.log('FFmpeg not installed. Attempting to install via Homebrew.');
-    try {
-      output = await exec('brew install nasm pkg-config texi2html ffmpeg');
-      returnMessage = 'FFmpeg installed via Homebrew.';
-    } catch (err) {
-      console.log('Failed to install ffmpeg:\n');
-      console.error(err);
-      process.exit(1);
-    }
+  await mkdir('ffmpeg').catch(e => {
+    if (e.code === 'EEXIST') return;
+    else throw e;
+  });
+
+  const version = '1.33rc3';
+
+  // default to platform-architecture
+  let arch = os.arch()
+
+  // but if the '--arch' argument is provided
+  // use the next argument as the value (e.g. 'x64' or 'arm64')
+  const overrideArchIndex = process.argv.indexOf('--arch');
+  if (0 < overrideArchIndex && overrideArchIndex < process.argv.length - 1) {
+    arch = process.argv[overrideArchIndex + 1];
+  }
+  
+  if (arch === 'x64') {
+    arch = 'x86_64';
   }
 
-  console.log(output.stdout);
-  console.log(returnMessage);
+  const ffmpegFilename = `ffmpeg-ffprobe-shared-darwin-${arch}.${version}`;
+  const tag = `v${version}`
 
-  return 0;
+  await access(`ffmpeg/${ffmpegFilename}`, fs.constants.R_OK).catch(async () => {
+    const ws = fs.createWriteStream(`ffmpeg/${ffmpegFilename}.zip`);
+    await get(
+      ws,
+      `https://github.com/descriptinc/ffmpeg-build-script/releases/download/${tag}/${ffmpegFilename}.zip`,
+      `${ffmpegFilename}.zip`
+    ).catch(async (err) => {
+      if (err.name === 'RedirectError') {
+        const redirectURL = err.message;
+        await get(ws, redirectURL, `${ffmpegFilename}.zip`);
+      } else {
+        console.error(err);
+        throw err;
+      }
+    });
+
+    await exec(`unzip ffmpeg/${ffmpegFilename}.zip -d ffmpeg/${ffmpegFilename}/`);
+  });
 }
 
 switch (os.platform()) {

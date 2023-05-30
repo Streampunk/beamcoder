@@ -1,0 +1,83 @@
+name: prebuild
+on: [push]
+
+jobs:
+  package:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-20.04
+          - macos-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          lfs: true
+
+      - name: Use nodejs
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.13.0
+
+      - name: npm install
+        run: npm install
+        env:
+          PREBUILD: true
+
+      - name: install Linux dependencies
+        run: |
+          sudo add-apt-repository ppa:savoury1/ffmpeg4
+          sudo apt-get update
+          sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev libzimg-dev
+        if: ${{ runner.os == 'Linux' }}
+
+      - name: check Linux dependencies
+        run: node ./install_ffmpeg.js
+        if: ${{ runner.os == 'Linux'}}
+
+      - name: install Mac build dependencies (brew)
+        run: brew install nasm pkg-config
+        if: ${{ runner.os == 'macOS'}}
+
+      - name: install Mac dependencies (shared release x64)
+        run: node ./install_ffmpeg.js --arch x64
+        if: ${{ runner.os == 'macOS'}}
+
+      - name: install Mac dependencies (shared release arm64)
+        run: node ./install_ffmpeg.js --arch arm64
+        if: ${{ runner.os == 'macOS'}}
+
+      - name: install Windows dependencies
+        run: node ./install_ffmpeg.js
+        if: ${{ runner.os == 'Windows'}}
+
+      - name: prebuild Release for macOS (x64)
+        run: npx prebuild --runtime napi --arch x64 --include-regex '(\.node|\.dylib|ffmpeg|ffprobe)$' --verbose --upload ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ runner.os == 'macOS'}}
+
+#      - name: prebuild Debug for macOS (x64)
+#        run: npx prebuild --debug --runtime napi --arch x64 --include-regex '(\.node|\.dylib|ffmpeg|ffprobe)$' --upload ${{ secrets.GITHUB_TOKEN }}
+#        if: ${{ runner.os == 'macOS'}}
+
+      - name: clean build directory for cross-compiling
+        run: rm ./build/Release/*.dylib
+        if: ${{ runner.os == 'macOS'}}
+
+      - name: prebuild Release for macOS (arm64)
+        run: npx prebuild --runtime napi --arch arm64 --include-regex '(\.node|\.dylib|ffmpeg|ffprobe)$' --verbose --upload ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ runner.os == 'macOS'}}
+
+      - name: prebuild for Windows
+        run: npx prebuild --runtime napi --include-regex '.node|.dll|.exe' --verbose --upload ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        if: ${{ runner.os == 'Windows'}}
+
+      - name: prebuild for Linux (x64)
+        run: npx prebuild --runtime napi --arch x64 --include-regex '(\.node|\.dylib|ffmpeg|ffprobe)$' --upload ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ runner.os == 'Linux'}}
+
+      - name: prebuild for Linux (arm64)
+        run: npx prebuild --runtime napi --arch arm64 --include-regex '(\.node|\.dylib|ffmpeg|ffprobe)$' --upload ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ runner.os == 'Linux'}}
