@@ -22,10 +22,6 @@
 const beamcoder = require('bindings')('beamcoder');
 const beamstreams = require('./beamstreams.js');
 
-// Provide useful debug on segfault-related crash
-const SegfaultHandler = require('segfault-handler');
-SegfaultHandler.registerHandler('crash.log');
-
 const splash = `Aerostat Beam Coder  Copyright (C) 2019  Streampunk Media Ltd
 GPL v3.0 or later license. This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it
