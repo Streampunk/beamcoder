@@ -1,12 +1,12 @@
 {
-  "name": "beamcoder",
-  "version": "0.6.15",
+  "name": "beamcoder-prebuild",
+  "version": "0.6.15-rc.10",
   "description": "Node.js native bindings to FFmpeg.",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "preinstall": "node install_ffmpeg.js",
-    "install": "node-gyp rebuild",
+    "install": "node install.js",
+    "postinstall": "node postinstall.js",
     "test": "tape test/*.js",
     "lint": "eslint **/*.js",
     "lint-html": "eslint **/*.js -f html -o ./reports/lint-results.html",
@@ -14,8 +14,25 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Streampunk/beamcoder.git"
+    "url": "git+https://github.com/descriptinc/beamcoder.git"
   },
+  "binary": {
+    "napi_versions": [
+      3
+    ]
+  },
+  "files": [
+    "types/**",
+    "beamstreams.js",
+    "index.d.ts",
+    "index.js",
+    "paths.js",
+    "paths.d.ts",
+    "install.js",
+    "postinstall.js",
+    "LICENSE",
+    "README.md"
+  ],
   "keywords": [
     "FFmpeg",
     "libav",
@@ -30,16 +47,26 @@
   "author": "Streampunk Media Ltd",
   "license": "GPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/Streampunk/beamcoder/issues"
+    "url": "https://github.com/descriptinc/beamcoder/issues"
   },
-  "homepage": "https://github.com/Streampunk/beamcoder#readme",
+  "homepage": "https://github.com/descriptinc/beamcoder#readme",
   "dependencies": {
     "bindings": "^1.5.0",
+    "prebuild-install": "^6.0.0",
     "segfault-handler": "^1.3.0"
   },
   "devDependencies": {
     "eslint": "^8.1.0",
+    "ffmpeg-ffprobe-static": "^4.4.0-rc.11",
+    "node-gyp": "^9.3.1",
+    "patch-package": "^6.2.2",
+    "prebuild": "^11.0.4",
     "tape": "^5.3.1"
+  },
+  "overrides": {
+    "prebuild": {
+      "node-gyp": "$node-gyp"
+    }
   },
   "gypfile": true
 }

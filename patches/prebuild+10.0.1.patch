@@ -1,0 +1,43 @@
+diff --git a/node_modules/prebuild/pack.js b/node_modules/prebuild/pack.js
+index 7552a4d..3be8aae 100644
+--- a/node_modules/prebuild/pack.js
++++ b/node_modules/prebuild/pack.js
+@@ -20,20 +20,30 @@ function pack (filenames, tarPath, cb) {
+     tarStream.pipe(zlib.createGzip({ level: 9 })).pipe(ws)
+ 
+     eachSeries(filenames, function processFile (filename, nextFile) {
+-      fs.stat(filename, function (err, st) {
++      fs.lstat(filename, function (err, st) {
+         if (err) return nextFile(err)
+ 
+-        var stream = tarStream.entry({
++        var header = {
+           name: filename.replace(/\\/g, '/').replace(/:/g, '_'),
+           size: st.size,
+           mode: st.mode | mode('444') | mode('222'),
+           gid: st.gid,
+-          uid: st.uid
+-        })
+-
+-        fs.createReadStream(filename).pipe(stream).on('finish', nextFile)
+-
+-        stream.on('error', nextFile)
++          uid: st.uid,
++        }
++
++        if (st.isSymbolicLink()) {
++          fs.readlink(filename, function (err, linkname) {
++            if (err) return nextFile(err)
++            header.type = 'symlink'
++            header.linkname = linkname
++            tarStream.entry(header)
++            nextFile()
++          })
++        } else {
++          var stream = tarStream.entry(header)
++          fs.createReadStream(filename).pipe(stream).on('finish', nextFile)
++          stream.on('error', nextFile)
++        }
+       })
+     }, function allFilesProcessed (err) {
+       tarStream.finalize()

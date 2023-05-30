@@ -104,7 +104,7 @@ On Linux, use the appropriate package manager to install the FFmpeg 4.1 developm
 
     sudo add-apt-repository ppa:jonathonf/ffmpeg-4
     sudo apt-get update
-    sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev
+    sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev libzimg-dev
 
 An example for Debian / Redhat / Fedora / CentOs will follow.
 

@@ -35,6 +35,12 @@ https://github.com/Streampunk/beamcoder/blob/master/LICENSE`;
 console.log(splash);
 console.log('Using FFmpeg version', beamcoder.avVersionInfo());
 
+if (Object.values(beamcoder.configurations()).some(value => value.includes('--enable-small'))) {
+  console.error('beamcoder will crash because ffmpeg is compiled' +
+    ' with --enable-small (because, for example, codec->long_name is ' +
+    'NULL and beamcoder expects it to be defined)');
+}
+
 beamcoder.demuxerStream = beamstreams.demuxerStream;
 beamcoder.muxerStream = beamstreams.muxerStream;
 

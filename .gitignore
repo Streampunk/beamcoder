@@ -62,6 +62,7 @@ typings/
 
 # Native module build dir
 build/
+prebuilds/
 
 # FFmpeg install folder
 ffmpeg/
@@ -73,3 +74,5 @@ ffmpeg/
 # Editors and IDE's
 *.swp
 .vscode/
+
+.DS_Store

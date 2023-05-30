@@ -22,6 +22,14 @@
 #include "codec.h"
 #include "hwcontext.h"
 
+#ifndef FF_DEBUG_VIS_QP
+#define FF_DEBUG_VIS_QP 0x2000
+#endif
+
+#ifndef FF_DEBUG_VIS_MB_TYPE
+#define FF_DEBUG_VIS_MB_TYPE 0x4000
+#endif
+
 napi_value getCodecCtxCodecID(napi_env env, napi_callback_info info) {
   napi_status status;
   napi_value result;
