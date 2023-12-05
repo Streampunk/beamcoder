@@ -9,7 +9,7 @@ jobs:
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
       UV_THREADPOOL_SIZE: 16
     docker:
-    - image: streampunkmedia/testbeam:16-4.4
+    - image: streampunkmedia/testbeam:16-5.0
     steps:
     - checkout
     - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS

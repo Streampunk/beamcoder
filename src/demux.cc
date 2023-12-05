@@ -324,7 +324,7 @@ void readBufferFinalizer(napi_env env, void* data, void* hint) {
   AVBufferRef* hintRef = (AVBufferRef*) hint;
   napi_status status;
   int64_t externalMemory;
-  status = napi_adjust_external_memory(env, -hintRef->size, &externalMemory);
+  status = napi_adjust_external_memory(env, -(int64_t)hintRef->size, &externalMemory);
   if (status != napi_ok) {
     printf("DEBUG: Napi failure to adjust external memory. In beamcoder format.cc readBufferFinalizer.");
   }

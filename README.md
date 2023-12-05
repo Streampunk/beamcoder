@@ -55,7 +55,7 @@ If you are looking to write your own frame-by-frame transcoder, media mangler or
 
 Does beam coder support X, Y or Z protocol / format / codec / file type / stream type / hardware etc.? If FFmpeg supports it, its possible and likely. Beam coder is self-describing at runtime, allowing exploration of what should be possible. However, you have to start somewhere, and the developers have been testing with the codecs and formats they are familiar with. Issues are expected so please raise any problems or requests for additional features as git hub issues. Even better, raise a pull request to fix a problem or add in missing features. Automated testing will be extended in due course, memory management improved, more examples added and hardware accelerated codecs added.
 
-Beam coder will be a cross-platform module for Windows, Mac and Linux. The release version of FFmpeg that beam coder links with is currently 4.1.
+Beam coder will be a cross-platform module for Windows, Mac and Linux. The release version of FFmpeg that beam coder links with is currently 5.0.
 
 Typescript bindings are available
 
@@ -69,9 +69,9 @@ Beam coder is the first release of Streampunk Media's [_Aerostat_](https://en.wi
 
 ### Pre-requisites
 
-Native packages require a build stage that needs some setup. This includes Python 2.7 (not 3) and build tools.
+Native packages require a build stage that needs some setup. This includes Python 3 and build tools.
 
-1. Install the LTS version of [Node.js](https://nodejs.org/en/) for your platform, currently the latest v10.
+1. Install the LTS version of [Node.js](https://nodejs.org/en/) for your platform, currently the latest v16.
 2. Enable [node-gyp - the Node.js native addon build tool](https://github.com/nodejs/node-gyp) for your platform by following the [installation instructions](https://github.com/nodejs/node-gyp#installation).
 
 Note: For MacOSX _Mojave_, install the following package after `xcode-select --install`:
@@ -92,7 +92,7 @@ This will install all necessary dependencies, download the FFmpeg shared and dev
 
 Note that if you want to use a local version of FFmpeg then, before the install, symbolic link or copy appropriate folders to:
 
-    ./node_modules/beamcoder/ffmpeg/ffmpeg-4.x-win64-shared
+    ./node_modules/beamcoder/ffmpeg/ffmpeg-5.x-win64-shared
 
 To ensure that sufficient threads are available to process several requests in parallel, set the `UV_THREADPOOL_SIZE` environment variable, e.g.:
 
@@ -103,6 +103,7 @@ To ensure that sufficient threads are available to process several requests in p
 On Linux, use the appropriate package manager to install the FFmpeg 4.1 development dependencies first. An error will be printed if these cannot be found at expected locations. For example, on Ubuntu:
 
     sudo add-apt-repository ppa:jonathonf/ffmpeg-4
+    sudo add-apt-repository ppa:savoury1/ffmpeg5    
     sudo apt-get update
     sudo apt-get install libavcodec-dev libavformat-dev libavdevice-dev libavfilter-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev libzimg-dev
 
@@ -279,6 +280,11 @@ To control the level of logging from FFmpeg you can use the `beamcoder.logging()
 * `verbose` - detailed information
 * `debug` - stuff which is only useful for libav* developers
 * `trace` - extremely verbose debugging for libav* developers
+
+To bypass the default ffmpeg logger you can use `beamcoder.setLoggingCallback()`. For example, to log all the messages using `console.log` :
+```javascript
+beamcoder.setLoggingCallback(msg => console.log(msg))
+```
 
 ### Demuxing
 

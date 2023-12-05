@@ -23,7 +23,7 @@ const test = require('tape');
 const beamcoder = require('../index.js');
 
 test('Version information', t => {
-  const verPos = beamcoder.avVersionInfo().indexOf('4.');
+  const verPos = beamcoder.avVersionInfo().indexOf('5.');
   t.ok(verPos === 0 || verPos === 1, 'has expected version number.');
   t.equals(typeof beamcoder.versions(), 'object', 'versions is an object.');
   t.equals(Object.keys(beamcoder.versions()).length, 8, 'versions has 8 entries.');
@@ -51,4 +51,23 @@ test('Muxer information', t => {
   t.equal(typeof muxers, 'object', 'muxers is an object.');
   t.ok(JSON.stringify(muxers), 'can be converted to JSON.');
   t.end();
+});
+
+test('Custom Logging', async t => {
+  let n = 0;
+  const cb = () => {
+    n++;
+  };
+  beamcoder.setLoggingCallback(cb);
+  
+  await beamcoder.demuxer('https://www.elecard.com/storage/video/bbb_1080p_c.ts');
+  // Expected logs are :
+  // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
+  // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
+  // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
+  // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
+  // [hevc @ 0x7f1978017180] Unknown HEVC profile: 0
+  // [mpegts @ 0x7f1978000900] PES packet size mismatch
+  // [mpegts @ 0x7f1978000900] Packet corrupt (stream = 1, dts = 53647096)
+  t.ok(n > 5);
 });

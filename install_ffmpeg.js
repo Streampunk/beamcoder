@@ -101,14 +101,14 @@ async function win32() {
     else throw e;
   });
   
-  const ffmpegFilename = 'ffmpeg-4.x-win64-shared';
+  const ffmpegFilename = 'ffmpeg-5.x-win64-shared';
   await access(`ffmpeg/${ffmpegFilename}`, fs.constants.R_OK).catch(async () => {
     const html = await getHTML('https://github.com/BtbN/FFmpeg-Builds/wiki/Latest', 'latest autobuilds');
     const htmlStr = html.toString('utf-8');
     const autoPos = htmlStr.indexOf('<p><a href=');
     const endPos = htmlStr.indexOf('</div>', autoPos);
     const autoStr = htmlStr.substring(autoPos, endPos);
-    const sharedEndPos = autoStr.lastIndexOf('">win64-gpl-shared-4.');
+    const sharedEndPos = autoStr.lastIndexOf('">win64-gpl-shared-5.');
     if (sharedEndPos === -1)
       throw new Error('Failed to find latest v4.x autobuild from "https://github.com/BtbN/FFmpeg-Builds/wiki/Latest"');
     const startStr = '<p><a href="';
@@ -135,36 +135,36 @@ async function linux() {
   const { stdout } = await execFile('ldconfig', ['-p']).catch(console.error);
   let result = 0;
 
-  if (stdout.indexOf('libavcodec.so.58') < 0) {
-    console.error('libavcodec.so.58 is not installed.');
+  if (stdout.indexOf('libavcodec.so.59') < 0) {
+    console.error('libavcodec.so.59 is not installed.');
     result = 1;
   }
-  if (stdout.indexOf('libavformat.so.58') < 0) {
-    console.error('libavformat.so.58 is not installed.');
+  if (stdout.indexOf('libavformat.so.59') < 0) {
+    console.error('libavformat.so.59 is not installed.');
     result = 1;
   }
-  if (stdout.indexOf('libavdevice.so.58') < 0) {
-    console.error('libavdevice.so.58 is not installed.');
+  if (stdout.indexOf('libavdevice.so.59') < 0) {
+    console.error('libavdevice.so.59 is not installed.');
     result = 1;
   }
-  if (stdout.indexOf('libavfilter.so.7') < 0) {
-    console.error('libavfilter.so.7 is not installed.');
+  if (stdout.indexOf('libavfilter.so.8') < 0) {
+    console.error('libavfilter.so.8 is not installed.');
     result = 1;
   }
-  if (stdout.indexOf('libavutil.so.56') < 0) {
-    console.error('libavutil.so.56 is not installed.');
+  if (stdout.indexOf('libavutil.so.57') < 0) {
+    console.error('libavutil.so.57 is not installed.');
     result = 1;
   }
-  if (stdout.indexOf('libpostproc.so.55') < 0) {
-    console.error('libpostproc.so.55 is not installed.');
+  if (stdout.indexOf('libpostproc.so.56') < 0) {
+    console.error('libpostproc.so.56 is not installed.');
     result = 1;
   }
-  if (stdout.indexOf('libswresample.so.3') < 0) {
-    console.error('libswresample.so.3 is not installed.');
+  if (stdout.indexOf('libswresample.so.4') < 0) {
+    console.error('libswresample.so.4 is not installed.');
     result = 1;
   }
-  if (stdout.indexOf('libswscale.so.5') < 0) {
-    console.error('libswscale.so.5 is not installed.');
+  if (stdout.indexOf('libswscale.so.6') < 0) {
+    console.error('libswscale.so.6 is not installed.');
     result = 1;
   }
   if (stdout.indexOf('libzimg.so.2') < 0) {

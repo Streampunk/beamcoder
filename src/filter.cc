@@ -244,20 +244,18 @@ napi_value getFilterDesc(napi_env env, napi_callback_info info) {
   return result;
 }
 
-napi_value getFilterPads(napi_env env, napi_callback_info info) {
+napi_value getFilterPads(napi_env env, AVFilter* filter, bool isOutput) {
   napi_status status;
   napi_value pad, result;
-  AVFilterPad* filterPads;
+  const AVFilterPad* filterPads;
   int padCount;
 
-  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filterPads);
-  CHECK_STATUS;
-
-  padCount = avfilter_pad_count(filterPads);
+  padCount = avfilter_filter_pad_count(filter, isOutput);
   if (0 == padCount) {
     status = napi_get_null(env, &result);
     CHECK_STATUS;
   } else {
+    filterPads = isOutput ? filter->outputs : filter->inputs;
     status = napi_create_array(env, &result);
     CHECK_STATUS;
     for ( int x = 0 ; x < padCount ; x++ ) {
@@ -274,6 +272,26 @@ napi_value getFilterPads(napi_env env, napi_callback_info info) {
     }
   }
   return result;
+}
+
+napi_value getFilterInputPads(napi_env env, napi_callback_info info) {
+  napi_status status;
+  AVFilter* filter;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filter);
+  CHECK_STATUS;
+
+  return getFilterPads(env, filter, false);
+}
+
+napi_value getFilterOutputPads(napi_env env, napi_callback_info info) {
+  napi_status status;
+  AVFilter* filter;
+
+  status = napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void**) &filter);
+  CHECK_STATUS;
+
+  return getFilterPads(env, filter, true);
 }
 
 napi_value getFilterPrivData(napi_env env, napi_callback_info info) {
@@ -340,8 +358,8 @@ napi_status fromAVFilter(napi_env env, const AVFilter* filter, napi_value* resul
     { "type", nullptr, nullptr, nullptr, nullptr, typeName, napi_enumerable, nullptr },
     { "name", nullptr, nullptr, getFilterName, nullptr, nullptr, napi_enumerable, (void*)filter },
     { "description", nullptr, nullptr, getFilterDesc, nullptr, nullptr, napi_enumerable, (void*)filter },
-    { "inputs", nullptr, nullptr, getFilterPads, nullptr, nullptr, napi_enumerable, (void*)filter->inputs },
-    { "outputs", nullptr, nullptr, getFilterPads, nullptr, nullptr, napi_enumerable, (void*)filter->outputs },
+    { "inputs", nullptr, nullptr, getFilterInputPads, nullptr, nullptr, napi_enumerable, (void*)filter },
+    { "outputs", nullptr, nullptr, getFilterOutputPads, nullptr, nullptr, napi_enumerable, (void*)filter },
     { "priv_class", nullptr, nullptr, getFilterPrivData, nullptr, nullptr, napi_enumerable, (void*)filter },
     { "flags", nullptr, nullptr, getFilterFlags, nullptr, nullptr, napi_enumerable, (void*)filter }
   };
@@ -897,10 +915,17 @@ private:
   std::vector<std::string> mContextNames;
 };
 
+struct filtererInData {
+  AVBufferRef *hardwareDeviceContext;
+  uint32_t width, height;
+  AVPixelFormat pixelFormat, softwarePixelFormat;
+};
+
 struct filtererCarrier : carrier {
   std::string filterType;
   std::vector<std::string> inNames;
   std::vector<std::string> inParams;
+  std::vector<filtererInData> inData;
   std::vector<std::string> outNames;
   std::vector<std::map<std::string, std::string> > outParams;
   std::string filterSpec;
@@ -1023,6 +1048,46 @@ void filtererExecute(napi_env env, void* data) {
     c->status = BEAMCODER_ERROR_ENOMEM;
     c->errorMsg = "Failed to parse filter graph.";
     goto end;
+  }
+
+  {
+    size_t filterIndex = 0;
+    for (filtererInData &data : c->inData)
+    {
+      if (data.hardwareDeviceContext)
+      {
+        if (filterIndex >= c->filterGraph->nb_filters ||
+            !c->filterGraph->filters[filterIndex]->nb_outputs) {
+          c->status = BEAMCODER_ERROR_ENOMEM;
+          c->errorMsg = "Unexpected out of bounds when allocating hardware frame context for filter.";
+          goto end;
+        }
+
+        AVFilterLink *filterLink = c->filterGraph->filters[filterIndex]->outputs[0];
+        filterLink->hw_frames_ctx = av_hwframe_ctx_alloc(data.hardwareDeviceContext);
+        if (!filterLink->hw_frames_ctx) {
+          c->status = BEAMCODER_ERROR_ENOMEM;
+          c->errorMsg = "Failed to allocate hardware frame context for filter.";
+          goto end;
+        }
+
+        AVHWFramesContext *linkFramesContext = (AVHWFramesContext *)(filterLink->hw_frames_ctx->data);
+        linkFramesContext->sw_format = data.softwarePixelFormat;
+        linkFramesContext->width = data.width;
+        linkFramesContext->height = data.height;
+        linkFramesContext->format = data.pixelFormat;
+
+        int initErr = av_hwframe_ctx_init(filterLink->hw_frames_ctx);
+        if (initErr) {
+          c->status = BEAMCODER_ERROR_ENOMEM;
+          c->errorMsg = "Failed to initialize hardware frame context for filter.";
+          goto end;
+        }
+      }
+
+      ++filterIndex;
+      av_buffer_unref(&data.hardwareDeviceContext);
+    }
   }
 
   if ((ret = avfilter_graph_config(c->filterGraph, NULL)) < 0) {
@@ -1176,6 +1241,7 @@ napi_value filterer(napi_env env, napi_callback_info info) {
     std::string pixFmt;
     AVRational timeBase;
     AVRational pixelAspect;
+    std::string swPixFmt;
 
     bool hasNameVal;
     c->status = napi_has_named_property(env, inParamsVal, "name", &hasNameVal);
@@ -1273,6 +1339,45 @@ napi_value filterer(napi_env env, napi_callback_info info) {
         c->status = napi_get_value_int32(env, arrayVal, (0==i)?&pixelAspect.num:&pixelAspect.den);
         REJECT_RETURN;
       }
+
+      bool hasSoftwarePixelFormat;
+      c->status = napi_has_named_property(env, inParamsVal, "swPixelFormat", &hasSoftwarePixelFormat);
+      REJECT_RETURN;
+      if (hasSoftwarePixelFormat) {
+        napi_value swPixFmtVal;
+        c->status = napi_get_named_property(env, inParamsVal, "swPixelFormat", &swPixFmtVal);
+        REJECT_RETURN;
+        size_t swPixFmtLen;
+        c->status = napi_get_value_string_utf8(env, swPixFmtVal, nullptr, 0, &swPixFmtLen);
+        REJECT_RETURN;
+        swPixFmt.resize(swPixFmtLen);
+        c->status = napi_get_value_string_utf8(env, swPixFmtVal, (char *)swPixFmt.data(), swPixFmtLen+1, nullptr);
+        REJECT_RETURN;
+      }
+
+      filtererInData inData = {};
+      inData.width = width;
+      inData.height = height;
+      inData.pixelFormat = av_get_pix_fmt(pixFmt.c_str());
+      inData.softwarePixelFormat = av_get_pix_fmt(swPixFmt.c_str());
+
+      bool hasDeviceCtxVal;
+      c->status = napi_has_named_property(env, inParamsVal, "hw_device_ctx", &hasDeviceCtxVal);
+      REJECT_RETURN;
+      if (hasDeviceCtxVal) {
+        napi_value hwDeviceCtxVal;
+        c->status = napi_get_named_property(env, inParamsVal, "hw_device_ctx", &hwDeviceCtxVal);
+        REJECT_RETURN;
+        napi_value contextExt;
+        c->status = napi_get_named_property(env, hwDeviceCtxVal, "_deviceContext", &contextExt);
+        REJECT_RETURN;
+        AVBufferRef* hwDeviceCtxRef;
+        c->status = napi_get_value_external(env, contextExt, (void**) &hwDeviceCtxRef);
+        REJECT_RETURN;
+        inData.hardwareDeviceContext = av_buffer_ref(hwDeviceCtxRef);
+      }
+
+      c->inData.push_back(inData);
     }
 
     napi_value timeBaseVal;

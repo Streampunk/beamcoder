@@ -8,9 +8,8 @@
                 "C:/Program Files (x86)/Windows Kits/10/Include/10.0.10240.0/ucrt",
                 "C:/Program Files (x86)/Windows Kits/8.1/Include/shared",
                 "C:/Program Files (x86)/Windows Kits/8.1/Include/winrt",
-                "${workspaceFolder}/**",
-                "${workspaceFolder}/ffmpeg/ffmpeg-4.x-win64-shared/include/**",
-                "${env:USERPROFILE}/AppData/Local/node-gyp/Cache/12.21.0/include/node"
+                "${workspaceFolder}/ffmpeg/ffmpeg-5.x-win64-shared/include/**",
+                "${env:USERPROFILE}/AppData/Local/node-gyp/Cache/16.14.0/include/node"
             ],
             "defines": [
                 "_DEBUG",
